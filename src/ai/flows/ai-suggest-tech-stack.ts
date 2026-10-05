@@ -17,13 +17,15 @@ const TechStackSuggestionOutputSchema = z.object({
   stacks: z.array(
     z.object({
       id: z.string().describe('A unique ID for this stack option.'),
-      name: z.string().describe('A descriptive name for this tech stack (e.g., "MERN Stack", "AWS Serverless").'),
+      name: z.string().describe('A descriptive name for this tech stack (e.g., "MERN Stack", "AWS Serverless", "Next.js + Python Microservices").'),
       description: z.string().describe('A brief explanation of why this stack fits the project summary.'),
       systems: z.array(
         z.object({
-          name: z.string().describe('The name of the system or component (e.g., "Web Frontend", "User Database").'),
+          name: z.string().describe('The name of the system or component (e.g., "Web Frontend", "User Database", "Payment Gateway API").'),
           description: z.string().describe('The specific technology used and its role (e.g., "React frontend hosted on Vercel").'),
           category: z.enum(['Technology', 'Function']).describe('The category of this system.'),
+          estimate: z.number().describe('Approximate development effort in man-days (e.g., 10, 20, 35).'),
+          dailyBillingRate: z.number().describe('Standard market daily billing rate in USD (e.g., 500, 650, 800).'),
         })
       ).describe('The systems/components that make up this stack.'),
     })
@@ -45,6 +47,10 @@ const prompt = ai.definePrompt({
 Based on the provided Project Summary below, suggest exactly 3 different, highly suitable technology stacks that could be used to build the system. 
 For each stack, provide a clear name, a brief description of why it's a good fit, and then decompose it into the individual impacted systems (e.g., Frontend, Backend API, Database, Auth system) specifying the technology for each.
 
+For each impacted system:
+- Estimate the approximate development effort in man-days (provide realistic ballpark estimates like 10, 20, 35 man-days based on the system's scope and complexity).
+- Provide a standard market daily billing rate in USD (provide realistic industry consultancy rates like $450 to $850/day depending on the technology stack, skill rarity, and required expertise).
+
 Project Summary:
 {{{projectSummary}}}
 
@@ -62,3 +68,4 @@ const aiSuggestTechStackFlow = ai.defineFlow(
     return output!;
   }
 );
+

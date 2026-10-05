@@ -51,20 +51,9 @@ import { Badge } from '@/components/ui/badge';
 import { cn, formatRateInput } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from '@/components/ui/checkbox';
-import { getAiEstimates, getAiTechStackSuggestions, getAiHorizontalSuggestions } from '@/app/actions';
+import { getAiTechStackSuggestions, getAiHorizontalSuggestions } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-const GeminiIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    {...props}
-  >
-    <path d="M12.012 2.25c.348 0 .68.163.888.45l3.5 5.063c.21.303.324.673.324 1.05V15a3 3 0 0 1-3 3h-3.414a3 3 0 0 1-2.122-.879l-3.5-3.5a3 3 0 0 1 0-4.242l3.5-3.5a3 3 0 0 1 2.122-.879H12.012Zm0 1.5H9.89a1.5 1.5 0 0 0-1.06.44L5.33 7.69a1.5 1.5 0 0 0 0 2.12l3.5 3.5a1.5 1.5 0 0 0 1.06.44h2.122a1.5 1.5 0 0 0 1.5-1.5V8.813a1.5 1.5 0 0 0-.162-.75L13.06 3.013a1.5 1.5 0 0 0-.44-.683l-.008-.005a1.53 1.53 0 0 0-.6-.175Z" />
-    <path d="M16.513 10.5h-2.121a1.5 1.5 0 0 0-1.061.44l-3.5 3.5a1.5 1.5 0 0 0 0 2.12l3.5 3.5a1.5 1.5 0 0 0 1.06.44h2.122a3 3 0 0 0 3-3V13.5a3 3 0 0 0-3-3Zm-2.121 1.5h2.121a1.5 1.5 0 0 1 1.5 1.5v2.188a1.5 1.5 0 0 1-1.06 1.419l-3.5 1.75a1.5 1.5 0 0 1-1.68-.21l-3.5-3.5a1.5 1.5 0 0 1-.21-1.68l1.75-3.5a1.5 1.5 0 0 1 1.42-1.06Z" />
-  </svg>
-);
+import { AiLoadingState } from '@/components/AiLoadingState';
 
 
 const estimationSchema = z.object({
@@ -114,9 +103,6 @@ export default function InitialEstimationPage() {
   const [isHorizontalFormOpen, setIsHorizontalFormOpen] = useState(false);
   const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
-
-  const [isAiEstimating, setIsAiEstimating] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
   const [isSuggestStackDialogOpen, setIsSuggestStackDialogOpen] = useState(false);
   const [isAiSuggestingStack, setIsAiSuggestingStack] = useState(false);
@@ -176,45 +162,6 @@ export default function InitialEstimationPage() {
     setIsConfirming(false);
   };
   
-  const handleAiEstimate = async () => {
-    if (!project?.summary || initialImpactedSystems.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Project summary and at least one impacted system are required.'});
-      return;
-    }
-    setIsAiEstimating(true);
-    setAiError(null);
-    try {
-      const result = await getAiEstimates({
-        projectSummary: project.summary,
-        impactedSystems: initialImpactedSystems.map(({ id, name, description }) => ({ id, name, description })),
-        horizontals: initialHorizontals.map(({ id, name }) => ({ id, name })),
-      });
-
-      if ('error' in result && result.error) {
-        throw new Error(result.error);
-      }
-
-      if (!('estimates' in result)) {
-        throw new Error('Invalid response from AI');
-      }
-
-      const { systemEstimates, horizontalEstimates } = result.estimates;
-      
-      const systemPromises = systemEstimates.map((est: any) => updateInitialImpactedSystem(est.id, { name: est.name, estimate: est.estimate }));
-      const horizontalPromises = horizontalEstimates.map((est: any) => updateInitialHorizontal(est.id, { name: est.name, weightage: est.weightage, isEnabled: true }));
-      
-      await Promise.all([...systemPromises, ...horizontalPromises]);
-
-      toast({ title: 'Success', description: 'AI estimates have been applied.' });
-
-    } catch (e: any) {
-      setAiError(e.message || 'An unknown error occurred.');
-      toast({ variant: 'destructive', title: 'AI Estimation Failed', description: e.message || 'Could not get AI estimates.' });
-    } finally {
-      setIsAiEstimating(false);
-    }
-  };
-
   const handleSuggestTechStack = async (force: boolean = false) => {
     if (!project?.summary) return;
     setIsSuggestStackDialogOpen(true);
@@ -248,8 +195,8 @@ export default function InitialEstimationPage() {
            name: sys.name,
            description: sys.description,
            category: sys.category,
-           estimate: undefined,
-           dailyBillingRate: 0
+           estimate: typeof sys.estimate === 'number' ? sys.estimate : (sys.estimate ? parseFloat(sys.estimate) : undefined),
+           dailyBillingRate: typeof sys.dailyBillingRate === 'number' ? sys.dailyBillingRate : (sys.dailyBillingRate ? parseFloat(sys.dailyBillingRate) : 0),
        }));
        
        await replaceInitialImpactedSystems(newSystems);
@@ -274,7 +221,11 @@ export default function InitialEstimationPage() {
     setHorizontalSuggestions([]);
 
     try {
-      const result = await getAiHorizontalSuggestions({ projectSummary: project.summary });
+      const currentDevEffort = initialImpactedSystems.reduce((acc, system) => acc + (system.estimate || 0), 0);
+      const result = await getAiHorizontalSuggestions({
+        projectSummary: project.summary,
+        totalDevEffort: currentDevEffort > 0 ? currentDevEffort : undefined,
+      });
       if ('error' in result && result.error) {
          throw new Error(result.error);
       }
@@ -292,8 +243,9 @@ export default function InitialEstimationPage() {
     try {
        const newHorizontals = strategy.horizontals.map((hor: any) => ({
            name: hor.name,
-           weightage: hor.weightage,
-           isEnabled: true
+           weightage: typeof hor.weightage === 'number' ? hor.weightage : (parseFloat(hor.weightage) || 0),
+           isEnabled: true,
+           dailyBillingRate: typeof hor.dailyBillingRate === 'number' ? hor.dailyBillingRate : (hor.dailyBillingRate ? parseFloat(hor.dailyBillingRate) : undefined),
        }));
 
        await replaceInitialHorizontals(newHorizontals);
@@ -411,13 +363,6 @@ export default function InitialEstimationPage() {
         <PageHeader title="Specifications" description="Define the project summary and impacted systems for an initial estimate.">
         </PageHeader>
         
-        {aiError && (
-          <Alert variant="destructive">
-            <AlertTitle>AI Estimation Error</AlertTitle>
-            <AlertDescription>{aiError}</AlertDescription>
-          </Alert>
-        )}
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -747,15 +692,6 @@ export default function InitialEstimationPage() {
 
         {project?.status === 'Initial Estimation' && (
           <div className="flex justify-end mt-6 gap-4">
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={handleAiEstimate}
-              disabled={isAiEstimating || !project?.summary || initialImpactedSystems.length === 0}
-            >
-              <GeminiIcon className="mr-2 h-4 w-4" />
-              {isAiEstimating ? 'Estimating...' : 'AI Estimator'}
-            </Button>
             <Button onClick={handleConfirmEstimation} disabled={isConfirming} size="lg">
               <CheckCircle className="mr-2 h-4 w-4" />
               {isConfirming ? 'Confirming...' : 'Confirm Estimation'}
@@ -907,20 +843,17 @@ export default function InitialEstimationPage() {
       </AlertDialog>
 
       <Dialog open={isSuggestStackDialogOpen} onOpenChange={setIsSuggestStackDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
-          <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0 flex flex-row items-center justify-between">
             <DialogTitle>AI Tech Stack Suggestions</DialogTitle>
             <Button variant="outline" size="sm" onClick={() => handleSuggestTechStack(true)} disabled={isAiSuggestingStack}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 Refresh
             </Button>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
              {isAiSuggestingStack && (
-                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                   <Bot className="h-8 w-8 mb-4 animate-pulse" />
-                   <p>Analyzing project summary and generating stack options...</p>
-                </div>
+                <AiLoadingState type="stack" />
              )}
              {suggestStackError && (
                <Alert variant="destructive">
@@ -930,47 +863,85 @@ export default function InitialEstimationPage() {
              )}
              {!isAiSuggestingStack && techStackSuggestions.length > 0 && (
                 <div className="grid gap-4">
-                   {techStackSuggestions.map((stack, idx) => (
-                      <Card key={idx}>
-                         <CardHeader>
-                            <CardTitle>{stack.name}</CardTitle>
-                            <CardDescription>{stack.description}</CardDescription>
-                         </CardHeader>
-                         <CardContent>
-                            <ul className="list-disc pl-5 space-y-1 mb-4 text-sm">
-                               {stack.systems.map((sys: any, i: number) => (
-                                  <li key={i}><strong>{sys.name}</strong> ({sys.category}): {sys.description}</li>
-                               ))}
-                            </ul>
-                            <div className="flex justify-end">
-                                <Button onClick={() => handleSelectTechStack(stack)}>Select this Stack</Button>
-                            </div>
-                         </CardContent>
-                      </Card>
-                   ))}
+                   {techStackSuggestions.map((stack, idx) => {
+                      const totalStackEffort = stack.systems?.reduce((acc: number, sys: any) => acc + (Number(sys.estimate) || 0), 0) || 0;
+                      const totalStackCost = stack.systems?.reduce((acc: number, sys: any) => acc + ((Number(sys.estimate) || 0) * (Number(sys.dailyBillingRate) || 0)), 0) || 0;
+                      return (
+                        <Card key={idx} className="border shadow-sm">
+                           <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                 <div>
+                                   <CardTitle className="text-lg">{stack.name}</CardTitle>
+                                   <CardDescription className="mt-1">{stack.description}</CardDescription>
+                                 </div>
+                                 <div className="text-right shrink-0 ml-4">
+                                   <div className="text-sm font-semibold">{totalStackEffort} man-days</div>
+                                   <div className="text-xs text-muted-foreground font-mono">${totalStackCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} est. cost</div>
+                                 </div>
+                              </div>
+                           </CardHeader>
+                           <CardContent className="pt-0">
+                              <div className="rounded-md border text-sm overflow-hidden mb-4">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-muted/50 text-xs">
+                                      <TableHead className="py-2">System / Component</TableHead>
+                                      <TableHead className="py-2">Category</TableHead>
+                                      <TableHead className="py-2 text-right">Effort</TableHead>
+                                      <TableHead className="py-2 text-right">Daily Rate</TableHead>
+                                      <TableHead className="py-2 text-right">Est. Cost</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                     {stack.systems?.map((sys: any, i: number) => {
+                                        const effort = Number(sys.estimate) || 0;
+                                        const rate = Number(sys.dailyBillingRate) || 0;
+                                        const cost = effort * rate;
+                                        return (
+                                          <TableRow key={i} className="text-xs">
+                                             <TableCell className="py-2 font-medium">
+                                                <div>{sys.name}</div>
+                                                <div className="text-muted-foreground text-[11px] font-normal">{sys.description}</div>
+                                             </TableCell>
+                                             <TableCell className="py-2">
+                                                <Badge variant="outline" className="text-[10px]">{sys.category}</Badge>
+                                             </TableCell>
+                                             <TableCell className="py-2 text-right font-mono">{effort > 0 ? `${effort} d` : '-'}</TableCell>
+                                             <TableCell className="py-2 text-right font-mono">${rate.toFixed(2)}/d</TableCell>
+                                             <TableCell className="py-2 text-right font-mono font-medium">${cost.toFixed(2)}</TableCell>
+                                          </TableRow>
+                                        );
+                                     })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                              <div className="flex justify-end">
+                                  <Button onClick={() => handleSelectTechStack(stack)}>Select this Stack</Button>
+                              </div>
+                           </CardContent>
+                        </Card>
+                      );
+                   })}
                 </div>
              )}
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
              <Button variant="ghost" onClick={() => setIsSuggestStackDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog open={isSuggestHorizontalsDialogOpen} onOpenChange={setIsSuggestHorizontalsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh]">
-          <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
+          <DialogHeader className="px-6 py-4 border-b shrink-0 flex flex-row items-center justify-between">
             <DialogTitle>AI Horizontal Strategy Suggestions</DialogTitle>
             <Button variant="outline" size="sm" onClick={() => handleSuggestHorizontals(true)} disabled={isAiSuggestingHorizontals}>
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 Refresh
             </Button>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 min-h-0">
              {isAiSuggestingHorizontals && (
-                <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                   <Bot className="h-8 w-8 mb-4 animate-pulse" />
-                   <p>Analyzing project summary and generating horizontal strategies...</p>
-                </div>
+                <AiLoadingState type="horizontals" />
              )}
              {suggestHorizontalsError && (
                <Alert variant="destructive">
@@ -980,28 +951,73 @@ export default function InitialEstimationPage() {
              )}
              {!isAiSuggestingHorizontals && horizontalSuggestions.length > 0 && (
                 <div className="grid gap-4">
-                   {horizontalSuggestions.map((strategy, idx) => (
-                      <Card key={idx}>
-                         <CardHeader>
-                            <CardTitle>{strategy.name}</CardTitle>
-                            <CardDescription>{strategy.description}</CardDescription>
-                         </CardHeader>
-                         <CardContent>
-                            <ul className="list-disc pl-5 space-y-1 mb-4 text-sm">
-                               {strategy.horizontals.map((hor: any, i: number) => (
-                                  <li key={i}><strong>{hor.name}</strong>: {hor.weightage}%</li>
-                               ))}
-                            </ul>
-                            <div className="flex justify-end">
-                                <Button onClick={() => handleSelectHorizontalStrategy(strategy)}>Apply Strategy</Button>
-                            </div>
-                         </CardContent>
-                      </Card>
-                   ))}
+                   {horizontalSuggestions.map((strategy, idx) => {
+                      const totalStratEffort = strategy.horizontals?.reduce((acc: number, hor: any) => {
+                         const effort = Number(hor.approximateEffort) || (totalDevEffort > 0 ? (totalDevEffort * (Number(hor.weightage) || 0) / 100) : 0);
+                         return acc + effort;
+                      }, 0) || 0;
+                      const totalStratCost = strategy.horizontals?.reduce((acc: number, hor: any) => {
+                         const effort = Number(hor.approximateEffort) || (totalDevEffort > 0 ? (totalDevEffort * (Number(hor.weightage) || 0) / 100) : 0);
+                         const rate = Number(hor.dailyBillingRate) || 0;
+                         return acc + (effort * rate);
+                      }, 0) || 0;
+
+                      return (
+                        <Card key={idx} className="border shadow-sm">
+                           <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                 <div>
+                                   <CardTitle className="text-lg">{strategy.name}</CardTitle>
+                                   <CardDescription className="mt-1">{strategy.description}</CardDescription>
+                                 </div>
+                                 <div className="text-right shrink-0 ml-4">
+                                   <div className="text-sm font-semibold">{totalStratEffort > 0 ? `${totalStratEffort.toFixed(1)} man-days` : ''}</div>
+                                   <div className="text-xs text-muted-foreground font-mono">${totalStratCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} est. cost</div>
+                                 </div>
+                              </div>
+                           </CardHeader>
+                           <CardContent className="pt-0">
+                              <div className="rounded-md border text-sm overflow-hidden mb-4">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-muted/50 text-xs">
+                                      <TableHead className="py-2">Horizontal</TableHead>
+                                      <TableHead className="py-2 text-right">Weightage</TableHead>
+                                      <TableHead className="py-2 text-right">Approx. Effort</TableHead>
+                                      <TableHead className="py-2 text-right">Daily Rate</TableHead>
+                                      <TableHead className="py-2 text-right">Est. Cost</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                     {strategy.horizontals?.map((hor: any, i: number) => {
+                                        const weightage = Number(hor.weightage) || 0;
+                                        const effort = Number(hor.approximateEffort) || (totalDevEffort > 0 ? (totalDevEffort * weightage / 100) : 0);
+                                        const rate = Number(hor.dailyBillingRate) || 0;
+                                        const cost = effort * rate;
+                                        return (
+                                          <TableRow key={i} className="text-xs">
+                                             <TableCell className="py-2 font-medium">{hor.name}</TableCell>
+                                             <TableCell className="py-2 text-right font-mono">{weightage}%</TableCell>
+                                             <TableCell className="py-2 text-right font-mono">{effort > 0 ? `${effort.toFixed(1)} d` : '-'}</TableCell>
+                                             <TableCell className="py-2 text-right font-mono">${rate.toFixed(2)}/d</TableCell>
+                                             <TableCell className="py-2 text-right font-mono font-medium">${cost.toFixed(2)}</TableCell>
+                                          </TableRow>
+                                        );
+                                     })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                              <div className="flex justify-end">
+                                  <Button onClick={() => handleSelectHorizontalStrategy(strategy)}>Apply Strategy</Button>
+                              </div>
+                           </CardContent>
+                        </Card>
+                      );
+                   })}
                 </div>
              )}
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
              <Button variant="ghost" onClick={() => setIsSuggestHorizontalsDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>

@@ -1,14 +1,13 @@
-
 'use server';
 
 import { aiTaskTestSuggestions, type AiTaskTestSuggestionsInput } from '@/ai/flows/task-test-suggestions';
-import { aiEstimator, type AiEstimatorInput, type AiEstimatorOutput } from '@/ai/flows/ai-estimator';
 import { aiStoryGenerator, type AiStoryGeneratorInput, type AiStoryGeneratorOutput } from '@/ai/flows/ai-story-generator';
 import { aiTestCaseGenerator, type AiTestCaseGeneratorInput, type AiTestCaseGeneratorOutput } from '@/ai/flows/ai-test-case-generator';
 import { aiRiskGenerator, type AiRiskGeneratorInput, type AiRiskGeneratorOutput } from '@/ai/flows/ai-risk-generator';
 import { aiAssumptionGenerator, type AiAssumptionGeneratorInput, type AiAssumptionGeneratorOutput } from '@/ai/flows/ai-assumption-generator';
 import { aiDependencyGenerator, type AiDependencyGeneratorInput, type AiDependencyGeneratorOutput } from '@/ai/flows/ai-dependency-generator';
-
+import { aiSuggestTechStack, type TechStackSuggestionInput, type TechStackSuggestionOutput } from '@/ai/flows/ai-suggest-tech-stack';
+import { aiSuggestHorizontals, type HorizontalSuggestionInput, type HorizontalSuggestionOutput } from '@/ai/flows/ai-suggest-horizontals';
 
 export async function getAiTaskSuggestions(
   input: AiTaskTestSuggestionsInput
@@ -19,18 +18,6 @@ export async function getAiTaskSuggestions(
   } catch (e: any) {
     console.error(e);
     return { error: e.message || 'An unexpected error occurred.' };
-  }
-}
-
-export async function getAiEstimates(
-  input: AiEstimatorInput
-): Promise<{ estimates: AiEstimatorOutput } | { error: string }> {
-  try {
-    const result = await aiEstimator(input);
-    return { estimates: result };
-  } catch (e: any) {
-    console.error('AI Estimator Flow Error:', e);
-    return { error: e.message || 'An unexpected error occurred while getting AI estimates.' };
   }
 }
 
@@ -93,7 +80,6 @@ export async function getAiDependencySuggestions(
     return { error: e.message || 'An unexpected error occurred while generating dependencies.' };
   }
 }
-import { aiSuggestTechStack, type TechStackSuggestionInput, type TechStackSuggestionOutput } from '@/ai/flows/ai-suggest-tech-stack';
 
 export async function getAiTechStackSuggestions(
   input: TechStackSuggestionInput
@@ -107,8 +93,6 @@ export async function getAiTechStackSuggestions(
   }
 }
 
-import { aiSuggestHorizontals, type HorizontalSuggestionInput, type HorizontalSuggestionOutput } from '@/ai/flows/ai-suggest-horizontals';
-
 export async function getAiHorizontalSuggestions(
   input: HorizontalSuggestionInput
 ): Promise<{ strategies: HorizontalSuggestionOutput['strategies'] } | { error: string }> {
@@ -120,3 +104,4 @@ export async function getAiHorizontalSuggestions(
     return { error: e.message || 'An unexpected error occurred while generating horizontal suggestions.' };
   }
 }
+
