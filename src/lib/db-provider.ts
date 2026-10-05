@@ -3,7 +3,21 @@ import * as SB from './supabase-firestore-adapter';
 import { db as fbDb, auth as fbAuth } from './firebase';
 import { supabase } from './supabase';
 
+let _runtimeDbProvider: string | null = null;
+
+export function setRuntimeDbProvider(provider: string | null) {
+  _runtimeDbProvider = provider;
+  if (typeof window !== 'undefined' && provider) {
+    try {
+      localStorage.setItem('projectflow_db_provider', provider);
+    } catch {}
+  }
+}
+
 export function isSupabaseActive(): boolean {
+  if (_runtimeDbProvider) {
+    return _runtimeDbProvider === 'supabase' || _runtimeDbProvider === 'postgres';
+  }
   if (typeof window !== 'undefined') {
     const cached = localStorage.getItem('projectflow_db_provider');
     if (cached) return cached === 'supabase' || cached === 'postgres';

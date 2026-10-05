@@ -104,15 +104,23 @@ export default function AIConfigPage() {
 
         setIsLoading(true);
         try {
+            const isFirst = profiles.length === 0;
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'ai', profile: config }),
+                body: JSON.stringify({ type: 'ai', profile: { ...config, isActive: isFirst } }),
                 headers: { 'Content-Type': 'application/json' }
             });
 
             if (!res.ok) throw new Error('Failed to save profile');
             const parsed = await res.json();
             if (parsed.success) {
+                if (isFirst && parsed.profile?.id) {
+                    await fetch('/api/config', {
+                        method: 'POST',
+                        body: JSON.stringify({ type: 'ai', makeActiveId: parsed.profile.id }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
                 toast({ title: 'Profile Saved', description: 'AI profile added to pool.' });
                 setShowNewForm(false);
                 setConfig({ profileName: '', provider: 'google' });
@@ -129,12 +137,21 @@ export default function AIConfigPage() {
         if (!editConfig || !editConfig.profileName) return;
         setIsLoading(true);
         try {
+            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'ai', profile: editConfig }),
+                body: JSON.stringify({ type: 'ai', profile: { ...editConfig, isActive: !!wasActive } }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) throw new Error('Failed to update profile');
+            
+            if (wasActive) {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'ai', makeActiveId: editConfig.id }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
             
             toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
             setEditingProfileId(null);

@@ -13,7 +13,7 @@ import { auth } from '@/lib/firebase';
 import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, setDoc } from '@/lib/db-provider';
+import { collection, query, where, getDocs, doc, setDoc, setRuntimeDbProvider } from '@/lib/db-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 
 export default function LoginPage() {
@@ -41,6 +41,10 @@ export default function LoginPage() {
           runtimeAuthProvider = cfg.authProvider || cfg.dbProvider || 'supabase';
         }
       } catch (_) {}
+
+      if (runtimeDbProvider) {
+        setRuntimeDbProvider(runtimeDbProvider);
+      }
 
       if (runtimeDbProvider === 'supabase' || runtimeAuthProvider === 'supabase') {
         if (!supabase) {
@@ -163,6 +167,12 @@ export default function LoginPage() {
         errorMessage = "Too many failed attempts. Please try again later.";
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = "Please enter a valid email address.";
+      } else if (
+        error.code === 'permission-denied' ||
+        error.message?.toLowerCase().includes('permission') ||
+        error.message?.toLowerCase().includes('insufficient')
+      ) {
+        errorMessage = "Database permission denied. If using Firebase, ensure Cloud Firestore rules allow authenticated users (Firestore Database > Rules: allow read, write: if request.auth != null;).";
       } else if (error.message) {
         errorMessage = error.message.replace('Firebase: ', '');
       }

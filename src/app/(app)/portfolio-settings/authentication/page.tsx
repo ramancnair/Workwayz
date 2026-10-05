@@ -107,15 +107,23 @@ export default function AuthenticationSettingsPage() {
         
         setIsLoading(true);
         try {
+            const isFirst = profiles.length === 0;
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: { ...config } }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...config, isActive: isFirst } }),
                 headers: { 'Content-Type': 'application/json' }
             });
 
             if (!res.ok) throw new Error('Failed to save profile');
             const parsed = await res.json();
             if (parsed.success) {
+                if (isFirst && parsed.profile?.id) {
+                    await fetch('/api/config', {
+                        method: 'POST',
+                        body: JSON.stringify({ type: 'authentication', makeActiveId: parsed.profile.id }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
                 toast({ title: 'Profile Saved', description: 'Authentication profile added to pool.' });
                 setShowNewForm(false);
                 setConfig({ ...defaultConfig });
@@ -132,14 +140,21 @@ export default function AuthenticationSettingsPage() {
         if (!editConfig || !editConfig.profileName) return;
         setIsLoading(true);
         try {
+            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'authentication', profile: { ...editConfig } }),
+                body: JSON.stringify({ type: 'authentication', profile: { ...editConfig, isActive: !!wasActive } }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) throw new Error('Failed to update profile');
             
-            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
+            if (wasActive) {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'authentication', makeActiveId: editConfig.id }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
             
             setEditingProfileId(null);
             setEditConfig(null);

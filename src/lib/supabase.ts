@@ -37,6 +37,11 @@ async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
                 supabaseAnonKey: data.supabaseAnonKey || null,
                 dbProvider: data.dbProvider || null,
             };
+            if (typeof window !== 'undefined' && data.dbProvider) {
+                try {
+                    localStorage.setItem('projectflow_db_provider', data.dbProvider);
+                } catch (_) {}
+            }
             return _runtimeConfig!;
         })
         .catch(() => {

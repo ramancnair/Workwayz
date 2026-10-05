@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { syncConnectionsToEnv } from '@/lib/config-sync';
 
 export async function POST(request: Request) {
     try {
@@ -138,6 +139,7 @@ export async function POST(request: Request) {
 
 
                          fs.writeFileSync(profilesPath, JSON.stringify(conns, null, 2), 'utf8');
+                         syncConnectionsToEnv(conns);
                      }
                  } catch (e) {
                      // Non fatal
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
         });
 
         fs.writeFileSync(envPath, newContent, 'utf8');
+        syncConnectionsToEnv();
 
         return NextResponse.json({ success: true, message: '.env.local updated successfully.' });
     } catch (e) {

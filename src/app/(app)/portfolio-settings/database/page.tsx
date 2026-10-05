@@ -126,16 +126,24 @@ export default function DatabaseSettingsPage() {
         
         setIsLoading(true);
         try {
+            const isFirst = profiles.length === 0;
             // Post to profiles
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'database', profile: config }),
+                body: JSON.stringify({ type: 'database', profile: { ...config, isActive: isFirst } }),
                 headers: { 'Content-Type': 'application/json' }
             });
 
             if (!res.ok) throw new Error('Failed to save profile');
             const parsed = await res.json();
             if (parsed.success) {
+                if (isFirst && parsed.profile?.id) {
+                    await fetch('/api/config', {
+                        method: 'POST',
+                        body: JSON.stringify({ type: 'database', makeActiveId: parsed.profile.id }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
                 toast({ title: 'Profile Saved', description: 'Connection profile added to pool.' });
                 setShowNewForm(false);
                 setConfig({ profileName: '', provider: 'firebase' });
@@ -152,14 +160,21 @@ export default function DatabaseSettingsPage() {
         if (!editConfig || !editConfig.profileName) return;
         setIsLoading(true);
         try {
+            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
             const res = await fetch('/api/config/profiles', {
                 method: 'POST',
-                body: JSON.stringify({ type: 'database', profile: editConfig }),
+                body: JSON.stringify({ type: 'database', profile: { ...editConfig, isActive: !!wasActive } }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) throw new Error('Failed to update profile');
             
-            const wasActive = profiles.find(p => p.id === editConfig.id)?.isActive;
+            if (wasActive) {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'database', makeActiveId: editConfig.id }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
             
             setEditingProfileId(null);
             setEditConfig(null);
@@ -219,9 +234,7 @@ export default function DatabaseSettingsPage() {
     };
 
     const initEditMode = (profile: any) => {
-        const newConf: any = { provider: profile.provider, profileName: profile.profileName, id: profile.id };
-        if (profile.projectId) newConf.projectId = profile.projectId;
-        if (profile.supabaseUrl) newConf.supabaseUrl = profile.supabaseUrl;
+        const newConf: any = { ...profile };
         setEditConfig({ ...defaultConfigs[profile.provider as DatabaseProvider], ...newConf } as DatabaseConfig);
         setEditingProfileId(profile.id);
     };

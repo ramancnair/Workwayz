@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { syncConnectionsToEnv } from '@/lib/config-sync';
 
 const getProfilesPath = () => path.join(process.cwd(), 'connections.json');
 
@@ -141,21 +142,38 @@ export async function POST(request: Request) {
         if (!conns[type]) conns[type] = [];
 
         const idx = conns[type].findIndex((p: any) => p.id === profile.id);
+        const isExistingActive = idx >= 0 ? !!conns[type][idx].isActive : false;
+        const shouldBeActive = profile.isActive === true || isExistingActive || conns[type].length === 0;
+
         if (idx >= 0) {
             const existing = conns[type][idx];
             if (type === 'database') {
-                if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
-                if (profile.supabaseAnonKey && profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
-                if (profile.connectionString && profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
+                if (profile.provider === existing.provider) {
+                    if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                    if (!profile.supabaseAnonKey || profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
+                    if (!profile.connectionString || profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
+                } else {
+                    if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                    if (profile.supabaseAnonKey && profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
+                    if (profile.connectionString && profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
+                }
             } else {
-                if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
             }
             conns[type][idx] = { ...existing, ...profile };
         } else {
             conns[type].push(profile);
         }
 
+        if (shouldBeActive) {
+            conns[type].forEach((p: any) => {
+                p.isActive = (p.id === profile.id);
+            });
+        }
+
         saveConnections(conns);
+        syncConnectionsToEnv(conns);
+
         return NextResponse.json({ success: true, profile: maskProfile(conns[type].find((p: any) => p.id === profile.id), type) });
     } catch (e) {
         console.error('Failed to save profile', e);
@@ -173,8 +191,13 @@ export async function DELETE(request: Request) {
 
         const conns: any = getConnections();
         if (conns[type]) {
+            const wasActive = conns[type].find((p: any) => p.id === id)?.isActive;
             conns[type] = conns[type].filter((p: any) => p.id !== id);
+            if (wasActive && conns[type].length > 0) {
+                conns[type][0].isActive = true;
+            }
             saveConnections(conns);
+            syncConnectionsToEnv(conns);
         }
 
         return NextResponse.json({ success: true });
