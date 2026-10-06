@@ -173,18 +173,25 @@ export default function SignupPage() {
   };
 
   return (
-    <Card className="w-full shadow-lg border-border/50">
+    <Card className="w-full max-w-lg shadow-2xl shadow-black/50 bg-[#0d1624]/95 backdrop-blur-xl border border-slate-700/60 rounded-2xl text-white">
       <CardHeader className="space-y-3 text-center">
-        <div className="flex justify-center mb-2">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
-              <LayoutDashboard className="h-5 w-5" />
+        <div className="flex flex-col items-center mb-1 select-none">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-black/50 ring-1 ring-white/10">
+              <img
+                src="/workwayz-icon.png"
+                alt="Workwayz Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
-            <span className="font-bold text-xl">ProjectFlow</span>
-          </Link>
+            <span className="font-bold text-2xl tracking-tight text-white">Workwayz</span>
+          </div>
+          <span className="text-[11px] font-semibold tracking-wider text-emerald-400 uppercase">
+            Workwayz.in
+          </span>
         </div>
         <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>
+        <CardDescription className="text-slate-400">
           Enter your information to get started
         </CardDescription>
       </CardHeader>
@@ -192,46 +199,92 @@ export default function SignupPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input id="firstName" type="text" placeholder="John" required />
+              <Label htmlFor="firstName" className="text-slate-200">First Name *</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input id="lastName" type="text" placeholder="Doe" required />
+              <Label htmlFor="lastName" className="text-slate-200">Last Name *</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="empId">Emp ID *</Label>
-              <Input id="empId" type="text" placeholder="E001" required />
+              <Label htmlFor="empId" className="text-slate-200">Emp ID *</Label>
+              <Input
+                id="empId"
+                type="text"
+                placeholder="E001"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
-              <Input id="phone" type="text" placeholder="123-456-7890" required />
+              <Label htmlFor="phone" className="text-slate-200">Phone *</Label>
+              <Input
+                id="phone"
+                type="text"
+                placeholder="123-456-7890"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="experience">Experience (years) *</Label>
-              <Input id="experience" type="number" placeholder="5" min="0" required />
+              <Label htmlFor="experience" className="text-slate-200">Experience (years) *</Label>
+              <Input
+                id="experience"
+                type="number"
+                placeholder="5"
+                min="0"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input id="email" type="email" placeholder="m@example.com" required />
+              <Label htmlFor="email" className="text-slate-200">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
-            <Input id="password" type="password" required />
+            <Label htmlFor="password" className="text-slate-200">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              required
+              className="bg-[#080f1a] border-slate-700/80 text-white focus-visible:ring-emerald-500"
+            />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] hover:from-[#1e40af] hover:via-[#0369a1] hover:to-[#047857] text-white font-medium shadow-lg shadow-emerald-950/40 rounded-lg"
+            disabled={isLoading}
+          >
             {isLoading ? 'Creating account...' : 'Sign up'}
           </Button>
-          <div className="text-center text-sm text-muted-foreground content-center">
+          <div className="text-center text-sm text-slate-400 content-center">
             Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href="/login" className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold">
               Log in
             </Link>
           </div>
@@ -240,3 +293,4 @@ export default function SignupPage() {
     </Card>
   );
 }
+

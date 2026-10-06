@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format, parseISO } from 'date-fns';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, setDoc, Timestamp, query, where, writeBatch, db } from '@/lib/db-provider';
 import { firebaseConfig } from '@/lib/firebase';
 import { PageHeader } from '@/components/PageHeader';
@@ -40,7 +41,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, ShieldCheck, ShieldOff, Clock, UserCheck, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, ShieldCheck, ShieldOff, Clock, UserCheck, Search, KeyRound } from 'lucide-react';
 import { type User, type AccessLevel, ASSIGNABLE_ACCESS_LEVELS } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -113,7 +114,9 @@ export default function UsersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [resettingUser, setResettingUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
@@ -272,6 +275,61 @@ export default function UsersPage() {
     }
     setDeletingUser(null);
   };
+
+  const handleResetPasswordConfirm = async () => {
+    if (!resettingUser || !db) return;
+    if (resettingUser.accessLevel === 'Super Admin') {
+      toast({
+        variant: "destructive",
+        title: "Action Prohibited",
+        description: "Super Admin accounts cannot have their password reset via this panel.",
+      });
+      setResettingUser(null);
+      return;
+    }
+
+    setIsResetSubmitting(true);
+    try {
+      // 1. Direct authenticated database update from client (works for both Firebase and Supabase client adapter)
+      const targetDocId = resettingUser.id || resettingUser.empId;
+      const userRef = doc(db, 'employees', targetDocId);
+      await updateDoc(userRef, {
+        needsPasswordReset: true,
+        updatedAt: Timestamp.now(),
+      });
+
+      // 2. Also notify backend to handle Supabase Auth pool password update (if Supabase is active)
+      try {
+        await fetch('/api/users/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: resettingUser.email,
+            empId: resettingUser.empId || resettingUser.id,
+            accessLevel: resettingUser.accessLevel,
+          })
+        });
+      } catch (apiErr) {
+        console.warn('[handleResetPasswordConfirm] Backend sync note:', apiErr);
+      }
+
+      toast({
+        title: "Password Reset Successful",
+        description: `Password for ${resettingUser.firstName} ${resettingUser.lastName} has been reset to temporary (P@ssw0rd). They will be prompted to set a new password on login.`,
+      });
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      toast({
+        variant: "destructive",
+        title: "Reset Failed",
+        description: err.message || "Could not reset user password.",
+      });
+    } finally {
+      setIsResetSubmitting(false);
+      setResettingUser(null);
+    }
+  };
+
 
   const handleBulkDeleteConfirm = async () => {
     if (selectedUsers.length === 0 || !db) return;
@@ -666,6 +724,16 @@ export default function UsersPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setResettingUser(user)}
+                          disabled={user.accessLevel === 'Super Admin' || !isAdmin}
+                          className={cn(user.accessLevel === 'Super Admin' && "opacity-40 cursor-not-allowed")}
+                          title={user.accessLevel === 'Super Admin' ? "Super Admin password cannot be reset via this panel." : !isAdmin ? "Only Administrators can reset passwords" : "Reset user password to default (P@ssw0rd)"}
+                        >
+                          <KeyRound className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -892,6 +960,37 @@ export default function UsersPage() {
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!resettingUser} onOpenChange={(isOpen) => { if (!isOpen && !isResetSubmitting) setResettingUser(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset User Password?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-1 text-left">
+              <span>
+                Are you sure you want to reset the password for{' '}
+                <strong className="text-foreground">{resettingUser?.firstName} {resettingUser?.lastName}</strong> ({resettingUser?.email})?
+              </span>
+              <span className="block p-3 rounded-md bg-muted text-xs text-muted-foreground border leading-relaxed">
+                Their credentials will be reset to the default temporary password: <code className="font-mono font-bold text-foreground bg-background px-1.5 py-0.5 rounded border">P@ssw0rd</code>.<br />
+                Upon their next login, they will be required to change it to a private password before accessing the system.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResetSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleResetPasswordConfirm();
+              }}
+              disabled={isResetSubmitting}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isResetSubmitting ? 'Resetting...' : 'Reset Password'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -166,41 +166,41 @@ export default function AppLayout({ children }: PropsWithChildren) {
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
               <TooltipProvider delayDuration={150}>
                 <Tabs value={activeTab} onValueChange={onTabChange}>
-                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80">
-                        <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 border border-border/40">
+                        <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                           <Link href={getDefaultRouteForTab('my-projects')}>My Projects</Link>
                         </TabsTrigger>
                         {!showOnlyMyProjects && (
                           <>
                             {(hasAccess('Project Home') || hasAccess('Portfolio Dashboard')) && (
-                              <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                              <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('projects')}>Projects</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Estimations') || hasAccess('Defects')) && (
-                              <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                              <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('quality')}>Quality</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Billing') || hasAccess('Billing Rate')) && (
-                              <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                              <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('billing')}>Billing</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('User List') || hasAccess('Utilization')) && (
-                              <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                              <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('users')}>Users</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings') || hasAccess('Leave Tracker')) && (
-                              <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                              <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                                  <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5">
                                     <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
                                       <Settings className="h-4 w-4" />
                                       <span className="sr-only">Portfolio Settings</span>
@@ -215,7 +215,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             {(hasAccess('Portfolio Trash') || hasAccess('Trash')) && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
+                                  <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5">
                                     <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Portfolio Trash">
                                       <Trash2 className="h-4 w-4" />
                                       <span className="sr-only">Portfolio Trash</span>
@@ -230,7 +230,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                           </>
                         )}
                         {dynamicTab && (
-                          <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                          <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                             <Link href={dynamicTab.value === 'my-account' ? '/my-account' : '#'}>
                               {dynamicTab.label}
                             </Link>

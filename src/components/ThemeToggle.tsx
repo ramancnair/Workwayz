@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Leaf, Monitor, Moon, Sun, Waves } from "lucide-react"
+import { Check, Monitor, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
@@ -16,8 +16,6 @@ import {
 const themes = [
   { value: "light", label: "Light", icon: Sun },
   { value: "dark", label: "Dark", icon: Moon },
-  { value: "green", label: "Forest", icon: Leaf },
-  { value: "blue", label: "Ocean", icon: Waves },
   { value: "system", label: "System", icon: Monitor },
 ] as const
 

@@ -17,8 +17,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'ProjectFlow',
-  description: 'Manage your projects with ease and clarity.',
+  title: 'Workwayz',
+  description: 'Manage your projects with ease and clarity. Workwayz.in',
 };
 
 export default async function RootLayout({
@@ -33,8 +33,8 @@ export default async function RootLayout({
       <body className="font-body antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          themes={["light", "dark", "green", "blue", "system"]}
+          defaultTheme="dark"
+          themes={["light", "dark", "system"]}
           enableSystem
           disableTransitionOnChange
           nonce={nonce}

@@ -99,6 +99,15 @@ function ResetPasswordScreen({ user, onComplete }: { user: any; onComplete: () =
       const res = await changeUserPassword(newPassword, user.authProvider);
       
       if (res.success) {
+        // Clear needsPasswordReset in database
+        try {
+          const { db, doc, updateDoc } = await import('@/lib/db-provider');
+          const targetId = user?.empId || user?.id;
+          if (db && targetId) {
+            await updateDoc(doc(db, 'employees', targetId), { needsPasswordReset: false });
+          }
+        } catch (_) {}
+
         // Success! Update local storage
         const userStr = localStorage.getItem('projectflow_user');
         if (userStr) {

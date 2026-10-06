@@ -383,12 +383,18 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       <SidebarHeader className="p-2 transition-all duration-300">
         <div className="flex flex-col gap-3">
           <div className="flex items-center h-10 overflow-hidden">
-            <Waves className="w-8 h-8 text-primary shrink-0" />
-            <h1 className="ml-3 text-xl font-semibold text-sidebar-foreground transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
-                ProjectFlow
+            <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-sm ring-1 ring-white/10">
+              <img
+                src="/workwayz-icon.png"
+                alt="Workwayz"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <h1 className="ml-3 text-xl font-bold tracking-tight text-sidebar-foreground transition-all duration-300 ease-in-out group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 overflow-hidden whitespace-nowrap">
+              Workwayz
             </h1>
             <Button variant="ghost" size="icon" className="md:hidden ml-auto shrink-0 transition-all duration-300 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:w-0 overflow-hidden" onClick={toggleSidebar}>
-               <ChevronLeft />
+              <ChevronLeft />
             </Button>
           </div>
           <div className="flex items-center ml-[2px] gap-2">
