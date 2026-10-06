@@ -112,9 +112,9 @@ type CollectionName = 'epics' | 'stories' | 'sprints' | 'employees' | 'testCases
 
 const pageToCollectionMap: Record<string, CollectionName[]> = {
     '/development/dashboard': ['stories', 'sprints', 'releases', 'holidays', 'weeklyOffDays'],
-    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays'],
+    '/development/kanban': ['stories', 'epics', 'sprints', 'kanbanColumns', 'employees', 'environments', 'impactedSystems', 'releases', 'holidays', 'weeklyOffDays', 'testCases'],
     '/testing/defect-tracker': ['stories', 'epics', 'sprints', 'employees', 'environments', 'releases', 'testCases', 'testCycles'],
-    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases'],
+    '/development/grooming': ['stories', 'sprints', 'projectSettings', 'epics', 'employees', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'releases', 'testCases'],
     '/development/backlog': ['epics', 'stories', 'sprints', 'employees', 'releases', 'projectSettings', 'environments', 'impactedSystems', 'holidays', 'weeklyOffDays', 'testCases'],
     '/development/development-tasks': ['stories', 'employees', 'sprints', 'epics', 'holidays', 'impactedSystems', 'releases'],
     '/testing/dashboard': ['testCases', 'stories', 'sprints', 'releases', 'testCycles'],
@@ -627,6 +627,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
             : 1;
 
         const defaultPrefixMap: Record<WorkItemType, string> = {
+            'Story': 'ST',
             'User Story': 'US',
             'Requirement/Story': 'ST',
             'Feature Change': 'FC',
@@ -670,6 +671,11 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         if (['Sub Task', 'Subtasks'].includes(story.itemType) && story.parentStoryId) {
             await updateStoryEffort(story.parentStoryId);
         }
+        const newStoryItem: Story = { ...payload, id: newDocRef.id };
+        setStories((prev) => {
+            if (prev.some((s) => s.id === newDocRef.id)) return prev;
+            return [...prev, newStoryItem];
+        });
         return { id: newDocRef.id, storyId };
     } catch (e: any) {
         console.error("Firebase Error: Failed to add story.", e);
@@ -701,6 +707,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       let currentIdCounter = highestId + 1;
 
       const prefixMap: Record<WorkItemType, string> = {
+          'Story': 'ST',
           'User Story': 'US',
           'Requirement/Story': 'ST',
           'Feature Change': 'FC',
@@ -889,15 +896,61 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
 
   const deleteStory = async (storyId: string): Promise<boolean> => {
     if (!db || !projectId) return false;
-    const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
-    const storyToDelete = stories.find(s => s.id === storyId);
+    try {
+      const batch = writeBatch(db);
+      const now = Timestamp.now();
+      const storyRef = doc(db, 'projects', projectId, 'stories', storyId);
+      const storyToDelete = stories.find(s => s.id === storyId);
 
-    await updateDoc(storyRef, { isDeleted: true, deletedAt: Timestamp.now() });
+      // 1. Mark main story as deleted
+      batch.update(storyRef, { isDeleted: true, deletedAt: now });
 
-    if (storyToDelete?.itemType === 'Sub Task' && storyToDelete.parentStoryId) {
-      await updateStoryEffort(storyToDelete.parentStoryId);
+      // 2. Cascade delete all child items with parentStoryId == storyId (subtasks, defects, feature changes)
+      const qChildren = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId));
+      const childrenSnapshot = await getDocs(qChildren);
+      childrenSnapshot.forEach((childDoc: any) => {
+        batch.update(doc(db, 'projects', projectId, 'stories', childDoc.id), { isDeleted: true, deletedAt: now });
+      });
+
+      // 3. Cascade delete any defects with relatedBugId == storyId
+      const qRelated = query(collection(db, 'projects', projectId, 'stories'), where('relatedBugId', '==', storyId));
+      const relatedSnapshot = await getDocs(qRelated);
+      relatedSnapshot.forEach((relDoc: any) => {
+        batch.update(doc(db, 'projects', projectId, 'stories', relDoc.id), { isDeleted: true, deletedAt: now });
+      });
+
+      // 4. Cascade delete related test cases in testCases collection
+      const qTC = query(collection(db, 'projects', projectId, 'testCases'), where('storyId', '==', storyId));
+      const tcSnapshot = await getDocs(qTC);
+      tcSnapshot.forEach((tcDoc: any) => {
+        batch.update(doc(db, 'projects', projectId, 'testCases', tcDoc.id), { isDeleted: true, deletedAt: now });
+      });
+
+      // 5. Cascade delete test cases in testCycles subcollections
+      if (testCycles && testCycles.length > 0) {
+        for (const cycle of testCycles) {
+          try {
+            const qCycleTC = query(collection(db, 'projects', projectId, 'testCycles', cycle.id, 'testCases'), where('storyId', '==', storyId));
+            const cycleTCSnapshot = await getDocs(qCycleTC);
+            cycleTCSnapshot.forEach((cycleTCDoc: any) => {
+              batch.delete(doc(db, 'projects', projectId, 'testCycles', cycle.id, 'testCases', cycleTCDoc.id));
+            });
+          } catch (cycleErr) {
+            console.warn(`Could not delete test cycle test cases for cycle ${cycle.id}:`, cycleErr);
+          }
+        }
+      }
+
+      await batch.commit();
+
+      if (storyToDelete?.itemType === 'Sub Task' && storyToDelete.parentStoryId) {
+        await updateStoryEffort(storyToDelete.parentStoryId);
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to cascade delete story:", e);
+      return false;
     }
-    return true;
   };
 
   const moveStoryToSprint = async (storyId: string, sprintId: string | null): Promise<boolean> => {
@@ -963,14 +1016,38 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     if (!db || !projectId || storyIds.length === 0) return false;
     try {
       const batch = writeBatch(db);
-      storyIds.forEach(id => {
+      const now = Timestamp.now();
+
+      for (const id of storyIds) {
         const storyRef = doc(db, 'projects', projectId, 'stories', id);
-        batch.update(storyRef, { isDeleted: true, deletedAt: Timestamp.now() });
-      });
+        batch.update(storyRef, { isDeleted: true, deletedAt: now });
+
+        // Cascade children
+        const qChildren = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', id));
+        const childrenSnapshot = await getDocs(qChildren);
+        childrenSnapshot.forEach((childDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'stories', childDoc.id), { isDeleted: true, deletedAt: now });
+        });
+
+        // Cascade related defects
+        const qRelated = query(collection(db, 'projects', projectId, 'stories'), where('relatedBugId', '==', id));
+        const relatedSnapshot = await getDocs(qRelated);
+        relatedSnapshot.forEach((relDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'stories', relDoc.id), { isDeleted: true, deletedAt: now });
+        });
+
+        // Cascade test cases
+        const qTC = query(collection(db, 'projects', projectId, 'testCases'), where('storyId', '==', id));
+        const tcSnapshot = await getDocs(qTC);
+        tcSnapshot.forEach((tcDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'testCases', tcDoc.id), { isDeleted: true, deletedAt: now });
+        });
+      }
+
       await batch.commit();
       return true;
     } catch (e) {
-      console.error("Firebase Error: Failed to bulk delete stories.", e);
+      console.error("Firebase Error: Failed to bulk cascade delete stories.", e);
       return false;
     }
   };
@@ -1383,7 +1460,12 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
             testCaseId: `TC-${newIdNumber}`, 
             isDeleted: false,
         };
-        await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
+        const newDocRef = await addDoc(collection(db, 'projects', projectId, 'testCases'), sanitizeForFirestore(payload));
+        const newTestCaseItem: TestCase = { ...payload, id: newDocRef.id };
+        setTestCases((prev) => {
+            if (prev.some((tc) => tc.id === newDocRef.id)) return prev;
+            return [...prev, newTestCaseItem];
+        });
         return true;
     } catch (e: any) {
         console.error("Firebase Error: Failed to add test case.", { code: e.code, message: e.message, fullError: e });
@@ -1402,7 +1484,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
       let currentIdCounter = testCasesSnapshot.size > 0 ? Math.max(0, ...testCasesSnapshot.docs.map(doc => parseInt(doc.data().testCaseId.replace('TC-', ''), 10) || 0)) + 1 : 1;
 
-      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story' || s.itemType === 'User Story');
+      const storiesToLink = stories.filter(s => s.itemType === 'Story' || s.itemType === 'Requirement/Story' || s.itemType === 'User Story');
 
       for (const environmentId in counts) {
         const count = counts[environmentId];
@@ -2634,8 +2716,31 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
   const restoreItem = async (id: string, collectionName: string): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      const batch = writeBatch(db);
       const itemRef = doc(db, 'projects', projectId, collectionName, id);
-      await updateDoc(itemRef, { isDeleted: false, deletedAt: null });
+      batch.update(itemRef, { isDeleted: false, deletedAt: null });
+
+      if (collectionName === 'stories') {
+        const qChildren = query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', id));
+        const childrenSnapshot = await getDocs(qChildren);
+        childrenSnapshot.forEach((childDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'stories', childDoc.id), { isDeleted: false, deletedAt: null });
+        });
+
+        const qRelated = query(collection(db, 'projects', projectId, 'stories'), where('relatedBugId', '==', id));
+        const relatedSnapshot = await getDocs(qRelated);
+        relatedSnapshot.forEach((relDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'stories', relDoc.id), { isDeleted: false, deletedAt: null });
+        });
+
+        const qTC = query(collection(db, 'projects', projectId, 'testCases'), where('storyId', '==', id));
+        const tcSnapshot = await getDocs(qTC);
+        tcSnapshot.forEach((tcDoc: any) => {
+          batch.update(doc(db, 'projects', projectId, 'testCases', tcDoc.id), { isDeleted: false, deletedAt: null });
+        });
+      }
+
+      await batch.commit();
       return true;
     } catch (e) {
       console.error(`Firebase Error: Failed to restore item from ${collectionName}.`, e);

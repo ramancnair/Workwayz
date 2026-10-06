@@ -8,6 +8,7 @@ import { aiAssumptionGenerator, type AiAssumptionGeneratorInput, type AiAssumpti
 import { aiDependencyGenerator, type AiDependencyGeneratorInput, type AiDependencyGeneratorOutput } from '@/ai/flows/ai-dependency-generator';
 import { aiSuggestTechStack, type TechStackSuggestionInput, type TechStackSuggestionOutput } from '@/ai/flows/ai-suggest-tech-stack';
 import { aiSuggestHorizontals, type HorizontalSuggestionInput, type HorizontalSuggestionOutput } from '@/ai/flows/ai-suggest-horizontals';
+import { aiSubtaskTestCaseGenerator, type AiSubtaskTestCaseGeneratorInput, type AiSubtaskTestCaseGeneratorOutput } from '@/ai/flows/ai-subtask-testcase-generator';
 
 export async function getAiTaskSuggestions(
   input: AiTaskTestSuggestionsInput
@@ -102,6 +103,18 @@ export async function getAiHorizontalSuggestions(
   } catch (e: any) {
     console.error('AI Horizontal Suggestion Flow Error:', e);
     return { error: e.message || 'An unexpected error occurred while generating horizontal suggestions.' };
+  }
+}
+
+export async function generateSubtasksAndTestCasesAction(
+  input: AiSubtaskTestCaseGeneratorInput
+): Promise<{ subTasks: AiSubtaskTestCaseGeneratorOutput['subTasks']; testCases: AiSubtaskTestCaseGeneratorOutput['testCases'] } | { error: string }> {
+  try {
+    const result = await aiSubtaskTestCaseGenerator(input);
+    return { subTasks: result.subTasks, testCases: result.testCases };
+  } catch (e: any) {
+    console.error('AI Subtask & Test Case Generator Flow Error:', e);
+    return { error: e.message || 'An unexpected error occurred while generating subtasks and test cases.' };
   }
 }
 

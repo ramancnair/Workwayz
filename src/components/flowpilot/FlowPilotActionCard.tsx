@@ -72,6 +72,8 @@ export function FlowPilotActionCard({ action, onNavigate }: FlowPilotActionCardP
     switch (itemType) {
       case 'Bug':
         return <Bug className="w-4 h-4 text-red-500" />;
+      case 'Story':
+      case 'User Story':
       case 'Requirement/Story':
         return <BookOpen className="w-4 h-4 text-blue-500" />;
       case 'Task':

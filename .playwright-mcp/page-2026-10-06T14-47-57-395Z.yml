@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - img "Workwayz Logo" [ref=e9]
+        - generic [ref=e10]: Workwayz
+      - generic [ref=e11]: Workwayz.in
+    - generic [ref=e12]:
+      - heading "Log in to your account" [level=1] [ref=e13]
+      - paragraph [ref=e14]: Enter your email and password below to login
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - text: Email
+        - textbox "Email" [ref=e17]:
+          - /placeholder: m@example.com
+          - text: admin@zopcode.com
+      - generic [ref=e18]:
+        - text: Password
+        - textbox "Password" [ref=e19]: Password123!
+      - generic [ref=e20]:
+        - checkbox "Remember me on this computer" [ref=e21] [cursor=pointer]
+        - checkbox [aria-hidden]
+        - generic [ref=e22] [cursor=pointer]: Remember me on this computer
+      - button "Log in" [ref=e23] [cursor=pointer]
+      - generic [ref=e24]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e25] [cursor=pointer]:
+          - /url: /signup
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e33]
+  - alert [ref=e37]

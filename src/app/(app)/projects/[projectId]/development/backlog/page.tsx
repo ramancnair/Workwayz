@@ -49,8 +49,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem, BugSeverity, TestCase } from '@/types';
-import { isPbiWorkItem, isExecutionWorkItem, isBugWorkItem, PBI_WORK_ITEM_TYPES, WORK_ITEM_TAXONOMY } from '@/types';
+import type { Epic, Story, Sprint, SprintStatus, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem, BugSeverity, TestCase } from '@/types';
+import { isPbiWorkItem, isExecutionWorkItem, isBugWorkItem, PBI_WORK_ITEM_TYPES, WORK_ITEM_TAXONOMY, formatWorkItemType } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -68,12 +68,14 @@ import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AiSubtaskTestCaseButton } from '@/components/kanban/AiSubtaskTestCaseButton';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/datepicker';
 import { getAiStorySuggestions } from '@/app/actions';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Story': BookOpen,
   'User Story': BookOpen,
   'Requirement/Story': BookOpen,
   'Feature Change': GitCommit,
@@ -109,6 +111,7 @@ const epicFormSchema = z.object({
 
 const storyFormSchema = z.object({
   itemType: z.enum([
+    'Story',
     'User Story',
     'Requirement/Story',
     'Feature Change',
@@ -180,7 +183,7 @@ const bulkMoveSchema = z.object({
 });
 
 
-function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
+function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete?: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
   const Icon = workItemIcons[story.itemType] || BookOpen;
   const subTasks = useMemo(() => subItems?.filter(i => isExecutionWorkItem(i.itemType) && !isBugWorkItem(i.itemType)) || [], [subItems]);
   const bugs = useMemo(() => subItems?.filter(i => isBugWorkItem(i.itemType)) || [], [subItems]);
@@ -262,9 +265,24 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
                   e.stopPropagation();
                   onClick();
                 }}
+                title="Edit"
               >
                 <Edit className="h-4 w-4" />
               </Button>
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -418,8 +436,47 @@ export default function BacklogPage() {
   const [storiesToMove, setStoriesToMove] = useState<string[]>([]);
   const [groupBy, setGroupBy] = useState<'epic' | 'sprint'>('epic');
 
+  const storiesToDeleteCascadeInfo = useMemo(() => {
+    if (storiesToDelete.length === 0) return { targetStory: null, subTasksCount: 0, defectsCount: 0, testCasesCount: 0 };
+    const idSet = new Set(storiesToDelete);
+    const targetStory = storiesToDelete.length === 1 ? (stories.find(s => s.id === storiesToDelete[0]) || null) : null;
+    
+    let subTasksCount = 0;
+    let defectsCount = 0;
+    let testCasesCount = 0;
+
+    stories.forEach(s => {
+      if (s.parentStoryId && idSet.has(s.parentStoryId) && !idSet.has(s.id) && !s.isDeleted) {
+        if (s.itemType === 'Sub Task' || s.itemType === 'Subtasks') {
+          subTasksCount++;
+        } else if (isBugWorkItem(s.itemType)) {
+          defectsCount++;
+        } else {
+          subTasksCount++;
+        }
+      } else if (s.relatedBugId && idSet.has(s.relatedBugId) && !idSet.has(s.id) && !s.isDeleted) {
+        defectsCount++;
+      }
+    });
+
+    testCases.forEach(tc => {
+      if (tc.storyId && idSet.has(tc.storyId) && !tc.isDeleted) {
+        testCasesCount++;
+      }
+    });
+
+    return { targetStory, subTasksCount, defectsCount, testCasesCount };
+  }, [storiesToDelete, stories, testCases]);
+
   useEffect(() => {
     setSelectedStories(prev => prev.filter(id => stories.some(s => s.id === id && !s.isDeleted)));
+    setSelectionStack(prev => {
+      if (prev.length === 0) return prev;
+      return prev.map(stackedStory => {
+        const latest = stories.find(s => s.id === stackedStory.id);
+        return latest || stackedStory;
+      });
+    });
   }, [stories]);
 
   const [addParentStoryText, setAddParentStoryText] = useState('');
@@ -582,11 +639,15 @@ export default function BacklogPage() {
     resolver: zodResolver(storyFormSchema),
   });
   
+  const [editStoryActiveTab, setEditStoryActiveTab] = useState<string>('details');
+
   const handleSetSelectedStory = (story: Story | null) => {
     if (story) {
         setSelectionStack([story]);
+        setEditStoryActiveTab('details');
     } else {
         setSelectionStack([]);
+        setEditStoryActiveTab('details');
     }
   };
 
@@ -1284,12 +1345,12 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Requirement
+                Add Story
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
               <DialogHeader className="px-6 py-4 border-b shrink-0">
-                <DialogTitle>Add New Requirement</DialogTitle>
+                <DialogTitle>Add New Story</DialogTitle>
               </DialogHeader>
               <Form {...addStoryForm}>
                 <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1303,7 +1364,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
-                                <SelectValue placeholder="Select a requirement type" />
+                                <SelectValue placeholder="Select a story type" />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[380px]">
@@ -1422,6 +1483,64 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             </FormItem>
                             )}
                         />
+                        <AiSubtaskTestCaseButton
+                          itemType={watchedItemType}
+                          title={addStoryForm.watch('title')}
+                          description={addStoryForm.watch('description')}
+                          acceptanceCriteria={addStoryForm.watch('acceptanceCriteria')}
+                          impactedSystemIds={addStoryForm.watch('impactedSystemIds') || []}
+                          sprintId={addStoryForm.watch('sprintId')}
+                          releaseId={addStoryForm.watch('releaseId')}
+                          onPreSaveStory={async () => {
+                            const values = addStoryForm.getValues();
+                            if (!values.title || values.title.trim().length === 0) {
+                              toast({
+                                variant: 'destructive',
+                                title: 'Title Required',
+                                description: 'Please enter a title before generating subtasks and test cases.',
+                              });
+                              return null;
+                            }
+                            const newStoryPayload: Omit<Story, 'id' | 'storyId'> = {
+                              title: values.title.trim(),
+                              description: values.description || '',
+                              itemType: values.itemType as WorkItemType,
+                              acceptanceCriteria: values.acceptanceCriteria,
+                              reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
+                              assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
+                              epicId: isPbiWorkItem(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : undefined,
+                              parentStoryId: (isBugWorkItem(values.itemType) || values.itemType === 'Feature Change') ? (values.parentStoryId || undefined) : undefined,
+                              relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
+                              status: 'To Do',
+                              estimatedHours: values.estimatedHours,
+                              priority: values.priority as Priority | undefined,
+                              severity: values.severity as BugSeverity | undefined,
+                              sprintId: values.sprintId === 'backlog' ? null : values.sprintId,
+                              releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
+                              foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
+                              relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
+                              impactedSystemIds: values.impactedSystemIds,
+                              attachments: values.attachments,
+                              isDeleted: false,
+                              deletedAt: null,
+                              createdAt: new Date().toISOString(),
+                            };
+                            const created = await addStory(newStoryPayload) as any;
+                            const newStoryId = created?.id || (typeof created === 'string' ? created : null);
+                            return newStoryId || null;
+                          }}
+                          onSuccess={({ targetStoryId }) => {
+                            setAddRequirementOpen(false);
+                            const values = addStoryForm.getValues();
+                            const fullStory = stories.find(s => s.id === targetStoryId) || {
+                              ...values,
+                              id: targetStoryId,
+                              storyId: 'ST-NEW',
+                            } as unknown as Story;
+                            handleSetSelectedStory(fullStory);
+                            setEditStoryActiveTab('subTasks');
+                          }}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {isPbiWorkItem(watchedItemType) ? (
                             <FormField
@@ -1503,7 +1622,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement / Story' : 'Related Story'}</FormLabel>
+                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Story' : 'Related Story'}</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-add"
@@ -1920,6 +2039,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                       epic={storyEpic}
                                       assignee={assignee}
                                       onClick={() => handleSetSelectedStory(story)}
+                                      onDelete={() => setStoriesToDelete([story.id])}
                                       subItems={subItems}
                                       sprint={sprint}
                                       release={release}
@@ -2051,6 +2171,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                   epic={storyEpic}
                                   assignee={assignee}
                                   onClick={() => handleSetSelectedStory(story)}
+                                  onDelete={() => setStoriesToDelete([story.id])}
                                   subItems={subItems}
                                   sprint={sprint}
                                   release={release}
@@ -2077,6 +2198,41 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
           )}
         </div>
       </div>
+
+      {selectedStories.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card/95 backdrop-blur-md border border-border/80 shadow-2xl rounded-full px-5 py-2.5 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+          <span className="text-xs font-semibold text-foreground whitespace-nowrap">
+            {selectedStories.length} {selectedStories.length === 1 ? 'item' : 'items'} selected
+          </span>
+          <div className="h-4 w-px bg-border shrink-0" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs rounded-full gap-1.5"
+            onClick={() => setStoriesToMove(selectedStories)}
+          >
+            <Move className="h-3.5 w-3.5" />
+            Move
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 text-xs rounded-full gap-1.5"
+            onClick={() => setStoriesToDelete(selectedStories)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete ({selectedStories.length})
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs rounded-full text-muted-foreground hover:text-foreground"
+            onClick={() => setSelectedStories([])}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
 
       <Dialog open={!!editingEpic} onOpenChange={(isOpen) => !isOpen && setEditingEpic(null)}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
@@ -2169,9 +2325,41 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
       <AlertDialog open={storiesToDelete.length > 0} onOpenChange={(isOpen) => !isOpen && setStoriesToDelete([])}>
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Delete Selected Stories?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Are you sure you want to move {storiesToDelete.length} item(s) to the trash?
+                <AlertDialogTitle>
+                  {storiesToDeleteCascadeInfo.targetStory
+                    ? `Delete ${formatWorkItemType(storiesToDeleteCascadeInfo.targetStory.itemType)}?`
+                    : `Delete ${storiesToDelete.length} Selected Items?`}
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    <p>
+                      Are you sure you want to delete {storiesToDeleteCascadeInfo.targetStory ? (
+                        <><strong>&quot;{storiesToDeleteCascadeInfo.targetStory.title}&quot;</strong>?</>
+                      ) : (
+                        <>{storiesToDelete.length} item(s)?</>
+                      )}
+                    </p>
+                    {(storiesToDeleteCascadeInfo.subTasksCount > 0 || storiesToDeleteCascadeInfo.defectsCount > 0 || storiesToDeleteCascadeInfo.testCasesCount > 0) ? (
+                      <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-destructive dark:text-red-400 space-y-1">
+                        <p className="font-semibold text-xs uppercase tracking-wide">
+                          Full Cascade Delete: All related items will also be moved to trash:
+                        </p>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
+                          {storiesToDeleteCascadeInfo.subTasksCount > 0 && (
+                            <li>{storiesToDeleteCascadeInfo.subTasksCount} related subtask(s)</li>
+                          )}
+                          {storiesToDeleteCascadeInfo.defectsCount > 0 && (
+                            <li>{storiesToDeleteCascadeInfo.defectsCount} related defect(s)</li>
+                          )}
+                          {storiesToDeleteCascadeInfo.testCasesCount > 0 && (
+                            <li>{storiesToDeleteCascadeInfo.testCasesCount} related test case(s)</li>
+                          )}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="text-xs">It will be moved to the trash and can be restored later.</p>
+                    )}
+                  </div>
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2426,10 +2614,24 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             </TabsContent>
                         </Tabs>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isEditStorySubmitting}>
-                            {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            setStoriesToDelete([selectedStory.id]);
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Sub Task
+                      </Button>
+                      <Button type="submit" disabled={isEditStorySubmitting}>
+                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -2541,7 +2743,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="parent-story-options-defect-edit-backlog"
-                                    placeholder="Search for a story/requirement..."
+                                    placeholder="Search for a story..."
                                     className="pl-9"
                                     value={editParentStoryText}
                                     onChange={(e) => {
@@ -2848,7 +3050,21 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         />
                       </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            setStoriesToDelete([selectedStory.id]);
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Defect
+                      </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -2865,10 +3081,10 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                        <DialogTitle>Edit {formatWorkItemType(selectedStory.itemType)}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
+                        Make changes to your {formatWorkItemType(selectedStory.itemType).toLowerCase()} here. Click save when you&apos;re done.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -2886,7 +3102,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                       </FormItem>
                     )}
                   />
-                    <Tabs defaultValue="details" className="w-full">
+                    <Tabs value={editStoryActiveTab} onValueChange={setEditStoryActiveTab} className="w-full">
                          <TabsList variant="folder">
                             <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
                             {isPbiWorkItem(selectedStory.itemType) && (
@@ -2993,6 +3209,19 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             </FormItem>
                             )}
                         />
+                        <AiSubtaskTestCaseButton
+                          storyId={selectedStory.id}
+                          itemType={selectedStory.itemType}
+                          title={editStoryForm.watch('title') || selectedStory.title}
+                          description={editStoryForm.watch('description')}
+                          acceptanceCriteria={editStoryForm.watch('acceptanceCriteria')}
+                          impactedSystemIds={editStoryForm.watch('impactedSystemIds') || []}
+                          sprintId={editStoryForm.watch('sprintId')}
+                          releaseId={editStoryForm.watch('releaseId')}
+                          onSuccess={() => {
+                            setEditStoryActiveTab('subTasks');
+                          }}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {isPbiWorkItem(selectedStory.itemType) ? (
                             <FormField
@@ -3053,7 +3282,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>Original Requirement</FormLabel>
+                              <FormLabel>Original Story</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-edit"
@@ -3180,7 +3409,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                         <Input
                                             list="predecessor-options-edit"
-                                            placeholder="Select predecessor requirement..."
+                                            placeholder="Select predecessor story..."
                                             className="pl-9"
                                             value={editPredecessorText}
                                             onChange={(e) => {
@@ -3464,7 +3693,21 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           </TabsContent>
                     </Tabs>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            setStoriesToDelete([selectedStory.id]);
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete {formatWorkItemType(selectedStory.itemType)}
+                      </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>

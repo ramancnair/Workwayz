@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { PageHeader } from '@/components/PageHeader';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -76,7 +76,7 @@ export default function ProjectTrashPage() {
       .map(s => ({
         id: s.id,
         name: s.title,
-        type: (s.itemType === 'Requirement/Story' ? 'Story' : s.itemType) as TrashedItemType,
+        type: (s.itemType === 'Requirement/Story' || s.itemType === 'User Story' ? 'Story' : s.itemType) as TrashedItemType,
         deletedAt: s.deletedAt!,
         collection: 'stories' as 'stories',
       }));

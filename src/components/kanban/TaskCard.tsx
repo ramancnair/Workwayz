@@ -11,6 +11,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Story': BookOpen,
   'User Story': BookOpen,
   'Requirement/Story': BookOpen,
   'Feature Change': GitCommit,

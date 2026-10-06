@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase, isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase, isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
 import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,7 @@ import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
+import { AiSubtaskTestCaseButton } from '@/components/kanban/AiSubtaskTestCaseButton';
 
 const sprintStatuses: SprintStatus[] = ['Yet to Start', 'Current', 'Completed', 'Cancelled'];
 
@@ -68,6 +69,7 @@ const sprintSchema = z.object({
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Story': BookOpen,
   'User Story': BookOpen,
   'Requirement/Story': BookOpen,
   'Feature Change': GitCommit,
@@ -141,6 +143,7 @@ function StoryItemCard({
     parentStory,
     onMove, 
     onEdit,
+    onDelete,
     onSubItemClick,
 }: { 
     story: Story, 
@@ -150,6 +153,7 @@ function StoryItemCard({
     parentStory?: Story,
     onMove: (storyId: string, sprintId: string | null) => void,
     onEdit: () => void;
+    onDelete?: () => void;
     onSubItemClick: (story: Story) => void;
 }) {
   const { sprints, impactedSystems } = useProject();
@@ -249,9 +253,14 @@ function StoryItemCard({
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     {epic && <Badge variant="secondary">{epic.title}</Badge>}
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }} title="Edit">
                     <Edit className="h-4 w-4" />
                     </Button>
+                    {onDelete && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete">
+                      <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                 </div>
             </div>
             <div className="flex justify-between items-center text-xs text-muted-foreground mt-2">
@@ -330,6 +339,7 @@ function SprintColumn({
     showNav,
     onMoveStory,
     onEditStory,
+    onDeleteStory,
     viewBy,
 }: { 
     sprint: Sprint & { stories: Story[] }, 
@@ -342,6 +352,7 @@ function SprintColumn({
     showNav: boolean,
     onMoveStory: (storyId: string, sprintId: string | null) => void,
     onEditStory: (story: Story) => void,
+    onDeleteStory?: (story: Story) => void,
     viewBy: 'story' | 'sub-task' | 'bug',
 }) {
     const { epics, employees, impactedSystems, projectSettings, stories: allStories } = useProject();
@@ -463,6 +474,7 @@ function SprintColumn({
                                 parentStory={parentStory}
                                 onMove={onMoveStory}
                                 onEdit={() => onEditStory(story)}
+                                onDelete={onDeleteStory ? () => onDeleteStory(story) : undefined}
                                 onSubItemClick={onEditStory}
                             />
                         </div>
@@ -488,6 +500,7 @@ export default function GroomingPage() {
         updateSprint,
         deleteSprint,
         updateStory,
+        deleteStory,
         environments,
         holidays,
         weeklyOffDays,
@@ -504,6 +517,39 @@ export default function GroomingPage() {
     const [deletingSprint, setDeletingSprint] = useState<Sprint | null>(null);
     const [selectionStack, setSelectionStack] = useState<Story[]>([]);
     const selectedStory = selectionStack[selectionStack.length - 1] || null;
+    const [editStoryActiveTab, setEditStoryActiveTab] = useState<string>('details');
+    const [storyToDelete, setStoryToDelete] = useState<Story | null>(null);
+
+    const storyToDeleteCascadeInfo = useMemo(() => {
+        if (!storyToDelete) return { subTasksCount: 0, defectsCount: 0, testCasesCount: 0 };
+        const id = storyToDelete.id;
+        
+        let subTasksCount = 0;
+        let defectsCount = 0;
+        let testCasesCount = 0;
+
+        stories.forEach(s => {
+            if (s.parentStoryId === id && s.id !== id && !s.isDeleted) {
+                if (s.itemType === 'Sub Task' || s.itemType === 'Subtasks') {
+                    subTasksCount++;
+                } else if (isBugWorkItem(s.itemType)) {
+                    defectsCount++;
+                } else {
+                    subTasksCount++;
+                }
+            } else if (s.relatedBugId === id && s.id !== id && !s.isDeleted) {
+                defectsCount++;
+            }
+        });
+
+        testCases.forEach(tc => {
+            if (tc.storyId === id && !tc.isDeleted) {
+                testCasesCount++;
+            }
+        });
+
+        return { subTasksCount, defectsCount, testCasesCount };
+    }, [storyToDelete, stories, testCases]);
     const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
     const [visibleSprintIndex, setVisibleSprintIndex] = useState(0);
     const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
@@ -759,8 +805,18 @@ export default function GroomingPage() {
             }
         }
     }, [isSprintDialogOpen, editingSprint, sprintForm]);
-    
     useEffect(() => {
+        setSelectionStack(prev => {
+            if (prev.length === 0) return prev;
+            return prev.map(stackedStory => {
+                const latest = stories.find(s => s.id === stackedStory.id);
+                return latest || stackedStory;
+            });
+        });
+    }, [stories]);
+
+    useEffect(() => {
+        setEditStoryActiveTab('details');
         if (!selectedStory) {
           setShowAddSubTask(false);
           subTaskForm.reset();
@@ -1109,6 +1165,7 @@ export default function GroomingPage() {
                                             parentStory={parentStory}
                                             onMove={moveStoryToSprint}
                                             onEdit={() => handleSetSelectedStory(story)}
+                                            onDelete={() => setStoryToDelete(story)}
                                             onSubItemClick={handleDrillDown}
                                         />
                                     </div>
@@ -1132,6 +1189,7 @@ export default function GroomingPage() {
                             showNav={sprintsWithStories.length > 1}
                             onMoveStory={moveStoryToSprint}
                             onEditStory={(story) => handleSetSelectedStory(story)}
+                            onDeleteStory={(story) => setStoryToDelete(story)}
                             viewBy={viewBy}
                         />
                     ) : (
@@ -1261,6 +1319,61 @@ export default function GroomingPage() {
                 className={cn(buttonVariants({ variant: 'destructive' }))}
                 >
                 Continue
+                </AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!storyToDelete} onOpenChange={(isOpen) => !isOpen && setStoryToDelete(null)}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Delete {storyToDelete ? formatWorkItemType(storyToDelete.itemType) : 'Item'}?</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                        <p>
+                            Are you sure you want to delete <strong>&quot;{storyToDelete?.title}&quot;</strong>?
+                        </p>
+                        {(storyToDeleteCascadeInfo.subTasksCount > 0 || storyToDeleteCascadeInfo.defectsCount > 0 || storyToDeleteCascadeInfo.testCasesCount > 0) ? (
+                            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-destructive dark:text-red-400 space-y-1">
+                                <p className="font-semibold text-xs uppercase tracking-wide">
+                                    Full Cascade Delete: All related items will also be moved to trash:
+                                </p>
+                                <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
+                                    {storyToDeleteCascadeInfo.subTasksCount > 0 && (
+                                        <li>{storyToDeleteCascadeInfo.subTasksCount} related subtask(s)</li>
+                                    )}
+                                    {storyToDeleteCascadeInfo.defectsCount > 0 && (
+                                        <li>{storyToDeleteCascadeInfo.defectsCount} related defect(s)</li>
+                                    )}
+                                    {storyToDeleteCascadeInfo.testCasesCount > 0 && (
+                                        <li>{storyToDeleteCascadeInfo.testCasesCount} related test case(s)</li>
+                                    )}
+                                </ul>
+                            </div>
+                        ) : (
+                            <p className="text-xs">It will be moved to the trash and can be restored later.</p>
+                        )}
+                    </div>
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                onClick={() => {
+                    if (storyToDelete) {
+                        deleteStory(storyToDelete.id).then(success => {
+                            if (success) {
+                                toast({ title: "Deleted", description: `"${storyToDelete.title}" moved to trash.` });
+                            } else {
+                                toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+                            }
+                        });
+                        setStoryToDelete(null);
+                    }
+                }}
+                className={cn(buttonVariants({ variant: 'destructive' }))}
+                >
+                Delete
                 </AlertDialogAction>
             </AlertDialogFooter>
             </AlertDialogContent>
@@ -1428,10 +1541,27 @@ export default function GroomingPage() {
                             </TabsContent>
                         </Tabs>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isEditStorySubmitting}>
-                            {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            deleteStory(selectedStory.id).then(success => {
+                              if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete sub-task." });
+                              else toast({ title: "Deleted", description: "Sub-task moved to trash." });
+                            });
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Sub Task
+                      </Button>
+                      <Button type="submit" disabled={isEditStorySubmitting}>
+                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -1850,7 +1980,24 @@ export default function GroomingPage() {
                         />
                       </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            deleteStory(selectedStory.id).then(success => {
+                              if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete defect." });
+                              else toast({ title: "Deleted", description: "Defect moved to trash." });
+                            });
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Defect
+                      </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -1880,7 +2027,7 @@ export default function GroomingPage() {
                         </FormItem>
                         )}
                     />
-                     <Tabs defaultValue="details" className="w-full">
+                     <Tabs value={editStoryActiveTab} onValueChange={setEditStoryActiveTab} className="w-full">
                           <TabsList variant="folder">
                             <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
                              {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
@@ -1986,6 +2133,17 @@ export default function GroomingPage() {
                                     <FormMessage />
                                 </FormItem>
                                 )}
+                            />
+                            <AiSubtaskTestCaseButton
+                              storyId={selectedStory.id}
+                              itemType={selectedStory.itemType}
+                              title={editStoryForm.watch('title') || selectedStory.title}
+                              description={editStoryForm.watch('description')}
+                              acceptanceCriteria={editStoryForm.watch('acceptanceCriteria')}
+                              impactedSystemIds={editStoryForm.watch('impactedSystemIds') || []}
+                              sprintId={editStoryForm.watch('sprintId')}
+                              releaseId={editStoryForm.watch('releaseId')}
+                              onSuccess={() => setEditStoryActiveTab('subTasks')}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {isPbiWorkItem(selectedStory.itemType) ? (
@@ -2435,7 +2593,23 @@ export default function GroomingPage() {
                           </TabsContent>
                     </Tabs>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStory) {
+                            deleteStory(selectedStory.id).then(success => {
+                              if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+                            });
+                            handleSetSelectedStory(null);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete {formatWorkItemType(selectedStory.itemType)}
+                      </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>

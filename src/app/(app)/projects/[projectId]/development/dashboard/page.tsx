@@ -150,7 +150,7 @@ export default function DevelopmentDashboard() {
       const sprintStories = stories.filter(story => story.sprintId === sprint.id && !story.isDeleted);
       
       const isLeafOrStandaloneInSprint = (item: Story) => {
-          if (['Requirement/Story', 'Feature Change'].includes(item.itemType)) {
+          if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(item.itemType)) {
               const sprintSubItems = subItemsByStoryId[item.id]?.filter(si => si.sprintId === sprint.id && !si.isDeleted) || [];
               return sprintSubItems.length === 0;
           }
@@ -213,7 +213,7 @@ export default function DevelopmentDashboard() {
       const releaseStories = stories.filter(s => s.releaseId === release.id && !s.isDeleted);
       
       const isLeafOrStandaloneInRelease = (item: Story) => {
-          if (['Requirement/Story', 'Feature Change'].includes(item.itemType)) {
+          if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(item.itemType)) {
               const releaseSubItems = subItemsByStoryId[item.id]?.filter(si => si.releaseId === release.id && !si.isDeleted) || [];
               return releaseSubItems.length === 0;
           }
@@ -267,6 +267,8 @@ export default function DevelopmentDashboard() {
     stories.forEach(story => {
         const isCompleted = story.status === 'Done';
         switch (story.itemType) {
+            case 'Story':
+            case 'User Story':
             case 'Requirement/Story':
                 stats.stories.total++;
                 if (isCompleted) stats.stories.completed++;

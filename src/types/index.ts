@@ -26,6 +26,7 @@ export type StoryStatus = string;
 
 // [Backlog / PBI Level] — The "What" (Prioritized by PO / PM)
 export type PbiWorkItemType =
+  | 'Story'
   | 'User Story'
   | 'Feature Change'
   | 'Task'
@@ -41,6 +42,7 @@ export type ExecutionWorkItemType =
   | 'In-Sprint Bug';
 
 export type LegacyWorkItemType =
+  | 'Story'
   | 'Requirement/Story'
   | 'Bug';
 
@@ -75,21 +77,29 @@ export const EXECUTION_WORK_ITEM_TYPES: ExecutionWorkItemType[] = [
 ];
 
 export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
-  'User Story': {
-    type: 'User Story',
-    label: 'User Story',
-    level: 'PBI',
-    prefix: 'US',
-    description: 'Functional capability delivering user/business value',
-    placeholder: 'User Story title',
-  },
-  'Requirement/Story': {
-    type: 'Requirement/Story',
-    label: 'User Story',
+  'Story': {
+    type: 'Story',
+    label: 'Story',
     level: 'PBI',
     prefix: 'ST',
     description: 'Functional capability delivering user/business value',
-    placeholder: 'User Story title',
+    placeholder: 'Story title',
+  },
+  'User Story': {
+    type: 'User Story',
+    label: 'Story',
+    level: 'PBI',
+    prefix: 'US',
+    description: 'Functional capability delivering user/business value',
+    placeholder: 'Story title',
+  },
+  'Requirement/Story': {
+    type: 'Requirement/Story',
+    label: 'Story',
+    level: 'PBI',
+    prefix: 'ST',
+    description: 'Functional capability delivering user/business value',
+    placeholder: 'Story title',
   },
   'Feature Change': {
     type: 'Feature Change',
@@ -173,9 +183,16 @@ export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
   },
 };
 
+export const formatWorkItemType = (type: string | undefined | null): string => {
+  if (!type) return 'Item';
+  if (type === 'Requirement/Story' || type === 'User Story') return 'Story';
+  return WORK_ITEM_TAXONOMY[type as WorkItemType]?.label || type;
+};
+
 export const isPbiWorkItem = (type: string | undefined | null): boolean => {
   if (!type) return false;
   return [
+    'Story',
     'User Story',
     'Requirement/Story',
     'Feature Change',

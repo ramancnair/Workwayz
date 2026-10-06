@@ -27,9 +27,9 @@ describe('executeFpPmQuery', () => {
       { id: 'EMP001', empId: 'EMP001', firstName: 'Alice', lastName: 'Walker', email: 'alice@example.com' },
     ],
     stories: [
-      { id: 'S1', storyId: 'US-01', title: 'User Login', status: 'Done', itemType: 'Requirement/Story', storyPoints: 5, assigneeName: 'Bob Smith' },
-      { id: 'S2', storyId: 'US-02', title: 'Payment Processing', status: 'In Progress', itemType: 'Requirement/Story', storyPoints: 8, assigneeName: 'Alice Walker' },
-      { id: 'S3', storyId: 'US-03', title: 'Audit Trail Export', status: 'Blocked', itemType: 'Requirement/Story', storyPoints: 3, assigneeName: 'Bob Smith' },
+      { id: 'S1', storyId: 'US-01', title: 'User Login', status: 'Done', itemType: 'Story', storyPoints: 5, assigneeName: 'Bob Smith' },
+      { id: 'S2', storyId: 'US-02', title: 'Payment Processing', status: 'In Progress', itemType: 'Story', storyPoints: 8, assigneeName: 'Alice Walker' },
+      { id: 'S3', storyId: 'US-03', title: 'Audit Trail Export', status: 'Blocked', itemType: 'Story', storyPoints: 3, assigneeName: 'Bob Smith' },
       { id: 'S4', storyId: 'BUG-01', title: 'Null pointer in session', status: 'In Progress', itemType: 'Bug', severity: 'Critical', storyPoints: 2, assigneeName: 'Alice Walker' },
     ],
     sprints: [

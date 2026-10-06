@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -17,13 +17,23 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Circle, BookOpen, Bug, CheckSquare, GitCommit, Search, ArrowLeft, Layers, Wrench, Zap } from 'lucide-react';
+import { Circle, BookOpen, Bug, CheckSquare, GitCommit, Search, ArrowLeft, Layers, Wrench, Zap, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,9 +43,11 @@ import { cn, getSprintDisplayId, matchSearchQuery } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
-import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
+import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
+import { AiSubtaskTestCaseButton } from '@/components/kanban/AiSubtaskTestCaseButton';
 
 const workItemTypes: WorkItemType[] = [
+  'Story',
   'User Story',
   'Feature Change',
   'Task',
@@ -51,6 +63,7 @@ const workItemTypes: WorkItemType[] = [
 ];
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Story': BookOpen,
   'User Story': BookOpen,
   'Requirement/Story': BookOpen,
   'Feature Change': GitCommit,
@@ -133,6 +146,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     releasesAndMilestones,
     impactedSystems,
     updateStory,
+    deleteStory,
     holidays,
     weeklyOffDays,
     projectSettings,
@@ -145,15 +159,18 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
 
   const [activeStoryId, setActiveStoryId] = useState<string | null>(storyId);
   const [history, setHistory] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('details');
 
   useEffect(() => {
     setActiveStoryId(storyId);
     setHistory(storyId ? [storyId] : []);
+    setActiveTab('details');
   }, [storyId]);
 
   const handleDrillDown = (item: Story) => {
     setHistory(prev => [...prev, item.id]);
     setActiveStoryId(item.id);
+    setActiveTab('details');
   };
 
   const handleGoBack = () => {
@@ -161,6 +178,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
       if (prev.length <= 1) return prev;
       const next = prev.slice(0, -1);
       setActiveStoryId(next[next.length - 1]);
+      setActiveTab('details');
       return next;
     });
   };
@@ -168,6 +186,62 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   const selectedStory = useMemo(() => stories.find(s => s.id === activeStoryId) || null, [stories, activeStoryId]);
 
   const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const deleteCascadeInfo = useMemo(() => {
+    if (!selectedStory) return { subTasksCount: 0, defectsCount: 0, testCasesCount: 0 };
+    const id = selectedStory.id;
+    let subTasksCount = 0;
+    let defectsCount = 0;
+    let testCasesCount = 0;
+
+    stories.forEach(s => {
+      if (s.parentStoryId === id && s.id !== id && !s.isDeleted) {
+        if (s.itemType === 'Sub Task' || s.itemType === 'Subtasks') {
+          subTasksCount++;
+        } else if (isBugWorkItem(s.itemType)) {
+          defectsCount++;
+        } else {
+          subTasksCount++;
+        }
+      } else if (s.relatedBugId === id && s.id !== id && !s.isDeleted) {
+        defectsCount++;
+      }
+    });
+
+    testCases.forEach(tc => {
+      if (tc.storyId === id && !tc.isDeleted) {
+        testCasesCount++;
+      }
+    });
+
+    return { subTasksCount, defectsCount, testCasesCount };
+  }, [selectedStory, stories, testCases]);
+
+  const handleDelete = async () => {
+    if (!selectedStory) return;
+    setIsDeleting(true);
+    try {
+      const success = await deleteStory(selectedStory.id);
+      if (success) {
+        toast({
+          title: "Moved to trash",
+          description: `"${selectedStory.title}" was moved to trash.`,
+        });
+        setShowDeleteConfirm(false);
+        onClose();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not delete item.",
+        });
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const [testCaseInputText, setTestCaseInputText] = useState('');
@@ -257,7 +331,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     resolver: zodResolver(storyFormSchema),
   });
 
-  const parentStories = useMemo(() => stories.filter(s => ['User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['Story', 'User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
@@ -353,7 +427,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     if (success) {
         onClose();
     } else {
-        toast({ variant: "destructive", title: `Error Editing ${selectedStory.itemType}`, description: "Could not save your changes." });
+        toast({ variant: "destructive", title: `Error Editing ${formatWorkItemType(selectedStory.itemType)}`, description: "Could not save your changes." });
     }
     setIsEditStorySubmitting(false);
   };
@@ -429,6 +503,11 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     if (!selectedStory) return false;
     return subItemsEffort > 0;
   }, [selectedStory, subItemsEffort]);
+
+  const selectedStoryTestCases = useMemo(() => {
+    if (!selectedStory) return [];
+    return testCases.filter((tc) => tc.storyId === selectedStory.id);
+  }, [selectedStory, testCases]);
 
   return (
     <Dialog open={!!storyId} onOpenChange={(open) => !open && onClose()}>
@@ -601,10 +680,19 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             </TabsContent>
                         </Tabs>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isEditStorySubmitting}>
-                            {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
-                        </Button>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={isDeleting || isEditStorySubmitting}
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete {formatWorkItemType(selectedStory.itemType)}
+                      </Button>
+                      <Button type="submit" disabled={isEditStorySubmitting || isDeleting}>
+                        {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
+                      </Button>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -716,7 +804,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="parent-story-options-defect-edit-kanban"
-                                    placeholder="Search for a story/requirement..."
+                                    placeholder="Search for a story..."
                                     className="pl-9"
                                     value={editParentStoryText}
                                     onChange={(e) => {
@@ -1023,8 +1111,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                         />
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button type="submit" disabled={isEditStorySubmitting}>
+                    <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={isDeleting || isEditStorySubmitting}
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete {formatWorkItemType(selectedStory.itemType)}
+                      </Button>
+                      <Button type="submit" disabled={isEditStorySubmitting || isDeleting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </DialogFooter>
@@ -1040,10 +1137,10 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           <ArrowLeft className="h-4 w-4" />
                         </Button>
                       )}
-                      <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                      <DialogTitle>Edit {formatWorkItemType(selectedStory.itemType)}</DialogTitle>
                     </div>
                     <DialogDescription>
-                      Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
+                      Make changes to your {formatWorkItemType(selectedStory.itemType).toLowerCase()} here. Click save when you&apos;re done.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -1061,7 +1158,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                       </FormItem>
                     )}
                   />
-                    <Tabs defaultValue="details" className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList variant="folder">
                             <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
                             {isPbiWorkItem(selectedStory.itemType) && (
@@ -1076,6 +1173,12 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                         Defects
                                         <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                             {selectedStorySubItems.bugs.length}
+                                        </Badge>
+                                    </TabsTrigger>
+                                    <TabsTrigger variant="folder" value="testCases">
+                                        Test Cases
+                                        <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
+                                            {selectedStoryTestCases.length}
                                         </Badge>
                                     </TabsTrigger>
                                 </>
@@ -1162,6 +1265,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             </FormItem>
                             )}
                         />
+                        <AiSubtaskTestCaseButton
+                          storyId={selectedStory.id}
+                          itemType={selectedStory.itemType}
+                          title={editStoryForm.watch('title') || selectedStory.title}
+                          description={editStoryForm.watch('description')}
+                          acceptanceCriteria={editStoryForm.watch('acceptanceCriteria')}
+                          impactedSystemIds={editStoryForm.watch('impactedSystemIds') || []}
+                          sprintId={editStoryForm.watch('sprintId')}
+                          releaseId={editStoryForm.watch('releaseId')}
+                          onSuccess={() => setActiveTab('subTasks')}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {isPbiWorkItem(selectedStory.itemType) ? (
                             <FormField
@@ -1222,7 +1336,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>Original Requirement</FormLabel>
+                              <FormLabel>Original Story</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-edit"
@@ -1398,6 +1512,25 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                     )}
                                 </div>
                             </TabsContent>
+                            <TabsContent value="testCases" className="pt-4">
+                                <div className="space-y-4">
+                                    {selectedStoryTestCases.length > 0 ? (
+                                        <div className="space-y-2 rounded-md border p-2">
+                                            {selectedStoryTestCases.map((tc) => (
+                                                <div key={tc.id} className="flex items-center justify-between text-sm p-2 hover:bg-muted/50 rounded-md">
+                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                        <Badge variant="secondary" className="shrink-0">{tc.testCaseId}</Badge>
+                                                        <span className="font-medium truncate">{tc.title}</span>
+                                                    </div>
+                                                    <Badge variant="outline" className="ml-2 shrink-0">{tc.type}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic px-2 text-center py-4">No test cases linked.</p>
+                                    )}
+                                </div>
+                            </TabsContent>
                         </>
                     )}
                     <TabsContent value="logs">
@@ -1428,8 +1561,17 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                     </TabsContent>
                     </Tabs>
                   </div>
-                  <DialogFooter>
-                    <Button type="submit" disabled={isEditStorySubmitting}>
+                  <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={isDeleting || isEditStorySubmitting}
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete {formatWorkItemType(selectedStory.itemType)}
+                    </Button>
+                    <Button type="submit" disabled={isEditStorySubmitting || isDeleting}>
                       {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </DialogFooter>
@@ -1438,6 +1580,50 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
               )}
             </>
           )}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedStory ? formatWorkItemType(selectedStory.itemType) : 'Item'}?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Are you sure you want to delete <strong>&quot;{selectedStory?.title}&quot;</strong>?
+                  </p>
+                  {(deleteCascadeInfo.subTasksCount > 0 || deleteCascadeInfo.defectsCount > 0 || deleteCascadeInfo.testCasesCount > 0) ? (
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-destructive dark:text-red-400 space-y-1">
+                      <p className="font-semibold text-xs uppercase tracking-wide">
+                        Full Cascade Delete: All related items will also be moved to trash:
+                      </p>
+                      <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
+                        {deleteCascadeInfo.subTasksCount > 0 && (
+                          <li>{deleteCascadeInfo.subTasksCount} related subtask(s)</li>
+                        )}
+                        {deleteCascadeInfo.defectsCount > 0 && (
+                          <li>{deleteCascadeInfo.defectsCount} related defect(s)</li>
+                        )}
+                        {deleteCascadeInfo.testCasesCount > 0 && (
+                          <li>{deleteCascadeInfo.testCasesCount} related test case(s)</li>
+                        )}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-xs">It will be moved to the trash and can be restored later.</p>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={cn(buttonVariants({ variant: 'destructive' }))}
+                disabled={isDeleting}
+                onClick={handleDelete}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </DialogContent>
       </Dialog>
   );

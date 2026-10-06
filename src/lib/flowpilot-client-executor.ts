@@ -241,13 +241,14 @@ export async function executeClientCreateWorkItem(params: {
   parentStoryId?: string;
   impactedSystemIds?: string[];
 }) {
-  const { projectId, itemType = 'Requirement/Story', title, description = '', priority = 'Medium', severity, status = 'To Do', ...rest } = params;
+  const { projectId, itemType = 'Story', title, description = '', priority = 'Medium', severity, status = 'To Do', ...rest } = params;
   if (!db || !projectId) throw new Error('Database or Project ID is missing');
 
   const projectDocRef = doc(db, 'projects', projectId);
   const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
 
   const prefixMap: Record<WorkItemType, string> = {
+    'Story': 'ST',
     'User Story': 'US',
     'Requirement/Story': 'ST',
     'Feature Change': 'FC',

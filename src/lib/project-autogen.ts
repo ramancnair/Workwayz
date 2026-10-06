@@ -493,7 +493,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   const storyRefObjs: { id: string; storyId: string; sprintId: string }[] = [];
   const releaseRef = doc(col('releases'));
 
-  // 10a. Requirements / Stories & Subtasks
+  // 10a. Stories & Subtasks
   storyTitles.forEach((title, i) => {
     const stRef = doc(col('stories'));
     const storyId = `ST-${storyCounter++}`;
@@ -530,7 +530,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       storyId,
       title,
       description: `User story: As a user I want to ${title.toLowerCase()} so that productivity improves.`,
-      itemType: 'Requirement/Story',
+      itemType: 'Story',
       status: finalStatus,
       statusHistory: storyHistory,
       developmentStartDate: inProgEntry?.date,

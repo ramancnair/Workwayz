@@ -171,7 +171,7 @@ A specialized configuration portal optimized for hybrid execution models. It pro
 
 ### Development Dashboard & Backlog Management
 *   **Development Dashboard:** Tracks engineering momentum using an active *Sprint Burndown* line matrix alongside a cumulative *Release Burnup* progress chart.
-*   **Product Backlog Core:** Hierarchical container structure managing engineering requirements categorized by item types: *Requirement/Story*, *Feature Change*, *Task*, or *Bug*.
+*   **Product Backlog Core:** Hierarchical container structure managing engineering requirements categorized by item types: *Story*, *Feature Change*, *Task*, or *Bug*.
 *   **User Story Elaboration Flow:** Business Analysts and Product Owners structure target requirements inside the backlog container. Tech Leads then inspect the dependencies to map impacted components. Developers subsequently populate sub-tasks against those components, outputting explicit hourly or day-based estimations. The cumulative total forms the structural size metric of the parent user story.
 *   **Story Point Monitization Bridge:** For contemporary agile squads utilizing abstract Story Points, Workwayz features a built-in algorithmic conversion utility mapping point targets to contract billing hour approximations.
 

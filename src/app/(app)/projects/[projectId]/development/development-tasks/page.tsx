@@ -152,7 +152,7 @@ export default function DevelopmentTasksPage() {
   }, [projStart, projEnd, project]);
 
   const subTasks = stories.filter(story => story.itemType === 'Sub Task');
-  const parentStories = stories.filter(s => ['Requirement/Story', 'Feature Change'].includes(s.itemType));
+  const parentStories = stories.filter(s => ['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(s.itemType));
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
 
   const [filters, setFilters] = useState<Record<string, string[]>>({ search: [] });

@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity, TestCase } from '@/types';
-import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
+import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -59,8 +59,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from 'date-fns';
 import { DatePicker } from '@/components/ui/datepicker';
+import { AiSubtaskTestCaseButton } from '@/components/kanban/AiSubtaskTestCaseButton';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'Story': BookOpen,
   'User Story': BookOpen,
   'Requirement/Story': BookOpen,
   'Feature Change': GitCommit,
@@ -158,6 +160,7 @@ function StoryCard({
   columns: KanbanColumn[]; 
   onStatusChange?: (newStatus: StoryStatus) => void; 
   onEdit: () => void; 
+  onDelete?: () => void;
   className?: string; 
   isMoveToDoneDisabled?: boolean; 
   subItems?: Story[], 
@@ -235,10 +238,15 @@ function StoryCard({
                   </div>
                 )}
             </div>
-            <div className="flex items-center flex-shrink-0">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+            <div className="flex items-center flex-shrink-0 gap-0.5">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit} title="Edit">
                     <Edit className="h-4 w-4" />
                 </Button>
+                {onDelete && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete">
+                      <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
             </div>
         </div>
       </div>
@@ -399,8 +407,39 @@ export default function KanbanPage() {
   const [viewBy, setViewBy] = useState<'story' | 'sub-task'>('story');
   const [selectionStack, setSelectionStack] = useState<Story[]>([]);
   const selectedStory = selectionStack[selectionStack.length - 1] || null;
+  const [editStoryActiveTab, setEditStoryActiveTab] = useState<string>('details');
   const [editingTestCase, setEditingTestCase] = useState<TestCase | null>(null);
   const [deletingStory, setDeletingStory] = useState<Story | null>(null);
+
+  const deletingStoryCascadeInfo = useMemo(() => {
+    if (!deletingStory) return { subTasksCount: 0, defectsCount: 0, testCasesCount: 0 };
+    const id = deletingStory.id;
+    let subTasksCount = 0;
+    let defectsCount = 0;
+    let testCasesCount = 0;
+
+    stories.forEach(s => {
+      if (s.parentStoryId === id && s.id !== id && !s.isDeleted) {
+        if (s.itemType === 'Sub Task' || s.itemType === 'Subtasks') {
+          subTasksCount++;
+        } else if (isBugWorkItem(s.itemType)) {
+          defectsCount++;
+        } else {
+          subTasksCount++;
+        }
+      } else if (s.relatedBugId === id && s.id !== id && !s.isDeleted) {
+        defectsCount++;
+      }
+    });
+
+    testCases.forEach(tc => {
+      if (tc.storyId === id && !tc.isDeleted) {
+        testCasesCount++;
+      }
+    });
+
+    return { subTasksCount, defectsCount, testCasesCount };
+  }, [deletingStory, stories, testCases]);
   const [isEditStorySubmitting, setIsEditStorySubmitting] = useState(false);
   const [editParentStoryText, setEditParentStoryText] = useState('');
   const releases = releasesAndMilestones.filter(r => r.itemType === 'Release');
@@ -519,7 +558,7 @@ export default function KanbanPage() {
     return acc;
   }, {} as Record<string, Story[]>), [stories]);
 
-  const parentStories = useMemo(() => stories.filter(s => ['User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['Story', 'User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
@@ -539,8 +578,18 @@ export default function KanbanPage() {
     value: s.id,
     label: `[${s.storyId}] ${s.title}`,
   })), [stories, selectedStory]);
+  useEffect(() => {
+    setSelectionStack(prev => {
+      if (prev.length === 0) return prev;
+      return prev.map(stackedStory => {
+        const latest = stories.find(s => s.id === stackedStory.id);
+        return latest || stackedStory;
+      });
+    });
+  }, [stories]);
 
   useEffect(() => {
+    setEditStoryActiveTab('details');
     if (!selectedStory) {
         setIsEditStorySubmitting(false);
         return;
@@ -807,6 +856,7 @@ export default function KanbanPage() {
                                moveStoryStatus(story.id, finalStatus as StoryStatus);
                              }} 
                              onEdit={() => handleSetSelectedStory(story)}
+                             onDelete={() => setDeletingStory(story)}
                             isMoveToDoneDisabled={isMoveToDoneDisabled}
                             subItems={subItems}
                             onSubItemClick={handleDrillDown}
@@ -1082,7 +1132,7 @@ export default function KanbanPage() {
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="parent-story-options-defect-edit-kanban-page"
-                                    placeholder="Search for a story/requirement..."
+                                    placeholder="Search for a story..."
                                     className="pl-9"
                                     value={editParentStoryText}
                                     onChange={(e) => {
@@ -1406,10 +1456,10 @@ export default function KanbanPage() {
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                        <DialogTitle>Edit {formatWorkItemType(selectedStory.itemType)}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
+                        Make changes to your {formatWorkItemType(selectedStory.itemType).toLowerCase()} here. Click save when you&apos;re done.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -1426,7 +1476,7 @@ export default function KanbanPage() {
                           </FormItem>
                           )}
                       />
-                      <Tabs defaultValue="details" className="w-full">
+                      <Tabs value={editStoryActiveTab} onValueChange={setEditStoryActiveTab} className="w-full">
                           <TabsList variant="folder">
                               <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
                               {!['Task'].includes(selectedStory.itemType) && (
@@ -1533,6 +1583,17 @@ export default function KanbanPage() {
                                       </FormItem>
                                       )}
                                   />
+                                  <AiSubtaskTestCaseButton
+                                    storyId={selectedStory.id}
+                                    itemType={selectedStory.itemType}
+                                    title={editStoryForm.watch('title') || selectedStory.title}
+                                    description={editStoryForm.watch('description')}
+                                    acceptanceCriteria={editStoryForm.watch('acceptanceCriteria')}
+                                    impactedSystemIds={editStoryForm.watch('impactedSystemIds') || []}
+                                    sprintId={editStoryForm.watch('sprintId')}
+                                    releaseId={editStoryForm.watch('releaseId')}
+                                    onSuccess={() => setEditStoryActiveTab('subTasks')}
+                                  />
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {isPbiWorkItem(selectedStory.itemType) ? (
                                       <FormField
@@ -1593,7 +1654,7 @@ export default function KanbanPage() {
                                        name="parentStoryId" 
                                        render={({ field }) => (
                                            <FormItem>
-                                           <FormLabel>Original Requirement</FormLabel>
+                                           <FormLabel>Original Story</FormLabel>
                                            <FormControl>
                                                <Input 
                                                    list="parent-story-options"
@@ -1907,6 +1968,61 @@ export default function KanbanPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingStory} onOpenChange={(isOpen) => !isOpen && setDeletingStory(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deletingStory ? formatWorkItemType(deletingStory.itemType) : 'Item'}?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Are you sure you want to delete <strong>&quot;{deletingStory?.title}&quot;</strong>?
+                </p>
+                {(deletingStoryCascadeInfo.subTasksCount > 0 || deletingStoryCascadeInfo.defectsCount > 0 || deletingStoryCascadeInfo.testCasesCount > 0) ? (
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-destructive dark:text-red-400 space-y-1">
+                    <p className="font-semibold text-xs uppercase tracking-wide">
+                      Full Cascade Delete: All related items will also be moved to trash:
+                    </p>
+                    <ul className="list-disc list-inside text-xs space-y-0.5 ml-1">
+                      {deletingStoryCascadeInfo.subTasksCount > 0 && (
+                        <li>{deletingStoryCascadeInfo.subTasksCount} related subtask(s)</li>
+                      )}
+                      {deletingStoryCascadeInfo.defectsCount > 0 && (
+                        <li>{deletingStoryCascadeInfo.defectsCount} related defect(s)</li>
+                      )}
+                      {deletingStoryCascadeInfo.testCasesCount > 0 && (
+                        <li>{deletingStoryCascadeInfo.testCasesCount} related test case(s)</li>
+                      )}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-xs">It will be moved to the trash and can be restored later.</p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+              onClick={() => {
+                if (deletingStory) {
+                  deleteStory(deletingStory.id).then(success => {
+                    if (success) {
+                      toast({ title: "Deleted", description: `"${deletingStory.title}" and related items moved to trash.` });
+                    } else {
+                      toast({ variant: "destructive", title: "Error", description: "Could not delete story." });
+                    }
+                  });
+                  setDeletingStory(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <TestCaseEditDialog
         testCase={editingTestCase}

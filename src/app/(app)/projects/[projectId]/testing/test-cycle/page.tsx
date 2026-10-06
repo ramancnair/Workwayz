@@ -1318,9 +1318,9 @@ export default function TestCyclePage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  {/* Related Requirement (read-only, from the original) */}
+                  {/* Related Story (read-only, from the original) */}
                   <FormItem>
-                    <FormLabel>Related Requirement</FormLabel>
+                    <FormLabel>Related Story</FormLabel>
                     <Input
                       readOnly
                       value={editingTestCase?.storyId

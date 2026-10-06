@@ -237,7 +237,7 @@ export default function ProjectDashboardPage() {
       if (timeSpentSprintId !== 'all' && story.sprintId !== timeSpentSprintId) return false;
       if (timeSpentReleaseId !== 'all' && story.releaseId !== timeSpentReleaseId) return false;
 
-      if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+      if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(story.itemType)) {
         if (parentIdsWithSubTasks.has(story.id)) {
           return false;
         }
@@ -289,7 +289,7 @@ export default function ProjectDashboardPage() {
       if (timeSpentSprintId !== 'all' && story.sprintId !== timeSpentSprintId) return false;
       if (timeSpentReleaseId !== 'all' && story.releaseId !== timeSpentReleaseId) return false;
 
-      if (['Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+      if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(story.itemType)) {
         if (parentIdsWithSubTasks.has(story.id)) {
           return false;
         }

@@ -1,0 +1,1483 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Workwayz
+              - generic:
+                - button:
+                  - generic: Toggle Sidebar
+                - generic:
+                  - button:
+                    - generic: Toggle theme
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /my-projects
+                  - generic: My Projects
+          - generic:
+            - list:
+              - listitem:
+                - link:
+                  - /url: /projects/P2600001/development/dashboard
+                  - generic: Development Dashboard
+              - listitem:
+                - link:
+                  - /url: /projects/P2600001/development/backlog
+                  - generic: Product Backlog
+              - listitem:
+                - link:
+                  - /url: /projects/P2600001/development/development-tasks
+                  - generic: Sub-Tasks
+              - listitem:
+                - link:
+                  - /url: /projects/P2600001/development/grooming
+                  - generic: Grooming
+              - listitem:
+                - link:
+                  - /url: /projects/P2600001/development/kanban
+                  - generic: Kanban Board
+          - generic:
+            - generic:
+              - generic: SA
+              - generic:
+                - generic: Super Admin
+                - generic: Super Admin
+                - generic: admin@zopcode.com
+    - main:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - tablist:
+                - tab: Initial Estimation
+                - tab: Project Details
+                - tab: Resources
+                - tab: Releases
+                - tab [selected]: Development
+                - tab: Testing
+                - tab: Governance
+                - tab: Holidays
+                - tab: PMO
+                - tab:
+                  - generic: Project Settings
+                - tab:
+                  - generic: Project Trash
+          - generic:
+            - heading [level=1]: Microservices Architecture Migration (Batch 26-1)
+            - paragraph: P2600001
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=2]: Product Backlog
+                - paragraph: Manage your epics and stories.
+              - generic:
+                - button: AI Req Gen
+                - button: Add Epic
+                - button: Add Story
+            - generic:
+              - generic:
+                - generic: "Group by:"
+                - generic:
+                  - tablist:
+                    - tab [selected]: By Epic
+                    - tab: By Sprint
+              - generic:
+                - generic:
+                  - text: "Total:"
+                  - generic: "51"
+                - generic:
+                  - text: "In Sprints:"
+                  - generic: "50"
+                - generic:
+                  - text: "Backlog:"
+                  - generic: "1"
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=3]:
+                      - button [expanded]:
+                        - generic:
+                          - generic: Core Platform Features
+                          - generic: 7 items
+                          - generic: (7 in sprint, 0 backlog)
+                          - generic:
+                            - progressbar
+                            - generic: 59%
+                    - generic:
+                      - button
+                      - button
+                  - region:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - checkbox
+                          - generic: Select All
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-33
+                                      - paragraph: Report Generation
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Do
+                                  - generic:
+                                    - generic: "9"
+                                    - generic: 89h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: FC-42
+                                      - paragraph: Update email template design
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                                  - generic: 17h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-1
+                                      - paragraph: User Authentication & Login
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic:
+                                    - generic: "6"
+                                    - generic: 52h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-17
+                                      - paragraph: Notification System
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 24h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-25
+                                      - paragraph: Role-Based Access Control
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                                  - generic:
+                                    - generic: "6"
+                                    - generic: 47h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: FC-41
+                                      - paragraph: Change payment flow
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic: 18h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-9
+                                      - paragraph: Profile Management
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Core Platform Features
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 29h
+                - generic:
+                  - generic:
+                    - heading [level=3]:
+                      - button [expanded]:
+                        - generic:
+                          - generic: User Experience Enhancements
+                          - generic: 7 items
+                          - generic: (7 in sprint, 0 backlog)
+                          - generic:
+                            - progressbar
+                            - generic: 36%
+                    - generic:
+                      - button
+                      - button
+                  - region:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - checkbox
+                          - generic: Select All
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-13
+                                      - paragraph: Data Export to CSV/Excel
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 35h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-21
+                                      - paragraph: Search & Filter Functionality
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In QA
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 35h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-37
+                                      - paragraph: Settings & Configuration Page
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Do
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 31h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-29
+                                      - paragraph: Audit Logging
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 33h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: TASK-44
+                                      - paragraph: Configure CI/CD pipeline
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Do
+                                  - generic: 11h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: ST-5
+                                      - paragraph: Dashboard Overview Widget
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Done
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 22h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: TASK-43
+                                      - paragraph: Upgrade Node.js runtime
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: User Experience Enhancements
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In QA
+                                  - generic: 15h
+                - generic:
+                  - generic:
+                    - heading [level=3]:
+                      - button [expanded]:
+                        - generic:
+                          - generic: Unassigned
+                          - generic: 37 items
+                          - generic: (36 in sprint, 1 backlog)
+                  - region:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - checkbox
+                          - generic: Select All
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-46
+                                      - paragraph: "SIT: Deadlock when saving story status (#2)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-75
+                                      - paragraph: "Production: Concurrent worklog corrupts total hours (#1)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-57
+                                      - paragraph: "SIT: Auth token expires prematurely on refresh (#13)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-55
+                                      - paragraph: "SIT: Batch import API validation error (#11)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Resolved
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-54
+                                      - paragraph: "SIT: Thread exhaustion on parallel background tasks (#10)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-74
+                                      - paragraph: "UAT: Utilization heatmaps difficult in light mode (#12)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-65
+                                      - paragraph: "UAT: Payment milestone layout mismatch (#3)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Resolved
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-58
+                                      - paragraph: "SIT: Memory leak in real-time chart re-rendering (#14)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-52
+                                      - paragraph: "SIT: System error on generating utilization reports (#8)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Closed
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-78
+                                      - paragraph: "Production: CDN assets slow to load in APAC region (#4)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-64
+                                      - paragraph: "UAT: Utilization heatmaps difficult in light mode (#2)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-70
+                                      - paragraph: "UAT: Move to Backlog button wording issue (#8)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-80
+                                      - paragraph: "Production: Billing rounding issue on fixed-bid (#6)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-69
+                                      - paragraph: "UAT: Profile editing avatar selection unsaved (#7)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-66
+                                      - paragraph: "UAT: Missing confirmation on archiving project (#4)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-50
+                                      - paragraph: "SIT: File upload fails for attachments > 2MB (#6)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-68
+                                      - paragraph: "UAT: Dashboard counts archived items incorrectly (#6)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-48
+                                      - paragraph: "SIT: Memory leak in real-time chart re-rendering (#4)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-59
+                                      - paragraph: "SIT: Layout shift when resizing employee sidebar (#15)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-53
+                                      - paragraph: "SIT: WebSocket disconnects after 5 minutes (#9)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-71
+                                      - paragraph: "UAT: Datepicker allows past dates on sprint create (#9)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-47
+                                      - paragraph: "SIT: Auth token expires prematurely on refresh (#3)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-77
+                                      - paragraph: "Production: Webhook signature verification error (#3)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-72
+                                      - paragraph: "UAT: Export to CSV button hidden on small screens (#10)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-73
+                                      - paragraph: "UAT: Holiday generator confirmation modal issue (#11)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-56
+                                      - paragraph: "SIT: Deadlock when saving story status (#12)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Closed
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-62
+                                      - paragraph: "SIT: System error on generating utilization reports (#18)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Closed
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-67
+                                      - paragraph: "UAT: Text overlap in resource Gantt headers (#5)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-79
+                                      - paragraph: "Production: Safari browser crash on grid layout (#5)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-76
+                                      - paragraph: "Production: Auth rate limit exceeded on high load (#2)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 3
+                                    - generic: REL-1
+                                    - generic: To Triage
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-45
+                                      - paragraph: "SIT: Batch import API validation error (#1)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Closed
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: US-97
+                                      - paragraph: Alert
+                                  - generic:
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Backlog
+                                    - generic: To Do
+                                  - generic:
+                                    - generic: "3"
+                                    - generic: 18h
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-63
+                                      - paragraph: "UAT: Holiday generator confirmation modal issue (#1)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 2
+                                    - generic: REL-1
+                                    - generic: Open
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-49
+                                      - paragraph: "SIT: Layout shift when resizing employee sidebar (#5)"
+                                  - generic:
+                                    - button:
+                                      - generic: BS
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Resolved
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-61
+                                      - paragraph: "SIT: Incorrect JSON webhook payload signature (#17)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Resolved
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-60
+                                      - paragraph: "SIT: File upload fails for attachments > 2MB (#16)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: In Progress
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - checkbox
+                                    - generic:
+                                      - generic:
+                                        - button
+                                        - paragraph: BUG-51
+                                      - paragraph: "SIT: Incorrect JSON webhook payload signature (#7)"
+                                  - generic:
+                                    - button:
+                                      - generic: RG
+                                    - button
+                                    - button
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Sprint 1
+                                    - generic: REL-1
+                                    - generic: Open
+  - generic [aria-hidden]:
+    - button
+  - list
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button "Open Next.js Dev Tools"
+  - alert
+  - dialog [ref=f1e2600]:
+    - generic [ref=f1e2601]:
+      - generic [ref=f1e2602]:
+        - generic [ref=f1e2603]:
+          - heading "Edit Story" [level=2] [ref=f1e2605]
+          - paragraph [ref=f1e2606]: Make changes to your story here. Click save when you're done.
+        - button "Close" [active] [ref=f1e2607] [cursor=pointer]
+      - generic [ref=f1e2612]:
+        - generic [ref=f1e2613]:
+          - text: Title
+          - textbox "Title" [ref=f1e2614]:
+            - /placeholder: Story title
+            - text: User Authentication & Login
+        - generic [ref=f1e2615]:
+          - tablist [ref=f1e2616]:
+            - tab "Details" [selected]
+            - tab "Subtasks 6" [ref=f1e2617] [cursor=pointer]:
+              - text: Subtasks
+              - generic [ref=f1e2618]: "6"
+            - tab "In-Sprint Bugs 0" [ref=f1e2619] [cursor=pointer]:
+              - text: In-Sprint Bugs
+              - generic [ref=f1e2620]: "0"
+            - tab "Test Cases 3" [ref=f1e2621] [cursor=pointer]:
+              - text: Test Cases
+              - generic [ref=f1e2622]: "3"
+            - tab "Logs 4" [ref=f1e2623] [cursor=pointer]:
+              - text: Logs
+              - generic [ref=f1e2624]: "4"
+          - tabpanel "Details" [ref=f1e2625]:
+            - generic [ref=f1e2626]:
+              - generic [ref=f1e2627]:
+                - text: Impacted Systems
+                - generic [ref=f1e2628]:
+                  - generic [ref=f1e2629]:
+                    - checkbox "Front End" [checked] [ref=f1e2630] [cursor=pointer]
+                    - checkbox [checked] [aria-hidden]
+                    - generic [ref=f1e2631]: Front End
+                  - generic [ref=f1e2632]:
+                    - checkbox "Middleware" [checked] [ref=f1e2633] [cursor=pointer]
+                    - checkbox [checked] [aria-hidden]
+                    - generic [ref=f1e2634]: Middleware
+                  - generic [ref=f1e2635]:
+                    - checkbox "DB" [checked] [ref=f1e2636] [cursor=pointer]
+                    - checkbox [checked] [aria-hidden]
+                    - generic [ref=f1e2637]: DB
+              - generic [ref=f1e2638]:
+                - text: Description
+                - textbox "Description" [ref=f1e2639]:
+                  - /placeholder: Describe the story...
+                  - text: "User story: As a user I want to user authentication & login so that productivity improves."
+              - generic [ref=f1e2640]:
+                - text: Acceptance Criteria
+                - textbox "Acceptance Criteria" [ref=f1e2641]:
+                  - /placeholder: Define acceptance criteria for this story...
+              - button "AI sub-item gen" [ref=f1e2644] [cursor=pointer]
+              - generic [ref=f1e2646]:
+                - generic [ref=f1e2647]:
+                  - text: Epic
+                  - combobox "Epic" [ref=f1e2648] [cursor=pointer]:
+                    - generic: Core Platform Features
+                  - combobox [aria-hidden] [ref=f1e2651]
+                - generic [ref=f1e2652]:
+                  - text: Assignee
+                  - combobox "Assignee" [ref=f1e2653] [cursor=pointer]:
+                    - generic: Reese Gupta (E12348)
+                  - combobox [aria-hidden] [ref=f1e2656]
+              - generic [ref=f1e2657]:
+                - text: Priority
+                - combobox "Priority" [ref=f1e2658] [cursor=pointer]:
+                  - generic: Low
+                - combobox [aria-hidden] [ref=f1e2661]
+              - generic [ref=f1e2662]:
+                - generic [ref=f1e2663]:
+                  - text: Sprint
+                  - combobox "Sprint" [ref=f1e2664] [cursor=pointer]:
+                    - generic: Sprint 1
+                  - combobox [aria-hidden] [ref=f1e2667]
+                - generic [ref=f1e2668]:
+                  - text: Release
+                  - combobox "Release" [ref=f1e2669] [cursor=pointer]:
+                    - generic: "[REL-1] v1.0 Final Release"
+                  - combobox [aria-hidden] [ref=f1e2672]
+                - generic [ref=f1e2673]:
+                  - text: Effort (hours)
+                  - spinbutton "Effort (hours)" [ref=f1e2674]: "52"
+                  - paragraph [ref=f1e2675]: Effort is calculated from linked sub-tasks.
+              - generic [ref=f1e2677]:
+                - text: Predecessor Item
+                - combobox "Select predecessor story..." [ref=f1e2679]
+      - generic [ref=f1e2680]:
+        - button "Delete Story" [ref=f1e2681] [cursor=pointer]
+        - button "Save Changes" [ref=f1e2682] [cursor=pointer]

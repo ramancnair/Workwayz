@@ -217,6 +217,7 @@ export const createWorkItemTool = ai.defineTool(
       projectId: z.string().describe('The project ID in which to create the work item.'),
       itemType: z
         .enum([
+          'Story',
           'User Story',
           'Requirement/Story',
           'Feature Change',

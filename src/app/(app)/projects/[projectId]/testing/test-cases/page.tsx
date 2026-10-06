@@ -83,7 +83,7 @@ const columnConfig: Record<ColumnId, { label: string, defaultVisible: boolean }>
     testCaseId: { label: 'ID', defaultVisible: true },
     title: { label: 'Title', defaultVisible: true },
     type: { label: 'Type', defaultVisible: false },
-    storyId: { label: 'Related Requirement', defaultVisible: false },
+    storyId: { label: 'Related Story', defaultVisible: false },
     sprintId: { label: 'Sprint', defaultVisible: true },
     releaseId: { label: 'Release', defaultVisible: true },
 };
@@ -213,7 +213,7 @@ export default function TestCasesPage() {
   };
 
   const storyOptions = useMemo(() => stories
-    .filter(s => !s.isDeleted && ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType))
+    .filter(s => !s.isDeleted && ['Story', 'Requirement/Story', 'User Story', 'Feature Change', 'Task'].includes(s.itemType))
     .map(story => ({
       value: story.id,
       label: `[${story.storyId}] ${story.title}`,
@@ -515,7 +515,7 @@ export default function TestCasesPage() {
                 {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId" onSort={handleSort}>ID</SortableHeader>}
                 {columnVisibility.title && <SortableHeader columnId="title" onSort={handleSort}>Title</SortableHeader>}
                 {columnVisibility.type && <SortableHeader columnId="type" onSort={handleSort}>Type</SortableHeader>}
-                {columnVisibility.storyId && <SortableHeader columnId="storyId" onSort={handleSort}>Requirement</SortableHeader>}
+                {columnVisibility.storyId && <SortableHeader columnId="storyId" onSort={handleSort}>Story</SortableHeader>}
                 {columnVisibility.sprintId && <SortableHeader columnId="sprintId" onSort={handleSort}>Sprint</SortableHeader>}
                 {columnVisibility.releaseId && <SortableHeader columnId="releaseId" onSort={handleSort}>Release</SortableHeader>}
                 <TableHead className="text-right">Actions</TableHead>
@@ -611,13 +611,13 @@ export default function TestCasesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="storyId" render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related Requirement</FormLabel>
+                              <FormLabel>Related Story</FormLabel>
                                 <FormControl>
                                   <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                     <Input 
                                         list="story-options-tc" 
-                                        placeholder="Select a requirement..." 
+                                        placeholder="Select a story..." 
                                         className="pl-9"
                                         value={relatedStoryInputText}
                                         onChange={(e) => {

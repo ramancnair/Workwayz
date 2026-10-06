@@ -710,7 +710,7 @@ export default function DefectTrackerPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                               list="parent-story-options-tracker"
-                              placeholder="Search for a story/requirement (required)..."
+                              placeholder="Search for a story (required)..."
                               className="pl-9"
                               value={parentStoryInputText}
                               onChange={(e) => {

@@ -16,6 +16,7 @@ import {
   Timestamp,
 } from '@/lib/db-provider';
 import { generateFullProjectData } from '@/lib/project-autogen';
+import { isBugWorkItem, isPbiWorkItem } from '@/types';
 import type {
   Story,
   Epic,
@@ -33,8 +34,6 @@ import type {
   ProjectSettings,
   Horizontal,
   Environment,
-  isBugWorkItem,
-  isPbiWorkItem,
 } from '@/types';
 
 // Helper to remove undefined values and enforce max string lengths
@@ -73,13 +72,14 @@ export async function flowpilotCreateWorkItem(params: {
   parentStoryId?: string;
   impactedSystemIds?: string[];
 }) {
-  const { projectId, itemType = 'Requirement/Story', title, description = '', priority = 'Medium', severity, status = 'To Do', ...rest } = params;
+  const { projectId, itemType = 'Story', title, description = '', priority = 'Medium', severity, status = 'To Do', ...rest } = params;
   if (!db || !projectId) throw new Error('Database or Project ID is missing');
 
   const projectDocRef = doc(db, 'projects', projectId);
   const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
 
   const prefixMap: Record<WorkItemType, string> = {
+    'Story': 'ST',
     'User Story': 'US',
     'Requirement/Story': 'ST',
     'Feature Change': 'FC',
@@ -1429,7 +1429,7 @@ export async function flowpilotQueryQualityEstimations(params: { portfolioId?: s
     let devPlannedHours = 0;
     storiesSnap.docs.forEach((s: any) => {
       const data = s.data();
-      if (data.itemType === 'Requirement/Story' || data.itemType === 'Task') {
+      if (data.itemType === 'Story' || data.itemType === 'Requirement/Story' || data.itemType === 'User Story' || data.itemType === 'Task') {
         devPlannedHours += data.estimatedHours || 0;
       }
     });
