@@ -66,6 +66,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Story, StoryStatus, Priority, BugSeverity, User } from '@/types';
+import { isBugWorkItem, isPbiWorkItem } from '@/types';
 import { cn, matchSearchQuery } from '@/lib/utils';
 
 // Swimlanes config with requested styling
@@ -274,10 +275,10 @@ export default function DefectTrackerPage() {
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
 
-  const bugs = useMemo(() => stories.filter(s => s.itemType === 'Bug'), [stories]);
+  const bugs = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)), [stories]);
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   const parentStoryOptions = useMemo(() => stories
-    .filter(s => ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType))
+    .filter(s => isPbiWorkItem(s.itemType))
     .sort((a, b) => (a.storyId || '').localeCompare(b.storyId || '', undefined, { numeric: true }))
     .map(s => ({
       value: s.id,
@@ -402,7 +403,7 @@ export default function DefectTrackerPage() {
   }, [testPlans, scopeType, selectedSprintId, selectedReleaseId]);
 
   const sprintBugs = useMemo(() => {
-    let baseBugs = stories.filter(story => story.itemType === 'Bug');
+    let baseBugs = stories.filter(story => isBugWorkItem(story.itemType));
 
     // 1. Primary Filter (Sprint vs Release)
     if (scopeType === 'sprint') {
@@ -434,7 +435,7 @@ export default function DefectTrackerPage() {
   const sprintAssigneeIds = useMemo(() => {
     const ids = new Set<string>();
     stories.forEach(story => {
-      if (story.itemType === 'Bug') {
+      if (isBugWorkItem(story.itemType)) {
         let matchesPrimary = false;
         if (scopeType === 'sprint') {
           matchesPrimary = selectedSprintId === 'all' || 

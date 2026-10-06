@@ -41,6 +41,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
+import { isBugWorkItem, isPbiWorkItem } from '@/types';
 import { cn, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2, ArrowUpDown, Search, X } from 'lucide-react';
@@ -121,7 +122,7 @@ export default function DefectsPage() {
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const bugs = useMemo(() => stories.filter(story => story.itemType === 'Bug'), [stories]);
+  const bugs = useMemo(() => stories.filter(story => isBugWorkItem(story.itemType)), [stories]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -136,7 +137,7 @@ export default function DefectsPage() {
   });
 
   const parentStoryOptions = useMemo(() => stories
-    .filter(s => ['Requirement/Story', 'Feature Change', 'Task'].includes(s.itemType))
+    .filter(s => isPbiWorkItem(s.itemType))
     .sort((a, b) => (a.storyId || '').localeCompare(b.storyId || '', undefined, { numeric: true }))
     .map(s => ({
       value: s.id,

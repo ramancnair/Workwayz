@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Circle, BookOpen, Bug, CheckSquare, GitCommit, Search, ArrowLeft } from 'lucide-react';
+import { Circle, BookOpen, Bug, CheckSquare, GitCommit, Search, ArrowLeft, Layers, Wrench, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,8 +33,38 @@ import { cn, getSprintDisplayId, matchSearchQuery } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
+import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
 
-const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task', 'Bug'];
+const workItemTypes: WorkItemType[] = [
+  'User Story',
+  'Feature Change',
+  'Task',
+  'Enabler',
+  'Tech Debt',
+  'Spike',
+  'Bug / Defect',
+  'Requirement/Story',
+  'Bug',
+  'Sub Task',
+  'Subtasks',
+  'In-Sprint Bug',
+];
+
+const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'User Story': BookOpen,
+  'Requirement/Story': BookOpen,
+  'Feature Change': GitCommit,
+  'Task': CheckSquare,
+  'Enabler': Layers,
+  'Tech Debt': Wrench,
+  'Spike': Zap,
+  'Bug / Defect': Bug,
+  'Bug': Bug,
+  'Subtasks': CheckSquare,
+  'Sub Task': CheckSquare,
+  'In-Sprint Bug': Bug,
+};
+
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -160,8 +190,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
 
   const actualEffortInHours = useMemo(() => {
     if (!selectedStory) return null;
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
-        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+    if (isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && (s.itemType === 'Sub Task' || s.itemType === 'Subtasks'));
         if (subTasks.length === 0) return null;
 
         return subTasks.reduce((total, task) => {
@@ -227,7 +257,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     resolver: zodResolver(storyFormSchema),
   });
 
-  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
@@ -238,7 +268,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     label: `[${tc.testCaseId}] ${tc.title}`,
   })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [testCases]);
 
-  const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+  const relatedBugOptions = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)).map(b => ({
     value: b.id,
     label: `[${b.storyId}] ${b.title}`,
   })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' })), [stories]);
@@ -251,7 +281,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
           return;
       }
   
-      if (selectedStory.itemType === 'Sub Task') {
+      if (selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks') {
           subTaskForm.reset({
               title: (selectedStory.title || '').slice(0, 60),
               description: (selectedStory.description || '').slice(0, 300),
@@ -265,7 +295,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
               releaseId: selectedStory.releaseId || 'unassigned',
           });
       } else {
-          const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+          const isSubItem = isBugWorkItem(selectedStory.itemType) || selectedStory.itemType === 'Feature Change' || isExecutionWorkItem(selectedStory.itemType);
           const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
           setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
           const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
@@ -329,7 +359,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
   };
 
   const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
-    if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
+    if (!selectedStory || (selectedStory.itemType !== 'Sub Task' && selectedStory.itemType !== 'Subtasks')) return;
     setIsEditStorySubmitting(true);
     
     if (projStart && values.startDate && values.startDate < projStart) {
@@ -383,8 +413,8 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
     return {
       devTasks: allSubItems.filter(item => item.itemType === 'Task'),
-      bugs: allSubItems.filter(item => item.itemType === 'Bug'),
-      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
+      bugs: allSubItems.filter(item => isBugWorkItem(item.itemType)),
+      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task' || item.itemType === 'Subtasks'),
       logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByParentId]);
@@ -405,7 +435,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           {selectedStory && (
             <>
-              {selectedStory.itemType === 'Sub Task' ? (
+              {selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks' ? (
                 <Form {...subTaskForm}>
                   <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -578,7 +608,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                     </DialogFooter>
                   </form>
                 </Form>
-              ) : selectedStory.itemType === 'Bug' ? (
+              ) : isBugWorkItem(selectedStory.itemType) ? (
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -1034,7 +1064,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList variant="folder">
                             <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
-                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                            {isPbiWorkItem(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger variant="folder" value="subTasks">
                                         Sub-Tasks
@@ -1059,7 +1089,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                         </TabsList>
                     <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                       <div className="space-y-4">
-                        {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                        {isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType) && (
                           <FormField
                             control={editStoryForm.control}
                             name="impactedSystemIds"
@@ -1133,7 +1163,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task', 'Feature Change'].includes(selectedStory.itemType) ? (
+                        {isPbiWorkItem(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -1309,7 +1339,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                         </div>
                       </div>
                     </TabsContent>
-                    {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                    {isPbiWorkItem(selectedStory.itemType) && (
                         <>
                             <TabsContent value="subTasks" className="pt-4">
                                 <div className="space-y-4">

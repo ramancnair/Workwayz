@@ -1,4 +1,5 @@
 import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/fp-dashboard';
+import { isBugWorkItem } from '@/types';
 
 function formatDateStr(d?: string | null): string {
   if (!d) return 'Not Specified';
@@ -71,7 +72,7 @@ export function executeFpPmQuery(
 
   // Active non-deleted stories
   const activeStories = stories.filter((s: any) => !s.isDeleted);
-  const activeBugs = activeStories.filter((s: any) => s.itemType === 'Bug' || s.itemType === 'Defect');
+  const activeBugs = activeStories.filter((s: any) => isBugWorkItem(s.itemType) || s.itemType === 'Defect');
   const activeRisks = risks.filter((r: any) => !r.isDeleted);
   const activeIssues = issues.filter((i: any) => !i.isDeleted);
   const activeSprints = sprints.filter((sp: any) => !sp.isDeleted);

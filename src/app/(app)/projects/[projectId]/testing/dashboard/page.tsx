@@ -16,7 +16,7 @@ import {
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { eachDayOfInterval, format, parseISO, startOfDay } from 'date-fns';
-import { Story, BugSeverity, TestCycleTestCase } from '@/types';
+import { Story, BugSeverity, TestCycleTestCase, isBugWorkItem, isPbiWorkItem } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
@@ -184,13 +184,13 @@ export default function TestingDashboard() {
     if (selectedTestPlanId !== 'all') {
       const planTCOrigIds = new Set(allPlanTestCases.map(tc => tc.originalTestCaseId));
       relatedBugs = stories.filter(story =>
-        story.itemType === 'Bug' &&
+        isBugWorkItem(story.itemType) &&
         (story.foundInTestCycleId === selectedTestPlanId ||
           story.foundInTestPlanId === selectedTestPlanId ||
           (story.relatedTestCaseId && planTCOrigIds.has(story.relatedTestCaseId)))
       );
     } else {
-      relatedBugs = stories.filter(story => story.itemType === 'Bug');
+      relatedBugs = stories.filter(story => isBugWorkItem(story.itemType));
     }
 
     // Test Case Metrics from plan copies
@@ -236,12 +236,12 @@ export default function TestingDashboard() {
     if (selectedTestPlanId !== 'all') {
       const planTCOrigIds = new Set(allPlanTestCases.map(tc => tc.originalTestCaseId));
       relatedBugs = stories.filter(story =>
-        story.itemType === 'Bug' &&
+        isBugWorkItem(story.itemType) &&
         (story.foundInTestPlanId === selectedTestPlanId ||
           (story.relatedTestCaseId && planTCOrigIds.has(story.relatedTestCaseId)))
       );
     } else {
-      relatedBugs = stories.filter(story => story.itemType === 'Bug');
+      relatedBugs = stories.filter(story => isBugWorkItem(story.itemType));
     }
 
     // Derive date range from test plan boundaries, not from data points
@@ -314,7 +314,7 @@ export default function TestingDashboard() {
   }, [testPlans]);
 
   const leakageChartData = useMemo(() => {
-    const bugs = stories.filter(s => s.itemType === 'Bug');
+    const bugs = stories.filter(s => isBugWorkItem(s.itemType));
 
     return sortedTestPlansForLeakage.map(plan => {
       const planBugs = bugs.filter(b => b.foundInTestPlanId === plan.id);
@@ -338,7 +338,7 @@ export default function TestingDashboard() {
 
   const storyCoverageData = useMemo(() => {
     const targetStories = stories.filter(
-      s => ['Requirement/Story', 'Feature Change'].includes(s.itemType) && !s.isDeleted
+      s => isPbiWorkItem(s.itemType) && !isBugWorkItem(s.itemType) && !s.isDeleted
     );
 
     const covered = targetStories.filter(s =>

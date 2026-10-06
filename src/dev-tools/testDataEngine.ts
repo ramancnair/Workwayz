@@ -19,6 +19,7 @@ import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { generateFullProjectData } from '@/lib/project-autogen';
 import { subDays, addDays, startOfWeek, differenceInDays } from 'date-fns';
 import type { User, Portfolio, Project, AccessLevel, PricingModel } from '@/types';
+import { isBugWorkItem } from '@/types';
 
 export const STUDIO_LOG_STORAGE_KEY = 'pf_test_data_studio_log';
 const INSTANCE_STORAGE_KEY = 'pf_instance_id';
@@ -967,7 +968,7 @@ export async function simulateProjectProgression(
       statusHistory: history,
       developmentStartDate: inProgEntry?.date || null,
       completionDate: doneEntry?.date || null,
-      closeDate: (item.itemType === 'Bug' && (targetStatus === doneCol || targetStatus === 'Resolved' || targetStatus === 'Closed'))
+      closeDate: (isBugWorkItem(item.itemType) && (targetStatus === doneCol || targetStatus === 'Resolved' || targetStatus === 'Closed'))
         ? (doneEntry?.date || now.toISOString())
         : null,
     });

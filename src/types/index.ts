@@ -23,7 +23,181 @@ export type Epic = {
 };
 
 export type StoryStatus = string;
-export type WorkItemType = 'Requirement/Story' | 'Bug' | 'Task' | 'Feature Change' | 'Sub Task';
+
+// [Backlog / PBI Level] — The "What" (Prioritized by PO / PM)
+export type PbiWorkItemType =
+  | 'User Story'
+  | 'Feature Change'
+  | 'Task'
+  | 'Enabler'
+  | 'Tech Debt'
+  | 'Spike'
+  | 'Bug / Defect';
+
+// [Execution Level] — The "How" (Decomposed by Developers)
+export type ExecutionWorkItemType =
+  | 'Subtasks'
+  | 'Sub Task'
+  | 'In-Sprint Bug';
+
+export type LegacyWorkItemType =
+  | 'Requirement/Story'
+  | 'Bug';
+
+export type WorkItemType =
+  | PbiWorkItemType
+  | ExecutionWorkItemType
+  | LegacyWorkItemType;
+
+export interface WorkItemTaxonomyItem {
+  type: WorkItemType;
+  label: string;
+  level: 'PBI' | 'Execution';
+  prefix: string;
+  description: string;
+  placeholder: string;
+}
+
+export const PBI_WORK_ITEM_TYPES: PbiWorkItemType[] = [
+  'User Story',
+  'Feature Change',
+  'Task',
+  'Enabler',
+  'Tech Debt',
+  'Spike',
+  'Bug / Defect',
+];
+
+export const EXECUTION_WORK_ITEM_TYPES: ExecutionWorkItemType[] = [
+  'Subtasks',
+  'Sub Task',
+  'In-Sprint Bug',
+];
+
+export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
+  'User Story': {
+    type: 'User Story',
+    label: 'User Story',
+    level: 'PBI',
+    prefix: 'US',
+    description: 'Functional capability delivering user/business value',
+    placeholder: 'User Story title',
+  },
+  'Requirement/Story': {
+    type: 'Requirement/Story',
+    label: 'User Story',
+    level: 'PBI',
+    prefix: 'ST',
+    description: 'Functional capability delivering user/business value',
+    placeholder: 'User Story title',
+  },
+  'Feature Change': {
+    type: 'Feature Change',
+    label: 'Feature Change',
+    level: 'PBI',
+    prefix: 'FC',
+    description: 'Scope modifications/deltas linked back to a delivered Story',
+    placeholder: 'Feature Change title',
+  },
+  'Task': {
+    type: 'Task',
+    label: 'Task',
+    level: 'PBI',
+    prefix: 'TASK',
+    description: 'Standalone operational, administrative, or compliance NFR work',
+    placeholder: 'Task title',
+  },
+  'Enabler': {
+    type: 'Enabler',
+    label: 'Enabler',
+    level: 'PBI',
+    prefix: 'EN',
+    description: 'Architecture, CI/CD, and runway for upcoming functional work',
+    placeholder: 'Enabler title',
+  },
+  'Tech Debt': {
+    type: 'Tech Debt',
+    label: 'Tech Debt',
+    level: 'PBI',
+    prefix: 'TD',
+    description: 'Remediation of legacy shortcuts, library upgrades, deprecations',
+    placeholder: 'Tech Debt title',
+  },
+  'Spike': {
+    type: 'Spike',
+    label: 'Spike',
+    level: 'PBI',
+    prefix: 'SPK',
+    description: 'Timeboxed R&D, feasibility tests, or architectural spikes',
+    placeholder: 'Spike title',
+  },
+  'Bug / Defect': {
+    type: 'Bug / Defect',
+    label: 'Bug / Defect',
+    level: 'PBI',
+    prefix: 'BUG',
+    description: 'Production/escaped defects discovered post-acceptance',
+    placeholder: 'Defect title',
+  },
+  'Bug': {
+    type: 'Bug',
+    label: 'Bug / Defect',
+    level: 'PBI',
+    prefix: 'BUG',
+    description: 'Production/escaped defects discovered post-acceptance',
+    placeholder: 'Defect title',
+  },
+  'Subtasks': {
+    type: 'Subtasks',
+    label: 'Subtasks',
+    level: 'Execution',
+    prefix: 'SUB',
+    description: 'Granular implementation steps categorized by impacted system',
+    placeholder: 'Sub-task title',
+  },
+  'Sub Task': {
+    type: 'Sub Task',
+    label: 'Sub Task',
+    level: 'Execution',
+    prefix: 'SUB',
+    description: 'Granular implementation steps categorized by impacted system',
+    placeholder: 'Sub-task title',
+  },
+  'In-Sprint Bug': {
+    type: 'In-Sprint Bug',
+    label: 'In-Sprint Bug',
+    level: 'Execution',
+    prefix: 'ISB',
+    description: 'Active defects logged against in-flight parent items before "Done"',
+    placeholder: 'In-sprint bug title',
+  },
+};
+
+export const isPbiWorkItem = (type: string | undefined | null): boolean => {
+  if (!type) return false;
+  return [
+    'User Story',
+    'Requirement/Story',
+    'Feature Change',
+    'Task',
+    'Enabler',
+    'Tech Debt',
+    'Spike',
+    'Bug / Defect',
+    'Bug',
+  ].includes(type);
+};
+
+export const isExecutionWorkItem = (type: string | undefined | null): boolean => {
+  if (!type) return false;
+  return ['Sub Task', 'Subtasks', 'In-Sprint Bug'].includes(type);
+};
+
+export const isBugWorkItem = (type: string | undefined | null): boolean => {
+  if (!type) return false;
+  return ['Bug', 'Bug / Defect', 'In-Sprint Bug'].includes(type);
+};
+
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low' | 'Backburner';
 export type BugSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 

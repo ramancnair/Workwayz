@@ -27,6 +27,7 @@ import type {
   KanbanColumn,
   ProjectSettings,
   Environment,
+  isBugWorkItem,
 } from '@/types';
 
 const sanitizeData = (data: any) => {
@@ -247,11 +248,18 @@ export async function executeClientCreateWorkItem(params: {
   const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
 
   const prefixMap: Record<WorkItemType, string> = {
+    'User Story': 'US',
     'Requirement/Story': 'ST',
     'Feature Change': 'FC',
     'Task': 'TASK',
+    'Enabler': 'EN',
+    'Tech Debt': 'TD',
+    'Spike': 'SPK',
+    'Bug / Defect': 'BUG',
     'Bug': 'BUG',
+    'Subtasks': 'SUB',
     'Sub Task': 'SUB',
+    'In-Sprint Bug': 'ISB',
   };
   const prefix = prefixMap[itemType] || 'ITEM';
 
@@ -278,13 +286,13 @@ export async function executeClientCreateWorkItem(params: {
     statusHistory: [{ fromStatus: null, toStatus: status, date: now }],
   };
 
-  if (severity && itemType === 'Bug') {
+  if (severity && isBugWorkItem(itemType)) {
     payload.severity = severity;
   }
 
   const docRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeData(payload));
 
-  const destinationUrl = itemType === 'Bug'
+  const destinationUrl = isBugWorkItem(itemType)
     ? `/projects/${projectId}/testing/defect-tracker`
     : `/projects/${projectId}/development/kanban`;
 

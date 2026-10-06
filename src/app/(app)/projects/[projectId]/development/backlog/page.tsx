@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight, Search, Layers } from 'lucide-react';
+import { PlusCircle, ChevronDown, Trash2, Star, Edit, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Clock, CornerDownRight, ThumbsUp, ChevronsRight, X, FolderUp, Tag, Library, ArrowLeft, Bot, Package, Move, Circle, CheckCircle, ChevronRight, Search, Layers, Wrench, Zap } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Epic, Story, Sprint, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem, BugSeverity, TestCase } from '@/types';
+import { isPbiWorkItem, isExecutionWorkItem, isBugWorkItem, PBI_WORK_ITEM_TYPES, WORK_ITEM_TAXONOMY } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -73,14 +74,21 @@ import { getAiStorySuggestions } from '@/app/actions';
 
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'User Story': BookOpen,
   'Requirement/Story': BookOpen,
-  Bug: Bug,
-  'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Task': CheckSquare,
+  'Enabler': Layers,
+  'Tech Debt': Wrench,
+  'Spike': Zap,
+  'Bug / Defect': Bug,
+  'Bug': Bug,
+  'Subtasks': CheckSquare,
   'Sub Task': CheckSquare,
+  'In-Sprint Bug': Bug,
 };
 
-const workItemTypes: WorkItemType[] = ['Requirement/Story', 'Feature Change', 'Task'];
+const workItemTypes: WorkItemType[] = [...PBI_WORK_ITEM_TYPES];
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
 const priorities: Priority[] = ['Critical', 'High', 'Medium', 'Low', 'Backburner'];
 const severities: BugSeverity[] = ['Critical', 'High', 'Medium', 'Low'];
@@ -100,7 +108,20 @@ const epicFormSchema = z.object({
 });
 
 const storyFormSchema = z.object({
-  itemType: z.enum(['Requirement/Story', 'Bug', 'Task', 'Feature Change', 'Sub Task']),
+  itemType: z.enum([
+    'User Story',
+    'Requirement/Story',
+    'Feature Change',
+    'Task',
+    'Enabler',
+    'Tech Debt',
+    'Spike',
+    'Bug / Defect',
+    'Bug',
+    'Subtasks',
+    'Sub Task',
+    'In-Sprint Bug',
+  ]),
   title: z.string().min(1, 'Title is required.').max(60, 'Title cannot exceed 60 characters.'),
   description: z.string().max(300, 'Description cannot exceed 300 characters.').optional(),
   acceptanceCriteria: z.string().optional(),
@@ -160,9 +181,9 @@ const bulkMoveSchema = z.object({
 
 
 function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
-  const Icon = workItemIcons[story.itemType];
-  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task') || [], [subItems]);
-  const bugs = useMemo(() => subItems?.filter(i => i.itemType === 'Bug') || [], [subItems]);
+  const Icon = workItemIcons[story.itemType] || BookOpen;
+  const subTasks = useMemo(() => subItems?.filter(i => isExecutionWorkItem(i.itemType) && !isBugWorkItem(i.itemType)) || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => isBugWorkItem(i.itemType)) || [], [subItems]);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -173,7 +194,7 @@ function StoryCard({ story, epic, assignee, onClick, className, subItems, sprint
   }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
   const displayEffort = useMemo(() => {
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType)) {
+    if (isPbiWorkItem(story.itemType)) {
       if (subTasks.length > 0 || bugs.length > 0) {
         return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
@@ -426,9 +447,9 @@ export default function BacklogPage() {
   const actualEffortInHours = useMemo(() => {
     if (!selectedStory) return null;
     // For parent stories, actual effort is sum of sub-tasks' actual effort
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
-        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
-        if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
+    if (isPbiWorkItem(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && isExecutionWorkItem(s.itemType) && !isBugWorkItem(s.itemType));
+        if (subTasks.length === 0) return null;
 
         return subTasks.reduce((total, task) => {
             if (!task.developmentStartDate || !task.completionDate) return total;
@@ -461,7 +482,7 @@ export default function BacklogPage() {
 
   const addStoryForm = useForm<z.infer<typeof storyFormSchema>>({
     resolver: zodResolver(storyFormSchema),
-    defaultValues: { itemType: 'Requirement/Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned', predecessorId: 'unassigned' },
+    defaultValues: { itemType: 'User Story', title: '', description: '', acceptanceCriteria: '', epicId: 'unassigned', parentStoryId: '', reporterId: 'unassigned', assigneeId: 'unassigned', estimatedHours: 0, priority: 'Medium', severity: 'Medium', releaseId: 'unassigned', foundInTestPlanId: 'unassigned', relatedBugId: 'unassigned', impactedSystemIds: [], attachments: '', sprintId: 'backlog', relatedTestCaseId: 'unassigned', predecessorId: 'unassigned' },
   });
   
   const projStart = useMemo(() => project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : undefined, [project?.startDate]);
@@ -535,7 +556,7 @@ export default function BacklogPage() {
   
   const watchedItemType = useWatch({ control: addStoryForm.control, name: 'itemType' });
   
-  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => isPbiWorkItem(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
@@ -546,12 +567,12 @@ export default function BacklogPage() {
     label: `[${tc.testCaseId}] ${tc.title}`,
   })), [testCases]);
 
-  const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+  const relatedBugOptions = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)).map(b => ({
     value: b.id,
     label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
 
-  const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
+  const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && !isExecutionWorkItem(s.itemType)).map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`,
   })), [stories, selectedStory]);
@@ -608,7 +629,7 @@ export default function BacklogPage() {
       }
       setShowAddBug(false);
   
-      if (selectedStory.itemType === 'Sub Task') {
+      if (isExecutionWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType)) {
           subTaskForm.reset({
               title: (selectedStory.title || '').slice(0, 60),
               description: (selectedStory.description || '').slice(0, 300),
@@ -622,7 +643,7 @@ export default function BacklogPage() {
               releaseId: selectedStory.releaseId || 'unassigned',
           });
       } else {
-          const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+          const isSubItem = isBugWorkItem(selectedStory.itemType) || selectedStory.itemType === 'Feature Change';
           const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
           setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
           const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
@@ -702,20 +723,20 @@ export default function BacklogPage() {
           title: story.title,
           description: story.description,
           acceptanceCriteria: story.acceptanceCriteria,
-          itemType: 'Requirement/Story',
+          itemType: 'User Story',
           status: 'To Do',
           priority: story.priority,
           estimatedHours: story.estimatedHours,
           impactedSystemIds: story.impactedSystemIds,
         };
-        const storyRef = await addStory(storyPayload, 'ST') as any;
+        const storyRef = await addStory(storyPayload, 'US') as any;
   
         if (storyRef && story.subTasks) {
           for (const subTask of story.subTasks) {
             const subTaskPayload: Omit<Story, 'id' | 'storyId'> = {
               title: subTask.title,
               description: '',
-              itemType: 'Sub Task',
+              itemType: 'Subtasks',
               status: 'To Do',
               parentStoryId: storyRef.id || storyRef,
               estimatedHours: subTask.estimatedHours,
@@ -774,7 +795,7 @@ export default function BacklogPage() {
     setAddStorySubmitting(true);
     try {
         let parentStory: Story | undefined;
-        if (['Bug', 'Feature Change'].includes(values.itemType) && values.parentStoryId) {
+        if ((isBugWorkItem(values.itemType) || values.itemType === 'Feature Change') && values.parentStoryId) {
           parentStory = stories.find(s => s.id === values.parentStoryId);
         }
 
@@ -785,8 +806,8 @@ export default function BacklogPage() {
           acceptanceCriteria: values.acceptanceCriteria,
           reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-          epicId: ['Task', 'Requirement/Story'].includes(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
-          parentStoryId: ['Bug', 'Feature Change'].includes(values.itemType) ? (values.parentStoryId || undefined) : undefined,
+          epicId: isPbiWorkItem(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
+          parentStoryId: (isBugWorkItem(values.itemType) || values.itemType === 'Feature Change') ? (values.parentStoryId || undefined) : undefined,
           relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
           status: 'To Do',
           estimatedHours: values.estimatedHours,
@@ -839,7 +860,7 @@ const onEditStorySubmit = async (values: z.infer<typeof storyFormSchema>) => {
 };
 
 const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) => {
-    if (!selectedStory || selectedStory.itemType !== 'Sub Task') return;
+    if (!selectedStory || !(isExecutionWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType))) return;
     setIsEditStorySubmitting(true);
     
     if (projStart && values.startDate && values.startDate < projStart) {
@@ -873,7 +894,7 @@ const onEditSubTaskSubmit = async (values: z.infer<typeof subTaskFormSchema>) =>
     if (success) {
         handleSetSelectedStory(null);
     } else {
-        toast({ variant: "destructive", title: "Error Editing Sub Task", description: "Could not save your changes." });
+        toast({ variant: "destructive", title: "Error Editing Subtask", description: "Could not save your changes." });
     }
     setIsEditStorySubmitting(false);
 };
@@ -902,7 +923,7 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
     const newSubTask: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
         description: values.description || '',
-        itemType: 'Sub Task',
+        itemType: 'Subtasks',
         status: 'To Do',
         epicId: selectedStory.epicId, // Inherit epic
         parentStoryId: selectedStory.id, // Link to parent story
@@ -917,11 +938,11 @@ const handleAddSubTask = async (values: z.infer<typeof subTaskFormSchema>) => {
 
     const success = await addStory(newSubTask, 'SUB');
     if (success) {
-        toast({ title: 'Success', description: 'Sub-task added.' });
+        toast({ title: 'Success', description: 'Subtask added.' });
         subTaskForm.reset();
         setShowAddSubTask(false);
     } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not add sub-task." });
+        toast({ variant: "destructive", title: "Error", description: "Could not add subtask." });
     }
 };
 
@@ -931,7 +952,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
     const newBug: Omit<Story, 'id' | 'storyId'> = {
         title: values.title,
         description: values.description || '',
-        itemType: 'Bug',
+        itemType: 'In-Sprint Bug',
         status: values.status || 'To Triage',
         severity: values.severity,
         epicId: selectedStory.epicId,
@@ -942,9 +963,9 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
         estimatedHours: values.estimatedHours,
     };
 
-    const success = await addStory(newBug, 'BUG');
+    const success = await addStory(newBug, 'ISB');
     if (success) {
-        toast({ title: 'Success', description: `Defect linked to [${selectedStory.storyId || 'REQ'}].` });
+        toast({ title: 'Success', description: `In-Sprint Bug linked to [${selectedStory.storyId || 'REQ'}].` });
         addBugForm.reset({
             title: '',
             description: '',
@@ -955,7 +976,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
         });
         setShowAddBug(false);
     } else {
-        toast({ variant: "destructive", title: "Error", description: "Could not add defect." });
+        toast({ variant: "destructive", title: "Error", description: "Could not add in-sprint bug." });
     }
 };
     
@@ -1009,7 +1030,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
   }
 
   const allWorkItems = stories.filter((story) => {
-    const isSubItem = story.itemType === 'Sub Task' || (story.itemType === 'Bug' && story.parentStoryId);
+    const isSubItem = (isExecutionWorkItem(story.itemType) && !isBugWorkItem(story.itemType)) || (isBugWorkItem(story.itemType) && !!story.parentStoryId);
     return !isSubItem && !story.isDeleted;
   });
 
@@ -1158,8 +1179,8 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
     const allSubItems = subItemsByParentId[selectedStory.id] || [];
     return {
       devTasks: allSubItems.filter(item => item.itemType === 'Task'),
-      bugs: allSubItems.filter(item => item.itemType === 'Bug'),
-      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
+      bugs: allSubItems.filter(item => isBugWorkItem(item.itemType)),
+      subTasks: allSubItems.filter(item => isExecutionWorkItem(item.itemType) && !isBugWorkItem(item.itemType)),
       logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByParentId]);
@@ -1279,18 +1300,35 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a requirement type" />
                                 </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                                {workItemTypes.map(itemType => (
-                                <SelectItem key={itemType} value={itemType}>
-                                    {itemType}
-                                </SelectItem>
-                                ))}
+                            <SelectContent className="max-h-[380px]">
+                                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/50 bg-muted/40">
+                                  [Backlog / PBI Level] — The &quot;What&quot; (PO / PM)
+                                </div>
+                                {PBI_WORK_ITEM_TYPES.map(itemType => {
+                                  const IconComponent = workItemIcons[itemType] || BookOpen;
+                                  const meta = WORK_ITEM_TAXONOMY[itemType];
+                                  return (
+                                    <SelectItem key={itemType} value={itemType} className="py-2 cursor-pointer">
+                                      <div className="flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-2 font-medium">
+                                          <IconComponent className="h-4 w-4 text-emerald-500 shrink-0" />
+                                          <span>{itemType}</span>
+                                        </div>
+                                        {meta?.description && (
+                                          <span className="text-xs text-muted-foreground line-clamp-1 pl-6">
+                                            {meta.description}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
                             </SelectContent>
                             </Select>
                             <FormMessage />
@@ -1304,7 +1342,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         <FormItem>
                             <FormLabel>Title</FormLabel>
                             <FormControl>
-                            <Input placeholder={watchedItemType === 'Bug' ? 'Defect title' : `${watchedItemType} title`} {...field} maxLength={60} />
+                            <Input placeholder={isBugWorkItem(watchedItemType) ? 'Defect title' : `${watchedItemType} title`} {...field} maxLength={60} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -1316,15 +1354,15 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             name="description"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{watchedItemType === 'Bug' ? 'Description (Steps to Reproduce)' : 'Description'}</FormLabel>
+                                <FormLabel>{isBugWorkItem(watchedItemType) ? 'Description (Steps to Reproduce)' : 'Description'}</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder={watchedItemType === 'Bug' ? 'Steps to reproduce: Nav to the affected module, perform standard actions, observe the critical issue.' : `Describe the ${watchedItemType.toLowerCase()}...`} {...field} maxLength={300} />
+                                <Textarea placeholder={isBugWorkItem(watchedItemType) ? 'Steps to reproduce: Nav to the affected module, perform standard actions, observe the critical issue.' : `Describe the ${watchedItemType.toLowerCase()}...`} {...field} maxLength={300} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
                         />
-                        {['Requirement/Story', 'Feature Change', 'Task'].includes(watchedItemType) && (
+                        {!isBugWorkItem(watchedItemType) && (
                         <FormField
                             control={addStoryForm.control}
                             name="impactedSystemIds"
@@ -1376,16 +1414,16 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             name="acceptanceCriteria"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{watchedItemType === 'Bug' ? 'Expected Result' : 'Acceptance Criteria'}</FormLabel>
+                                <FormLabel>{isBugWorkItem(watchedItemType) ? 'Expected Result' : 'Acceptance Criteria'}</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder={watchedItemType === 'Bug' ? 'Describe what should happen...' : `Define acceptance criteria for this ${watchedItemType.toLowerCase()}...`} {...field} />
+                                <Textarea placeholder={isBugWorkItem(watchedItemType) ? 'Describe what should happen...' : `Define acceptance criteria for this ${watchedItemType.toLowerCase()}...`} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(watchedItemType) ? (
+                        {isPbiWorkItem(watchedItemType) ? (
                             <FormField
                                 control={addStoryForm.control}
                                 name="epicId"
@@ -1410,7 +1448,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                 )}
                             />
                         ) : null}
-                        {watchedItemType === 'Bug' && (
+                        {isBugWorkItem(watchedItemType) && (
                             <FormField
                             control={addStoryForm.control}
                             name="reporterId"
@@ -1459,13 +1497,13 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             )}
                         />
                         </div>
-                        {['Feature Change', 'Bug'].includes(watchedItemType) ? (
+                        {(watchedItemType === 'Feature Change' || isBugWorkItem(watchedItemType)) ? (
                           <FormField
                           control={addStoryForm.control}
                           name="parentStoryId" 
                           render={({ field }) => (
                               <FormItem>
-                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement' : 'Related Story'}</FormLabel>
+                              <FormLabel>{watchedItemType === 'Feature Change' ? 'Original Requirement / Story' : 'Related Story'}</FormLabel>
                               <FormControl>
                                   <Input 
                                       list="parent-story-options-add"
@@ -1496,7 +1534,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           )}
                           />
                         ) : null}
-                        {watchedItemType === 'Bug' && (
+                        {isBugWorkItem(watchedItemType) && (
                           <FormField
                           control={addStoryForm.control}
                           name="relatedTestCaseId" 
@@ -1560,7 +1598,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             </FormItem>
                             )}
                         />
-                        {watchedItemType === 'Bug' && (
+                        {isBugWorkItem(watchedItemType) && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                     control={addStoryForm.control}
@@ -1688,7 +1726,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             )}
                             />
                         </div>
-                        {watchedItemType === 'Bug' && (
+                        {isBugWorkItem(watchedItemType) && (
                             <>
                             <FormField
                                 control={addStoryForm.control}
@@ -2215,7 +2253,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           {selectedStory && (
             <>
-              {selectedStory.itemType === 'Sub Task' ? (
+              {isExecutionWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType) ? (
                 <Form {...subTaskForm}>
                   <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -2225,9 +2263,9 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                   <ArrowLeft className="h-4 w-4" />
                               </Button>
                           )}
-                          <DialogTitle>Edit Sub Task</DialogTitle>
+                          <DialogTitle>Edit Subtask</DialogTitle>
                       </div>
-                      <DialogDescription>Make changes to your sub task here.</DialogDescription>
+                      <DialogDescription>Make changes to your subtask here.</DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <FormField control={subTaskForm.control} name="title" render={({field}) => (
@@ -2395,7 +2433,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                     </DialogFooter>
                   </form>
                 </Form>
-              ) : selectedStory.itemType === 'Bug' ? (
+              ) : isBugWorkItem(selectedStory.itemType) ? (
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -2851,16 +2889,16 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                     <Tabs defaultValue="details" className="w-full">
                          <TabsList variant="folder">
                             <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
-                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                            {isPbiWorkItem(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger variant="folder" value="subTasks">
-                                        Sub-Tasks
+                                        Subtasks
                                         <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                             {selectedStorySubItems.subTasks.length}
                                         </Badge>
                                     </TabsTrigger>
                                     <TabsTrigger variant="folder" value="bugs">
-                                        Defects
+                                        In-Sprint Bugs
                                         <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
                                             {selectedStorySubItems.bugs.length}
                                         </Badge>
@@ -2882,7 +2920,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         </TabsList>
                     <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                       <div className="space-y-4">
-                        {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                        {!isBugWorkItem(selectedStory.itemType) && (
                           <FormField
                             control={editStoryForm.control}
                             name="impactedSystemIds"
@@ -2956,7 +2994,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             )}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['Requirement/Story', 'Task', 'Feature Change'].includes(selectedStory.itemType) ? (
+                        {isPbiWorkItem(selectedStory.itemType) ? (
                             <FormField
                             control={editStoryForm.control}
                             name="epicId"
@@ -3176,11 +3214,14 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                     <TabsContent value="subTasks">
                         <div className="space-y-4 pt-4">
                             <div>
-                                <h4 className="text-sm font-medium mb-2">Sub-Tasks</h4>
+                                <div className="mb-2">
+                                    <h4 className="text-sm font-semibold">Subtasks (Execution Level)</h4>
+                                    <p className="text-xs text-muted-foreground">Granular implementation steps categorized by impacted system (e.g., [Core API], [Frontend], [DB])</p>
+                                </div>
                                 {selectedStorySubItems.subTasks.length > 0 ? (
                                     <div className="space-y-2 rounded-md border p-2">
                                     {selectedStorySubItems.subTasks.map(item => {
-                                        const ItemIcon = workItemIcons[item.itemType];
+                                        const ItemIcon = workItemIcons[item.itemType] || CheckSquare;
                                         return (
                                             <div key={item.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-x-2 text-sm p-2 hover:bg-muted/50 rounded-md">
                                                 <ItemIcon className="h-4 w-4 text-muted-foreground" />
@@ -3198,13 +3239,13 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                     })}
                                   </div>
                                 ) : (
-                                  <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No sub-tasks linked.</p>
+                                  <p className="text-sm text-muted-foreground italic px-2 py-4 text-center">No subtasks linked.</p>
                                 )}
                             </div>
                             <div>
                                 {showAddSubTask ? (
                                      <div className="p-4 border rounded-md space-y-4 mt-4">
-                                         <h4 className="font-semibold text-sm">Add Sub-Task</h4>
+                                         <h4 className="font-semibold text-sm">Add Subtask</h4>
                                          <Form {...subTaskForm}>
                                              <div className="space-y-4">
                                                  <FormField control={subTaskForm.control} name="title" render={({field}) => (
@@ -3289,19 +3330,23 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                                   )}/>
                                                   <div className='flex justify-end gap-2'>
                                                     <Button type="button" variant="ghost" onClick={() => setShowAddSubTask(false)}>Cancel</Button>
-                                                    <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Sub Task</Button>
+                                                    <Button type="button" onClick={subTaskForm.handleSubmit(handleAddSubTask)}>Save Subtask</Button>
                                                   </div>
                                               </div>
                                           </Form>
                                       </div>
                                  ) : (
-                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Sub-Task</Button>
+                                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddSubTask(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add Subtask</Button>
                                  )}
                              </div>
                          </div>
                      </TabsContent>
                      <TabsContent value="bugs">
                         <div className="space-y-4 pt-4">
+                            <div className="mb-2">
+                                <h4 className="text-sm font-semibold">In-Sprint Bugs</h4>
+                                <p className="text-xs text-muted-foreground">Active defects logged against in-flight parent items before &quot;Done&quot;</p>
+                            </div>
                                    {selectedStorySubItems.bugs.length > 0 ? (
                                        <div className="space-y-2 rounded-md border p-2">
                                        {selectedStorySubItems.bugs.map(item => {
@@ -3318,12 +3363,12 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                        })}
                                        </div>
                                    ) : (
-                                       <p className="text-sm text-muted-foreground italic px-2">No defects linked to this story.</p>
+                                       <p className="text-sm text-muted-foreground italic px-2">No in-sprint bugs logged against this item.</p>
                                    )}
 
                                    {showAddBug ? (
                                        <div className="p-4 border rounded-md bg-muted/40 space-y-4 mt-2">
-                                           <h4 className="font-semibold text-sm">Add Defect to [{selectedStory?.storyId || 'REQ'}] {selectedStory?.title}</h4>
+                                           <h4 className="font-semibold text-sm">Add In-Sprint Bug to [{selectedStory?.storyId || 'REQ'}] {selectedStory?.title}</h4>
                                            <Form {...addBugForm}>
                                                <div className="space-y-3">
                                                    <FormField control={addBugForm.control} name="title" render={({field}) => (
@@ -3360,14 +3405,14 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                                    )}/>
                                                    <div className="flex justify-end gap-2 pt-2">
                                                        <Button type="button" variant="ghost" onClick={() => setShowAddBug(false)}>Cancel</Button>
-                                                       <Button type="button" onClick={addBugForm.handleSubmit(handleAddBug)}>Save Defect</Button>
+                                                       <Button type="button" onClick={addBugForm.handleSubmit(handleAddBug)}>Save In-Sprint Bug</Button>
                                                    </div>
                                                </div>
                                            </Form>
                                        </div>
                                    ) : (
                                        <Button variant="outline" size="sm" className="mt-2" onClick={() => setShowAddBug(true)}>
-                                           <PlusCircle className="mr-2 h-4 w-4"/> Add Defect
+                                           <PlusCircle className="mr-2 h-4 w-4"/> Add In-Sprint Bug
                                        </Button>
                                    )}
                                </div>

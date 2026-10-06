@@ -23,7 +23,7 @@ export interface DatabaseAdapter {
 
     // Story actions
     addStory(projectId: string, story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string, testDate?: Date | null, stories?: Story[]): Promise<{id: string, storyId: string} | null>;
-    autoGenerateStories(projectId: string, counts: Record<WorkItemType, number>, testDate?: Date | null): Promise<boolean>;
+    autoGenerateStories(projectId: string, counts: Partial<Record<WorkItemType, number>> | Record<WorkItemType, number>, testDate?: Date | null): Promise<boolean>;
     updateStory(projectId: string, storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>, testDate?: Date | null, stories?: Story[]): Promise<boolean>;
     deleteStory(projectId: string, storyId: string, testDate?: Date | null): Promise<boolean>;
     moveStoryToSprint(projectId: string, storyId: string, sprintId: string | null): Promise<boolean>;

@@ -1,6 +1,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { AsyncLocalStorage } from 'async_hooks';
+import { isBugWorkItem } from '@/types';
 import {
   flowpilotCreateWorkItem,
   flowpilotUpdateWorkItem,
@@ -215,9 +216,22 @@ export const createWorkItemTool = ai.defineTool(
     inputSchema: z.object({
       projectId: z.string().describe('The project ID in which to create the work item.'),
       itemType: z
-        .enum(['Requirement/Story', 'Bug', 'Task', 'Feature Change', 'Sub Task'])
-        .default('Requirement/Story')
-        .describe('The type of work item: "Bug", "Requirement/Story", "Task", "Feature Change", or "Sub Task".'),
+        .enum([
+          'User Story',
+          'Requirement/Story',
+          'Feature Change',
+          'Task',
+          'Enabler',
+          'Tech Debt',
+          'Spike',
+          'Bug / Defect',
+          'Bug',
+          'Subtasks',
+          'Sub Task',
+          'In-Sprint Bug',
+        ])
+        .default('User Story')
+        .describe('The type of work item: User Story, Feature Change, Task, Enabler, Tech Debt, Spike, Bug / Defect, Subtasks, or In-Sprint Bug.'),
       title: z.string().describe('Clear, concise title or headline of the work item.'),
       description: z.string().optional().describe('Detailed description, steps to reproduce, or requirements.'),
       priority: z
@@ -263,7 +277,7 @@ export const createWorkItemTool = ai.defineTool(
         priority: input.priority,
         severity: input.severity,
         projectId: input.projectId,
-        url: input.itemType === 'Bug' ? `/projects/${input.projectId}/testing/defect-tracker` : `/projects/${input.projectId}/development/kanban`,
+        url: isBugWorkItem(input.itemType) ? `/projects/${input.projectId}/testing/defect-tracker` : `/projects/${input.projectId}/development/kanban`,
         needsClientExecution: true,
         params: input,
       };

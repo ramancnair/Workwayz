@@ -47,7 +47,7 @@ export interface ProjectContextType {
   addStory: (story: Omit<Story, 'id' | 'storyId'>, prefixOverride?: string) => Promise<{ id: string; storyId: string } | null>;
   updateStory: (storyId: string, data: Partial<Omit<Story, 'id' | 'storyId'>>) => Promise<boolean>;
   deleteStory: (storyId: string) => Promise<boolean>;
-  autoGenerateStories: (counts: Record<WorkItemType, number>) => Promise<boolean>;
+  autoGenerateStories: (counts: Partial<Record<WorkItemType, number>> | Record<WorkItemType, number>) => Promise<boolean>;
   moveStoryToSprint: (storyId: string, sprintId: string | null) => Promise<boolean>;
   moveStoryStatus: (storyId: string, newStatus: StoryStatus) => Promise<boolean>;
   moveStoryToEpic: (storyId: string, epicId: string | null) => Promise<boolean>;

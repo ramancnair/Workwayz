@@ -8,7 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity, TestCase } from '@/types';
-import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle, Search } from 'lucide-react';
+import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
+import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
   Select,
@@ -60,11 +61,18 @@ import { format, parseISO, differenceInDays, eachDayOfInterval, isSameDay } from
 import { DatePicker } from '@/components/ui/datepicker';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'User Story': BookOpen,
   'Requirement/Story': BookOpen,
-  'Bug': Bug,
-  'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Task': CheckSquare,
+  'Enabler': Layers,
+  'Tech Debt': Wrench,
+  'Spike': Zap,
+  'Bug / Defect': Bug,
+  'Bug': Bug,
+  'Subtasks': CheckSquare,
   'Sub Task': CheckSquare,
+  'In-Sprint Bug': Bug,
 };
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
@@ -161,9 +169,9 @@ function StoryCard({
   const Icon = workItemIcons[story.itemType];
   const doneColumn = columns.find(c => c.isDoneColumn);
   
-  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task') || [], [subItems]);
-  const bugs = useMemo(() => subItems?.filter(i => i.itemType === 'Bug') || [], [subItems]);
-  const showSubItems = story.itemType !== 'Bug' && (subTasks.length > 0 || bugs.length > 0);
+  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task' || i.itemType === 'Subtasks') || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => isBugWorkItem(i.itemType)) || [], [subItems]);
+  const showSubItems = !isBugWorkItem(story.itemType) && (subTasks.length > 0 || bugs.length > 0);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -174,7 +182,7 @@ function StoryCard({
   }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
   const displayEffort = useMemo(() => {
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType)) {
+    if (isPbiWorkItem(story.itemType)) {
       if (subTasks.length > 0 || bugs.length > 0) {
         return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
@@ -284,7 +292,7 @@ function StoryCard({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         {columns.filter(col => {
-                            const currentColumnName = story.itemType === 'Bug' ? getColumnForBugStatus(story.status, columns) : story.status;
+                            const currentColumnName = isBugWorkItem(story.itemType) ? getColumnForBugStatus(story.status, columns) : story.status;
                             return col.name !== currentColumnName;
                         }).map(col => {
                             const isDoneAndDisabled = doneColumn && col.id === doneColumn.id && isMoveToDoneDisabled;
@@ -362,7 +370,7 @@ function StoryCard({
                                 </Badge>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                {(item.itemType === 'Bug' 
+                                {(isBugWorkItem(item.itemType) 
                                   ? ['To Triage', 'Open', 'In Progress', 'Resolved', 'Reopened', 'Closed']
                                   : statusOptions).filter(s => s !== item.status).map(status => (
                                   <DropdownMenuItem key={status} onSelect={() => onSubItemStatusChange(item.id, status)}>
@@ -455,8 +463,8 @@ export default function KanbanPage() {
   const actualEffortInHours = useMemo(() => {
     if (!selectedStory) return null;
     // For parent stories, actual effort is sum of sub-tasks' actual effort
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
-        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+    if (isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && (s.itemType === 'Sub Task' || s.itemType === 'Subtasks'));
         if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
 
         return subTasks.reduce((total, task) => {
@@ -502,7 +510,7 @@ export default function KanbanPage() {
   }, {} as Record<string, Story>), [stories]);
   
   const subItemsByStoryId = useMemo(() => stories.reduce((acc, story) => {
-    if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+    if ((isExecutionWorkItem(story.itemType) || (isBugWorkItem(story.itemType) && story.parentStoryId)) && story.parentStoryId) {
         if (!acc[story.parentStoryId]) {
             acc[story.parentStoryId] = [];
         }
@@ -511,7 +519,7 @@ export default function KanbanPage() {
     return acc;
   }, {} as Record<string, Story[]>), [stories]);
 
-  const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+  const parentStories = useMemo(() => stories.filter(s => ['User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
   const parentStoryOptions = useMemo(() => parentStories.map(s => ({
     value: s.id,
     label: `[${s.storyId}] ${s.title}`
@@ -522,7 +530,7 @@ export default function KanbanPage() {
     label: `[${tc.testCaseId}] ${tc.title}`,
   })), [testCases]);
 
-  const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+  const relatedBugOptions = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)).map(b => ({
     value: b.id,
     label: `[${b.storyId}] ${b.title}`,
   })), [stories]);
@@ -537,7 +545,7 @@ export default function KanbanPage() {
         setIsEditStorySubmitting(false);
         return;
     }
-    if (selectedStory.itemType === 'Sub Task') {
+    if (selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks') {
        subTaskForm.reset({
             title: (selectedStory.title || '').slice(0, 60),
             description: (selectedStory.description || '').slice(0, 300),
@@ -643,9 +651,9 @@ export default function KanbanPage() {
     let filteredByView: Story[];
 
     if (viewBy === 'story') {
-        filteredByView = baseSprintStories.filter(story => ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+        filteredByView = baseSprintStories.filter(story => !isExecutionWorkItem(story.itemType));
     } else if (viewBy === 'sub-task') {
-        filteredByView = baseSprintStories.filter(story => story.itemType === 'Sub Task');
+        filteredByView = baseSprintStories.filter(story => isExecutionWorkItem(story.itemType));
     } else {
         filteredByView = [];
     }
@@ -660,8 +668,8 @@ export default function KanbanPage() {
     if (!selectedStory) return { subTasks: [], bugs: [], logs: [] };
     const allSubItems = subItemsByStoryId[selectedStory.id] || [];
     return {
-      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
-      bugs: allSubItems.filter(item => item.itemType === 'Bug'),
+      subTasks: allSubItems.filter(item => item.itemType === 'Sub Task' || item.itemType === 'Subtasks'),
+      bugs: allSubItems.filter(item => isBugWorkItem(item.itemType)),
       logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
     };
   }, [selectedStory, subItemsByStoryId]);
@@ -746,7 +754,7 @@ export default function KanbanPage() {
             const allColumnNames = new Set(sortedColumns.map(c => c.name));
             const firstNonDoneColumn = sortedColumns.find(c => !c.isDoneColumn);
             const itemsInColumn = sprintStories.filter((story) => {
-              const currentStatus = story.itemType === 'Bug' ? getColumnForBugStatus(story.status, sortedColumns) : story.status;
+              const currentStatus = isBugWorkItem(story.itemType) ? getColumnForBugStatus(story.status, sortedColumns) : story.status;
               if (currentStatus === column.name) return true;
               // Orphaned status: doesn't belong to any column
               if (!allColumnNames.has(currentStatus) && firstNonDoneColumn && column.id === firstNonDoneColumn.id) return true;
@@ -770,7 +778,7 @@ export default function KanbanPage() {
                       const activeSubItems = subItems.filter(sub => !sub.isDeleted);
                       const allSubItemsDone = activeSubItems.length === 0 || activeSubItems.every(sub => sub.status === doneColumnName);
 
-                      const isMoveToDoneDisabled = ['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType) && !allSubItemsDone;
+                      const isMoveToDoneDisabled = isPbiWorkItem(story.itemType) && !allSubItemsDone;
 
                       return (
                         <div key={story.id}>
@@ -782,7 +790,7 @@ export default function KanbanPage() {
                             columns={sortedColumns}
                             onStatusChange={(newStatus) => {
                                let finalStatus = newStatus;
-                               if (story.itemType === 'Bug') {
+                               if (isBugWorkItem(story.itemType)) {
                                    const doneColName = sortedColumns.find(c => c.isDoneColumn)?.name || 'Done';
                                    const inQaColName = sortedColumns.find(c => c.name === 'In QA' || c.name === 'QA')?.name || 'In QA';
                                    
@@ -817,7 +825,7 @@ export default function KanbanPage() {
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           {selectedStory && (
             <>
-              {selectedStory.itemType === 'Sub Task' ? (
+              {selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks' ? (
                 <Form {...subTaskForm}>
                   <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -966,7 +974,7 @@ export default function KanbanPage() {
                     </DialogFooter>
                   </form>
                 </Form>
-              ) : selectedStory.itemType === 'Bug' ? (
+              ) : isBugWorkItem(selectedStory.itemType) ? (
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -1452,7 +1460,7 @@ export default function KanbanPage() {
                           </TabsList>
                           <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                               <div className="space-y-4">
-                                  {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                                  {isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType) && (
                                     <FormField
                                         control={editStoryForm.control}
                                         name="impactedSystemIds"
@@ -1526,7 +1534,7 @@ export default function KanbanPage() {
                                       )}
                                   />
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {['Requirement/Story', 'Task', 'Feature Change'].includes(selectedStory.itemType) ? (
+                                  {isPbiWorkItem(selectedStory.itemType) ? (
                                       <FormField
                                       control={editStoryForm.control}
                                       name="epicId"

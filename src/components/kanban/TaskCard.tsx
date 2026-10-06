@@ -6,16 +6,23 @@ import React from 'react';
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Story, Epic, WorkItemType } from '@/types';
-import { BookOpen, Bug, CheckSquare, GitCommit } from 'lucide-react';
+import { BookOpen, Bug, CheckSquare, GitCommit, Layers, Wrench, Zap } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'User Story': BookOpen,
   'Requirement/Story': BookOpen,
-  Bug: Bug,
-  'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Task': CheckSquare,
+  'Enabler': Layers,
+  'Tech Debt': Wrench,
+  'Spike': Zap,
+  'Bug / Defect': Bug,
+  'Bug': Bug,
+  'Subtasks': CheckSquare,
   'Sub Task': CheckSquare,
+  'In-Sprint Bug': Bug,
 };
 
 interface StoryCardProps {

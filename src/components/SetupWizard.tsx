@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
+import { Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function SetupWizard({ onClose }: { onClose?: () => void }) {
@@ -343,8 +344,17 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           </Button>
         )}
         <div className="text-center space-y-2 pt-4 shrink-0">
-          <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-2">
-            <Sparkles className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center mb-2">
+            <div className="relative w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-black/50 ring-1 ring-white/10 border border-slate-700/60 bg-[#0d1624]">
+              <Image
+                src="/workwayz-icon.png"
+                alt="Workwayz Logo"
+                fill
+                sizes="56px"
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Welcome to Workwayz Setup</h1>
           <p className="text-muted-foreground text-lg">Let&apos;s configure your environment to get you started.</p>

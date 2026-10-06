@@ -33,6 +33,8 @@ import type {
   ProjectSettings,
   Horizontal,
   Environment,
+  isBugWorkItem,
+  isPbiWorkItem,
 } from '@/types';
 
 // Helper to remove undefined values and enforce max string lengths
@@ -78,11 +80,18 @@ export async function flowpilotCreateWorkItem(params: {
   const storiesSnapshot = await getDocs(collection(projectDocRef, 'stories'));
 
   const prefixMap: Record<WorkItemType, string> = {
+    'User Story': 'US',
     'Requirement/Story': 'ST',
     'Feature Change': 'FC',
     'Task': 'TASK',
+    'Enabler': 'EN',
+    'Tech Debt': 'TD',
+    'Spike': 'SPK',
+    'Bug / Defect': 'BUG',
     'Bug': 'BUG',
+    'Subtasks': 'SUB',
     'Sub Task': 'SUB',
+    'In-Sprint Bug': 'ISB',
   };
   const prefix = prefixMap[itemType] || 'ITEM';
 
@@ -110,13 +119,13 @@ export async function flowpilotCreateWorkItem(params: {
     statusHistory: [{ fromStatus: null, toStatus: status, date: now }],
   };
 
-  if (severity && itemType === 'Bug') {
+  if (severity && isBugWorkItem(itemType)) {
     payload.severity = severity;
   }
 
   const docRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeData(payload));
 
-  const destinationUrl = itemType === 'Bug'
+  const destinationUrl = isBugWorkItem(itemType)
     ? `/projects/${projectId}/testing/defect-tracker`
     : `/projects/${projectId}/development/kanban`;
 
@@ -919,7 +928,7 @@ export async function flowpilotQueryProjectContext(projectId?: string) {
     summary: projData.summary,
     counts: {
       totalStories: stories.length,
-      bugsCount: stories.filter((s: any) => s.itemType === 'Bug').length,
+      bugsCount: stories.filter((s: any) => isBugWorkItem(s.itemType)).length,
       epicsCount: epics.length,
       sprintsCount: sprints.length,
       testCasesCount: testCases.length,
@@ -3343,7 +3352,7 @@ export async function flowpilotQueryProjectWorkload(params: { projectId: string;
       workloadByAssignee[assignee] = { assignee, subTaskHours: 0, bugHours: 0, totalHours: 0, itemCount: 0 };
     }
     const hours = s.estimatedHours || 0;
-    if (s.itemType === 'Bug') {
+    if (isBugWorkItem(s.itemType)) {
       workloadByAssignee[assignee].bugHours += hours;
     } else {
       workloadByAssignee[assignee].subTaskHours += hours;
@@ -3948,7 +3957,7 @@ export async function flowpilotQueryDevDashboardSummary(params: { projectId: str
 
   const activeSprintStories = currentSprint ? stories.filter((s: any) => s.sprintId === currentSprint.id) : [];
   const completedStories = activeSprintStories.filter((s: any) => s.status === 'Done');
-  const openBugs = stories.filter((s: any) => s.itemType === 'Bug' && s.status !== 'Done');
+  const openBugs = stories.filter((s: any) => isBugWorkItem(s.itemType) && s.status !== 'Done');
 
   return {
     projectId: params.projectId,
@@ -4283,7 +4292,7 @@ export async function flowpilotQueryProjectDefects(params: {
   const snap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   let bugs = snap.docs
     .map((d: any) => ({ id: d.id, ...d.data() }))
-    .filter((s: any) => !s.isDeleted && s.itemType === 'Bug');
+    .filter((s: any) => !s.isDeleted && isBugWorkItem(s.itemType));
 
   if (params.severity) {
     bugs = bugs.filter((b: any) => b.severity === params.severity);
@@ -4397,8 +4406,8 @@ export async function flowpilotQueryDefectDensity(params: { projectId: string })
   if (!db) throw new Error('Database unavailable');
   const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
   const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })).filter((s: any) => !s.isDeleted);
-  const totalReqs = stories.filter((s: any) => s.itemType === 'Requirement/Story').length;
-  const totalBugs = stories.filter((s: any) => s.itemType === 'Bug').length;
+  const totalReqs = stories.filter((s: any) => isPbiWorkItem(s.itemType) && !isBugWorkItem(s.itemType)).length;
+  const totalBugs = stories.filter((s: any) => isBugWorkItem(s.itemType)).length;
 
   const defectDensity = totalReqs > 0 ? Math.round((totalBugs / totalReqs) * 10) / 10 : 0;
 

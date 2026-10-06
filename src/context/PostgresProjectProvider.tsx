@@ -627,11 +627,18 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
             : 1;
 
         const defaultPrefixMap: Record<WorkItemType, string> = {
+            'User Story': 'US',
             'Requirement/Story': 'ST',
             'Feature Change': 'FC',
             'Task': 'TASK',
+            'Enabler': 'EN',
+            'Tech Debt': 'TD',
+            'Spike': 'SPK',
+            'Bug / Defect': 'BUG',
             'Bug': 'BUG',
+            'Subtasks': 'SUB',
             'Sub Task': 'SUB',
+            'In-Sprint Bug': 'ISB',
         };
         const prefix = prefixOverride || defaultPrefixMap[story.itemType] || 'ITEM';
         const storyId = `${prefix}-${newIdNumber}`;
@@ -651,7 +658,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
 
 
         // If it's a sub-item (Bug) linked to a story, inherit the sprint
-        if (['Bug'].includes(story.itemType) && story.parentStoryId) {
+        if (['Bug', 'Bug / Defect', 'In-Sprint Bug'].includes(story.itemType) && story.parentStoryId) {
             const parentStory = stories.find(s => s.id === story.parentStoryId);
             if (parentStory && parentStory.sprintId) {
                 payload.sprintId = parentStory.sprintId;
@@ -660,7 +667,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         
         const newDocRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeForFirestore(payload));
 
-        if (story.itemType === 'Sub Task' && story.parentStoryId) {
+        if (['Sub Task', 'Subtasks'].includes(story.itemType) && story.parentStoryId) {
             await updateStoryEffort(story.parentStoryId);
         }
         return { id: newDocRef.id, storyId };
@@ -670,7 +677,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const autoGenerateStories = async (counts: Record<WorkItemType, number>): Promise<boolean> => {
+  const autoGenerateStories = async (counts: Partial<Record<WorkItemType, number>> | Record<WorkItemType, number>): Promise<boolean> => {
     if (!db || !projectId) return false;
     
     const getRandomItem = <T,>(arr: T[]): T | undefined => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
@@ -694,17 +701,24 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       let currentIdCounter = highestId + 1;
 
       const prefixMap: Record<WorkItemType, string> = {
+          'User Story': 'US',
           'Requirement/Story': 'ST',
           'Feature Change': 'FC',
           'Task': 'TASK',
+          'Enabler': 'EN',
+          'Tech Debt': 'TD',
+          'Spike': 'SPK',
+          'Bug / Defect': 'BUG',
           'Bug': 'BUG',
+          'Subtasks': 'SUB',
           'Sub Task': 'SUB',
+          'In-Sprint Bug': 'ISB',
       };
       
       const itemTypes = Object.keys(counts) as WorkItemType[];
       
       for (const itemType of itemTypes) {
-        const count = counts[itemType];
+        const count = counts[itemType] || 0;
         for (let i = 0; i < count; i++) {
           const newStoryRef = doc(collection(db, 'projects', projectId, 'stories'));
           const now = (testDate || new Date()).toISOString();
@@ -1388,7 +1402,7 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       const testCasesSnapshot = await getDocs(collection(db, 'projects', projectId, 'testCases'));
       let currentIdCounter = testCasesSnapshot.size > 0 ? Math.max(0, ...testCasesSnapshot.docs.map(doc => parseInt(doc.data().testCaseId.replace('TC-', ''), 10) || 0)) + 1 : 1;
 
-      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story');
+      const storiesToLink = stories.filter(s => s.itemType === 'Requirement/Story' || s.itemType === 'User Story');
 
       for (const environmentId in counts) {
         const count = counts[environmentId];

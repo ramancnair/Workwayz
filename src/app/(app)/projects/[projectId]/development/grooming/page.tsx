@@ -28,10 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase, isPbiWorkItem, isBugWorkItem, isExecutionWorkItem } from '@/types';
 import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,11 +68,18 @@ const sprintSchema = z.object({
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
+  'User Story': BookOpen,
   'Requirement/Story': BookOpen,
-  Bug: Bug,
-  'Task': CheckSquare,
   'Feature Change': GitCommit,
+  'Task': CheckSquare,
+  'Enabler': Layers,
+  'Tech Debt': Wrench,
+  'Spike': Zap,
+  'Bug / Defect': Bug,
+  'Bug': Bug,
+  'Subtasks': CheckSquare,
   'Sub Task': CheckSquare,
+  'In-Sprint Bug': Bug,
 };
 
 const statusOptions: StoryStatus[] = ['To Do', 'In Progress', 'Done'];
@@ -147,8 +154,8 @@ function StoryItemCard({
 }) {
   const { sprints, impactedSystems } = useProject();
   const Icon = workItemIcons[story.itemType];
-  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task') || [], [subItems]);
-  const bugs = useMemo(() => subItems?.filter(i => i.itemType === 'Bug') || [], [subItems]);
+  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task' || i.itemType === 'Subtasks') || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => isBugWorkItem(i.itemType)) || [], [subItems]);
   const showSubTasks = subTasks.length > 0;
   const showBugs = bugs.length > 0;
 
@@ -164,7 +171,7 @@ function StoryItemCard({
   }, [story.estimatedHours, story.impactedSystemIds, subTasks]);
 
   const displayEffort = useMemo(() => {
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(story.itemType)) {
+    if (isPbiWorkItem(story.itemType)) {
       if (subTasks.length > 0 || bugs.length > 0) {
         return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
@@ -378,9 +385,9 @@ function SprintColumn({
         let itemsToConsider: Story[] = [];
 
         if (viewBy === 'bug') {
-            itemsToConsider = allSubItemsInSprint.filter(i => i.itemType === 'Bug');
+            itemsToConsider = allSubItemsInSprint.filter(i => isBugWorkItem(i.itemType));
         } else {
-            itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Task'].includes(i.itemType));
+            itemsToConsider = allSubItemsInSprint.filter(i => ['Sub Task', 'Subtasks', 'Task'].includes(i.itemType));
         }
             
         itemsToConsider.forEach(task => {
@@ -514,11 +521,11 @@ export default function GroomingPage() {
         let baseItems: Story[];
 
         if (viewBy === 'story') {
-            baseItems = stories.filter(story => !story.sprintId && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+            baseItems = stories.filter(story => !story.sprintId && isPbiWorkItem(story.itemType) && !isBugWorkItem(story.itemType));
         } else if (viewBy === 'sub-task') {
-            baseItems = stories.filter(story => !story.sprintId && story.itemType === 'Sub Task');
+            baseItems = stories.filter(story => !story.sprintId && (story.itemType === 'Sub Task' || story.itemType === 'Subtasks'));
         } else if (viewBy === 'bug') {
-            baseItems = stories.filter(story => !story.sprintId && story.itemType === 'Bug');
+            baseItems = stories.filter(story => !story.sprintId && isBugWorkItem(story.itemType));
         } else {
             baseItems = [];
         }
@@ -530,7 +537,7 @@ export default function GroomingPage() {
     }, [stories, viewBy, selectedAssigneeId]);
     
      const subItemsByParentId = useMemo(() => stories.reduce((acc, story) => {
-        if (['Bug', 'Sub Task'].includes(story.itemType) && story.parentStoryId) {
+        if ((isBugWorkItem(story.itemType) || story.itemType === 'Sub Task' || story.itemType === 'Subtasks') && story.parentStoryId) {
             if (!acc[story.parentStoryId]) {
                 acc[story.parentStoryId] = [];
             }
@@ -543,11 +550,11 @@ export default function GroomingPage() {
         return sprints.map(sprint => {
             let items: Story[];
             if (viewBy === 'story') {
-                items = stories.filter(story => story.sprintId === sprint.id && ['Requirement/Story', 'Task', 'Feature Change'].includes(story.itemType));
+                items = stories.filter(story => story.sprintId === sprint.id && isPbiWorkItem(story.itemType) && !isBugWorkItem(story.itemType));
             } else if (viewBy === 'sub-task') {
-                items = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Sub Task');
+                items = stories.filter(story => story.sprintId === sprint.id && (story.itemType === 'Sub Task' || story.itemType === 'Subtasks'));
             } else if (viewBy === 'bug') {
-                items = stories.filter(story => story.sprintId === sprint.id && story.itemType === 'Bug');
+                items = stories.filter(story => story.sprintId === sprint.id && isBugWorkItem(story.itemType));
             } else {
                 items = [];
             }
@@ -693,7 +700,7 @@ export default function GroomingPage() {
         return employees.filter(emp => emp.capabilities?.includes(groomingWatchedImpactedSystemId));
     }, [employees, groomingWatchedImpactedSystemId]);
 
-    const parentStories = useMemo(() => stories.filter(s => ['Requirement/Story'].includes(s.itemType)), [stories]);
+    const parentStories = useMemo(() => stories.filter(s => ['User Story', 'Requirement/Story'].includes(s.itemType)), [stories]);
     const parentStoryOptions = useMemo(() => parentStories.map(s => ({
         value: s.id,
         label: `[${s.storyId}] ${s.title}`
@@ -704,12 +711,12 @@ export default function GroomingPage() {
         label: `[${tc.testCaseId}] ${tc.title}`,
     })), [testCases]);
 
-    const relatedBugOptions = useMemo(() => stories.filter(s => s.itemType === 'Bug').map(b => ({
+    const relatedBugOptions = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)).map(b => ({
         value: b.id,
         label: `[${b.storyId}] ${b.title}`,
     })), [stories]);
 
-    const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && s.itemType !== 'Sub Task').map(s => ({
+    const predecessorOptions = useMemo(() => stories.filter(s => s.id !== selectedStory?.id && !isExecutionWorkItem(s.itemType)).map(s => ({
         value: s.id,
         label: `[${s.storyId}] ${s.title}`,
     })), [stories, selectedStory]);
@@ -759,7 +766,7 @@ export default function GroomingPage() {
           subTaskForm.reset();
           return;
         }
-        if (selectedStory.itemType === 'Sub Task') {
+        if (selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks') {
             subTaskForm.reset({
                 title: (selectedStory.title || '').slice(0, 60),
                 description: (selectedStory.description || '').slice(0, 300),
@@ -773,7 +780,7 @@ export default function GroomingPage() {
                 releaseId: selectedStory.releaseId || 'unassigned',
             });
         } else {
-            const isSubItem = ['Bug', 'Feature Change', 'Task'].includes(selectedStory.itemType);
+            const isSubItem = isBugWorkItem(selectedStory.itemType) || selectedStory.itemType === 'Feature Change' || isExecutionWorkItem(selectedStory.itemType);
             const testCase = testCases.find(tc => tc.id === selectedStory.relatedTestCaseId);
             setTestCaseInputText(testCase ? `[${testCase.testCaseId}] ${testCase.title}` : '');
             const relBug = stories.find(b => b.id === selectedStory.relatedBugId);
@@ -830,8 +837,8 @@ export default function GroomingPage() {
   const actualEffortInHours = useMemo(() => {
     if (!selectedStory) return null;
     // For parent stories, actual effort is sum of sub-tasks' actual effort
-    if (['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType)) {
-        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && s.itemType === 'Sub Task');
+    if (isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType)) {
+        const subTasks = stories.filter(s => s.parentStoryId === selectedStory.id && (s.itemType === 'Sub Task' || s.itemType === 'Subtasks'));
         if (subTasks.length === 0) return null; // Or show based on parent dates if no sub-tasks?
 
         return subTasks.reduce((total, task) => {
@@ -1013,8 +1020,8 @@ export default function GroomingPage() {
         if (!selectedStory) return { subTasks: [], bugs: [], logs: [] };
         const allSubItems = subItemsByParentId[selectedStory.id] || [];
         return {
-          subTasks: allSubItems.filter(item => item.itemType === 'Sub Task'),
-          bugs: allSubItems.filter(item => item.itemType === 'Bug'),
+          subTasks: allSubItems.filter(item => item.itemType === 'Sub Task' || item.itemType === 'Subtasks'),
+          bugs: allSubItems.filter(item => isBugWorkItem(item.itemType)),
           logs: selectedStory.statusHistory?.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [],
         };
     }, [selectedStory, subItemsByParentId]);
@@ -1263,7 +1270,7 @@ export default function GroomingPage() {
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden" bypassScrollWrapper={true}>
             {selectedStory && (
                 <>
-                {selectedStory.itemType === 'Sub Task' ? (
+                {selectedStory.itemType === 'Sub Task' || selectedStory.itemType === 'Subtasks' ? (
                 <Form {...subTaskForm}>
                   <form onSubmit={subTaskForm.handleSubmit(onEditSubTaskSubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -1428,7 +1435,7 @@ export default function GroomingPage() {
                     </DialogFooter>
                   </form>
                 </Form>
-              ) : selectedStory.itemType === 'Bug' ? (
+              ) : isBugWorkItem(selectedStory.itemType) ? (
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
@@ -1907,7 +1914,7 @@ export default function GroomingPage() {
                         </TabsList>
                         <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                         <div className="space-y-4">
-                            {['Requirement/Story', 'Feature Change', 'Bug', 'Task'].includes(selectedStory.itemType) && (
+                            {isPbiWorkItem(selectedStory.itemType) && !isBugWorkItem(selectedStory.itemType) && (
                                 <FormField
                                     control={editStoryForm.control}
                                     name="impactedSystemIds"
@@ -1981,7 +1988,7 @@ export default function GroomingPage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {['Requirement/Story', 'Task', 'Bug', 'Feature Change'].includes(selectedStory.itemType) ? (
+                            {isPbiWorkItem(selectedStory.itemType) ? (
                                 <FormField
                                 control={editStoryForm.control}
                                 name="epicId"
@@ -2077,7 +2084,7 @@ export default function GroomingPage() {
                                 )}
                               />
                             ) : null}
-                            {selectedStory.itemType === 'Bug' && (
+                            {isBugWorkItem(selectedStory.itemType) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <FormField
                                   control={editStoryForm.control}

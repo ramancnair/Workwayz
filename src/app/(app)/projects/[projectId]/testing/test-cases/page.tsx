@@ -40,6 +40,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns, Paperclip, Search } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } from '@/types';
+import { isPbiWorkItem } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -137,7 +138,7 @@ export default function TestCasesPage() {
 
   const onAiGenSubmit = async () => {
     setIsAiGenSubmitting(true);
-    const storiesToProcess = stories.filter(s => s.itemType === 'Requirement/Story');
+    const storiesToProcess = stories.filter(s => isPbiWorkItem(s.itemType));
     if (storiesToProcess.length === 0) {
       toast({ variant: 'destructive', title: 'No Stories Found', description: 'There are no user stories to generate test cases from.'});
       setIsAiGenSubmitting(false);

@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label as UiLabel } from '@/components/ui/label';
 import { format, parseISO, isSameDay, eachDayOfInterval, differenceInDays, isWithinInterval } from 'date-fns';
 import type { Story, Worklog, UserRole } from '@/types';
+import { isBugWorkItem } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -403,9 +404,9 @@ export default function ProjectDashboardPage() {
     sprintStories.forEach(story => {
       if (!story.assigneeId || !resourceEffort[story.assigneeId]) return;
 
-      if (story.itemType === 'Sub Task') {
+      if (story.itemType === 'Sub Task' || story.itemType === 'Subtasks') {
         resourceEffort[story.assigneeId].subTaskEffort += story.estimatedHours || 0;
-      } else if (story.itemType === 'Bug') {
+      } else if (isBugWorkItem(story.itemType)) {
         resourceEffort[story.assigneeId].bugEffort += story.estimatedHours || 0;
       }
     });

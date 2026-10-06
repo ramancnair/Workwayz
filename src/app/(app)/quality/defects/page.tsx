@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Project, ProjectStatus } from '@/types';
+import { isBugWorkItem } from '@/types';
 
 type ProjectDefects = {
   projectId: string;
@@ -89,7 +90,7 @@ export default function QualityDefectsPage() {
         const testPlans = testCyclesData.length > 0 ? testCyclesData : testPlansData;
 
         // Extract active bugs (defects)
-        const bugs = stories.filter(s => s.itemType === 'Bug' && !s.isDeleted);
+        const bugs = stories.filter(s => isBugWorkItem(s.itemType) && !s.isDeleted);
 
         let sitCount = 0;
         let uatCount = 0;
