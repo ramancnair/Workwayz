@@ -1,4 +1,4 @@
-# ProjectFlow — Install Instructions
+# Workwayz — Install Instructions
 
 ## 1. Download the Project
 

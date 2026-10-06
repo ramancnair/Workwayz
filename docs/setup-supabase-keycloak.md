@@ -1,4 +1,4 @@
-# ProjectFlow Setup Guide: Supabase DB & Keycloak Auth
+# Workwayz Setup Guide: Supabase DB & Keycloak Auth
 
 This guide provides comprehensive instructions for installing and setting up ProjectFlow using **Supabase** as the database and **Keycloak** for authentication. Both services will be run locally via Docker.
 
@@ -39,7 +39,7 @@ npm install
 5. **Get your API Credentials**:
    - Open the `.env` file you created in `supabase-docker/docker`.
    - Find the **`ANON_KEY`** (a long JWT token) and the **`API_EXTERNAL_URL`** (typically `http://localhost:8000` or `http://localhost:54321`). 
-   - Keep these handy for the ProjectFlow wizard.
+   - Keep these handy for the Workwayz wizard.
 
 ## 4. Set Up Keycloak (Auth via Docker)
 
@@ -77,7 +77,7 @@ npm install
 
 ## 6. App Configuration (The Wizard)
 
-ProjectFlow provides a Configuration UI to easily set up your `.env.local` file.
+Workwayz provides a Configuration UI to easily set up your `.env.local` file.
 
 1. Navigate back to your `ProjectFlow` directory terminal and start the server:
    ```bash
@@ -124,4 +124,4 @@ GEMINI_API_KEY="<your-gemini-api-key>"
 ```
 
 ## 7. You're All Set!
-Open `http://localhost:3000`. You will now be redirected to the Keycloak login screen. Register your new account and start using ProjectFlow!
+Open `http://localhost:3000`. You will now be redirected to the Keycloak login screen. Register your new account and start using Workwayz!

@@ -19,6 +19,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Workwayz',
   description: 'Manage your projects with ease and clarity. Workwayz.in',
+  icons: {
+    icon: '/workwayz-icon.png',
+    shortcut: '/workwayz-icon.png',
+    apple: '/workwayz-icon.png',
+  },
 };
 
 export default async function RootLayout({

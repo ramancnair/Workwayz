@@ -157,7 +157,7 @@ export default function SignupPage() {
 
       toast({
         title: "Account created!",
-        description: "Welcome to ProjectFlow.",
+        description: "Welcome to Workwayz.",
       });
       router.push('/my-projects');
     } catch (error: any) {

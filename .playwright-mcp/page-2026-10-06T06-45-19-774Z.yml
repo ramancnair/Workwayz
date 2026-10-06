@@ -1,0 +1,42 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e6]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - img "Workwayz" [ref=e11]
+          - heading "Workwayz" [level=1] [ref=e12]
+        - generic [ref=e13]:
+          - button "Toggle Sidebar" [ref=e14] [cursor=pointer]
+          - button "Toggle theme" [ref=e17] [cursor=pointer]
+      - list [ref=e20]:
+        - listitem [ref=e21]:
+          - link "My Projects" [ref=e22] [cursor=pointer]:
+            - /url: /my-projects
+      - generic [ref=e29] [cursor=pointer]:
+        - generic [ref=e30]: SA
+        - generic [ref=e32]:
+          - generic [ref=e33]: Super Admin
+          - generic [ref=e34]: Super Admin
+          - generic [ref=e35]: admin@zopcode.com
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - tablist [ref=e40]:
+          - tab "My Projects" [selected]
+          - tab "Projects" [ref=e41] [cursor=pointer]
+          - tab "Quality" [ref=e42] [cursor=pointer]
+          - tab "Billing" [ref=e43] [cursor=pointer]
+          - tab "Users" [ref=e44] [cursor=pointer]
+          - tab "Holidays" [ref=e45] [cursor=pointer]
+          - tab "Portfolio Settings" [ref=e46] [cursor=pointer]
+          - tab "Portfolio Trash" [ref=e51] [cursor=pointer]
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - heading "My Projects" [level=2] [ref=e60]
+            - paragraph [ref=e61]: View your assigned projects and quick links.
+          - generic [ref=e63]:
+            - heading "No Projects Found" [level=3] [ref=e68]
+            - paragraph [ref=e69]: You are not currently assigned to any projects. Ask your Project Manager to add you to a project's resource list.
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=e77]
+  - alert [ref=e81]

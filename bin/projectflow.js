@@ -7,7 +7,7 @@ const appDir = path.resolve(__dirname, '..');
 const port = process.env.PORT || '3000';
 const host = process.env.HOSTNAME || '0.0.0.0';
 
-console.log(`▲ ProjectFlow starting on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+console.log(`▲ Workwayz starting on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
 
 const fs = require('fs');
 

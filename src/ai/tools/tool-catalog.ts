@@ -99,7 +99,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "createProject",
     "varName": "createProjectTool",
     "category": "portfolio_project",
-    "description": "Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.",
+    "description": "Creates a new project in Workwayz workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.",
     "params": [
       "name",
       "portfolioId",
@@ -114,7 +114,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
       "archive",
       "duplicate"
     ],
-    "searchText": "createProject | Category: portfolio_project | Aliases: portfolio project container archive duplicate | Description: Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead. | Parameters: name portfolioId pricingModel summary description"
+    "searchText": "createProject | Category: portfolio_project | Aliases: portfolio project container archive duplicate | Description: Creates a new project in Workwayz workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead. | Parameters: name portfolioId pricingModel summary description"
   },
   {
     "name": "createEpic",

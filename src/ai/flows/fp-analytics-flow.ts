@@ -362,7 +362,7 @@ async function executePortfolioAiAnalytics(
   });
 
   const now = new Date().toISOString();
-  const prompt = `You are ProjectFlow Executive Portfolio Analytics Intelligence.
+  const prompt = `You are Workwayz Executive Portfolio Analytics Intelligence.
 You are tasked with providing deep, zero-hallucination executive analytics answering the user's question about the organization's portfolios and projects.
 
 === USER QUERY ===

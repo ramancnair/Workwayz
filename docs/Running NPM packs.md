@@ -1,4 +1,4 @@
-# Running ProjectFlow Release Packages: NPM, Standalone & Docker
+# Running Workwayz Release Packages: NPM, Standalone & Docker
 
 This guide explains the three distribution formats available in ProjectFlow releases—**NPM Package (`.tgz`)**, **Next.js Standalone Bundle (`.tar.gz`)**, and **Docker Web Image (`projectflow-web-image-...tar.gz`)**—and provides step-by-step instructions on how to test and run each one.
 
@@ -84,7 +84,7 @@ The Standalone bundle is a lightweight (~19 MB), self-contained Node.js server w
 
 ### Option 3: Running the Docker Web Image (`projectflow-web-image-...`)
 
-The `projectflow-web-image-v<tag>.tar.gz` asset contains the complete, pre-built Docker image. It allows you to run ProjectFlow inside Docker without building from source or pulling from a remote registry.
+The `projectflow-web-image-v<tag>.tar.gz` asset contains the complete, pre-built Docker image. It allows you to run Workwayz inside Docker without building from source or pulling from a remote registry.
 
 #### Prerequisites
 * **Docker Desktop** (Windows / macOS) or **Docker Engine** (Linux) must be installed and running.
@@ -117,7 +117,7 @@ In the same folder where `docker-compose.yml` is located:
 ```bash
 docker compose up -d
 ```
-ProjectFlow is now running in the background at **[http://localhost:3000](http://localhost:3000)**!
+Workwayz is now running in the background at **[http://localhost:3000](http://localhost:3000)**!
 
 #### Step 4: Or Run Directly with `docker run` (Without Compose)
 ```bash
@@ -171,7 +171,7 @@ docker run -d -p 8080:3000 --name projectflow projectflow-web:latest
 ---
 
 ### Supplying Environment Variables
-ProjectFlow automatically reads `.env.local` from your current directory when started with Node or npm. For Docker, specify an `.env` file or environment variables in `docker-compose.yml`:
+Workwayz automatically reads `.env.local` from your current directory when started with Node or npm. For Docker, specify an `.env` file or environment variables in `docker-compose.yml`:
 
 ```env
 NEXT_PUBLIC_DB_PROVIDER=supabase

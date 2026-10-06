@@ -1,6 +1,6 @@
 /**
  * testDataEngine.ts
- * Core generator and cleanup engine for the ProjectFlow Test Data Studio.
+ * Core generator and cleanup engine for the Workwayz Test Data Studio.
  * Generates relationally linked mock datasets across Portfolios, Projects (with all subcollections),
  * and Employees/Users with Auth identity provisioning, and cleanly wipes test datasets.
  */

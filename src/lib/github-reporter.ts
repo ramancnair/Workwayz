@@ -117,7 +117,7 @@ ${payload.componentStack.trim()}
 `);
   }
 
-  bodySections.push(`---\n*Reported automatically from ProjectFlow application.*`);
+  bodySections.push(`---\n*Reported automatically from Workwayz application.*`);
 
   return bodySections.join('\n\n');
 }
@@ -144,7 +144,7 @@ export async function createGitHubIssue(payload: GitHubIssuePayload): Promise<Gi
         'Accept': 'application/vnd.github+json',
         'Authorization': `Bearer ${token}`,
         'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'ProjectFlow-App',
+        'User-Agent': 'Workwayz-App',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -201,7 +201,7 @@ export async function updateGitHubIssue(
         'Accept': 'application/vnd.github+json',
         'Authorization': `Bearer ${token}`,
         'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'ProjectFlow-App',
+        'User-Agent': 'Workwayz-App',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(update),

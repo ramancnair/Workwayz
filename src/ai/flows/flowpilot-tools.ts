@@ -388,7 +388,7 @@ export const createProjectTool = ai.defineTool(
   {
     name: 'createProject',
     description:
-      'Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.',
+      'Creates a new project in Workwayz workspace under a portfolio, initializing default Kanban columns, settings, and environments. WARNING: DO NOT call this tool when the user is already working inside an active project and providing project specifications, platform summary, or domain details — use updateProjectSpecifications or updateProjectDetails instead.',
     inputSchema: z.object({
       name: z.string().describe('Name of the new project.'),
       portfolioId: z.string().optional().describe('Optional portfolio ID or name. If omitted, uses default portfolio.'),

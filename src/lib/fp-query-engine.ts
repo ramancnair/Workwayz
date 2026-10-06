@@ -126,7 +126,7 @@ export async function executeFpQuery(
     recordsAnalyzed: allProjects.length,
     portfolioScope: portfolioName,
     timestamp: now,
-    provider: 'ProjectFlow Deterministic DB Engine',
+    provider: 'Workwayz Deterministic DB Engine',
     confidence: '100% (Grounded in Database, Zero Hallucination)',
   };
 

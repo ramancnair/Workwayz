@@ -1,13 +1,14 @@
 {
-  "name": "projectflow",
+  "name": "workwayz",
   "version": "0.1.0",
   "private": false,
-  "description": "Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
+  "description": "Workwayz - Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
   "repository": {
     "type": "git",
     "url": "https://github.com/ramancnair/ProjectFlow.git"
   },
   "bin": {
+    "workwayz": "./bin/projectflow.js",
     "projectflow": "./bin/projectflow.js"
   },
   "files": [

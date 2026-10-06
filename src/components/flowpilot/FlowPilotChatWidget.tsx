@@ -1120,7 +1120,7 @@ export function FlowPilotChatWidget() {
                     Hello{currentUser?.firstName ? `, ${currentUser.firstName}` : ''}!
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-[320px]">
-                    I am <span className="font-semibold text-primary">FlowPilot</span>, your autonomous project copilot. Tell me what you need and I will implement it in ProjectFlow.
+                    I am <span className="font-semibold text-primary">FlowPilot</span>, your autonomous project copilot. Tell me what you need and I will implement it in Workwayz.
                   </p>
                 </div>
 

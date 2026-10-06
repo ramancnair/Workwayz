@@ -1,4 +1,4 @@
-# ProjectFlow Setup Guide: Firebase Database & Auth
+# Workwayz Setup Guide: Firebase Database & Auth
 
 This guide provides comprehensive instructions for installing and setting up ProjectFlow using **Firebase** for both the database and authentication.
 
@@ -23,7 +23,7 @@ npm install
 1. Navigate to the [Firebase Console](https://console.firebase.google.com/).
 2. Click **Add project** and follow the on-screen prompts to create a new project.
 3. Once the project is created, click the **Web** icon (`</>`) on the project overview page to add a web app to your project.
-4. Register the app (e.g., name it `ProjectFlow`).
+4. Register the app (e.g., name it `Workwayz`).
 5. Firebase will provide a `firebaseConfig` object. **Keep this open** or copy it, as you will need these values during the app configuration step.
 6. **Enable Authentication**:
    - In the left sidebar, navigate to **Build > Authentication**.
@@ -54,7 +54,7 @@ If you prefer not to use cloud AI, you can run models locally.
 
 ## 5. App Configuration (The Wizard)
 
-ProjectFlow includes a built-in Configuration UI that automatically generates your `.env.local` file based on your inputs.
+Workwayz includes a built-in Configuration UI that automatically generates your `.env.local` file based on your inputs.
 
 1. Start the development server by running:
    ```bash
@@ -98,4 +98,4 @@ GEMINI_API_KEY="<your-gemini-api-key>"
 ```
 
 ## 6. You're All Set!
-Open `http://localhost:3000`, register a new account, and begin using ProjectFlow. The first user registered will have full administrator privileges.
+Open `http://localhost:3000`, register a new account, and begin using Workwayz. The first user registered will have full administrator privileges.

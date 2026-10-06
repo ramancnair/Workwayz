@@ -1,6 +1,6 @@
 # OWASP ZAP Security Scan Reports
 
-This directory stores the OWASP ZAP (Zed Attack Proxy) vulnerability and dynamic application security testing (DAST) scan reports for ProjectFlow across the development and hardening lifecycle.
+This directory stores the OWASP ZAP (Zed Attack Proxy) vulnerability and dynamic application security testing (DAST) scan reports for Workwayz across the development and hardening lifecycle.
 
 ---
 

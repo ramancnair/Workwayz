@@ -1,4 +1,4 @@
-# ProjectFlow Comprehensive Quality Assurance & Test Plan
+# Workwayz Comprehensive Quality Assurance & Test Plan
 
 This document outlines the enterprise testing architecture, automated test suites (Vitest & Playwright), living HTML matrices, and execution runbooks for ProjectFlow.
 
@@ -6,7 +6,7 @@ This document outlines the enterprise testing architecture, automated test suite
 
 ## 1. Quality Architecture Overview
 
-ProjectFlow implements an enterprise multi-tier testing pyramid:
+Workwayz implements an enterprise multi-tier testing pyramid:
 1. **Unit & Component Testing (Vitest + JSDOM)**: Fast, deterministic testing of business logic, role-based permissions, string formatters, and UI component behavior.
 2. **End-to-End Automation (Playwright)**: Full browser automation executing user journeys across the Global Portfolio Hub and Project Detail Hub with state-injecting session fixtures.
 3. **Living Traceability Matrices**: Standalone publication-ready HTML documents providing dynamic filtering and verification audit trails.

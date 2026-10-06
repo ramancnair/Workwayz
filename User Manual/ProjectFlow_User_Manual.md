@@ -1,10 +1,10 @@
-# PROJECTFLOW: User Manual
+# WORKWAYZ: User Manual
 **Author:** Raman C Nair
 
 ---
 
 ## 1. Setup Wizard
-When opening the ProjectFlow application for the first time, you are presented with a step-by-step Setup Wizard to enter essential environment configuration details and create the master system administrator account.
+When opening the Workwayz application for the first time, you are presented with a step-by-step Setup Wizard to enter essential environment configuration details and create the master system administrator account.
 
 ### Database Setup
 Configure your primary cloud or containerized database connection.
@@ -34,14 +34,14 @@ Enable intelligent project management utilities by connecting a generative AI fo
 ### Finish Setup
 Review and finalize your infrastructure configuration matrix before booting the instance.
 *   **Summary Checks:** Displays the binding state of your *Database*, *Authentication*, *Admin Account Status*, and *AI Integration*.
-*   *Action:* Clicking `Complete Setup` writes the structural parameters to the underlying system and boots up ProjectFlow.
+*   *Action:* Clicking `Complete Setup` writes the structural parameters to the underlying system and boots up Workwayz.
 
 ---
 
 ## 2. Signup and Login Flow
 
 ### Home Landing Page
-The entry point of the application outlines the modular value proposition of ProjectFlow: **Manage Portfolios and Projects with Clarity**.
+The entry point of the application outlines the modular value proposition of Workwayz: **Manage Portfolios and Projects with Clarity**.
 *   **Primary Functions Outlined:** Portfolio Management, Project Tracking, and Team Collaboration.
 *   **Navigation Actions:** Clear calls-to-action for `Get Started` or `Log In`.
 
@@ -126,7 +126,7 @@ To spawn an initial benchmark lifecycle pipeline:
 2. Navigate to the newly generated project space and explicitly document a comprehensive text summary outlining goals and scope inside the **Project Summary** input block.
 
 ### AI Stack and Horizontal Strategy Formulation
-ProjectFlow leverages its connected generative LLM framework to expedite foundational scoping:
+Workwayz leverages its connected generative LLM framework to expedite foundational scoping:
 *   **Stack Suggestions:** Clicking the `Stack Suggest` button triggers an automated reading of the scoping summary text. The AI responds by building 3 tailored structural options (e.g., *Next.js Full-Stack Suite* using Vercel/MongoDB/NextAuth/Stripe or an *AWS Serverless Architecture* relying on Amplify/Lambda/DynamoDB/Cognito).
 *   **System Ingestion:** Selecting an AI stack choice maps those distinct technical zones as structured lines underneath the **Impacted Systems** block. Manual items can be appended at any time via the `Add System` button.
 *   **Horizontal Staffing Allocation:** Click `Horizontal Suggest` to let the AI output proportional strategic staffing compositions mapped across core supporting practices (Project Management, Quality Analysis, Business Analysis, Solution Architecture, UI/UX Design, DevOps). Users assign an operational daily billing rate to calculate baseline values.
@@ -173,7 +173,7 @@ A specialized configuration portal optimized for hybrid execution models. It pro
 *   **Development Dashboard:** Tracks engineering momentum using an active *Sprint Burndown* line matrix alongside a cumulative *Release Burnup* progress chart.
 *   **Product Backlog Core:** Hierarchical container structure managing engineering requirements categorized by item types: *Requirement/Story*, *Feature Change*, *Task*, or *Bug*.
 *   **User Story Elaboration Flow:** Business Analysts and Product Owners structure target requirements inside the backlog container. Tech Leads then inspect the dependencies to map impacted components. Developers subsequently populate sub-tasks against those components, outputting explicit hourly or day-based estimations. The cumulative total forms the structural size metric of the parent user story.
-*   **Story Point Monitization Bridge:** For contemporary agile squads utilizing abstract Story Points, ProjectFlow features a built-in algorithmic conversion utility mapping point targets to contract billing hour approximations.
+*   **Story Point Monitization Bridge:** For contemporary agile squads utilizing abstract Story Points, Workwayz features a built-in algorithmic conversion utility mapping point targets to contract billing hour approximations.
 
 ### Sub-Tasks & Grooming Board
 *   **Bulk Sub-Tasks Matrix:** A tabular workspace enabling Tech Leads to perform high-velocity bulk scheduling, manipulation, and owner routing actions across hundreds of atomic engineering sub-tasks simultaneously.
@@ -202,11 +202,11 @@ Logs and processes system anomalies.
 *   **Project Dependencies Log:** Documents critical third-party engineering handoffs. Includes automated checking via an `AI Gen Dependencies` engine.
 
 ### PMO & Project Documents
-An audit verification dashboard built for project management offices, governance teams, and quality auditors. While ProjectFlow does not provide internal document storage, it acts as a structured repository mapping secure URLs to external cloud storage or corporate network paths.
+An audit verification dashboard built for project management offices, governance teams, and quality auditors. While Workwayz does not provide internal document storage, it acts as a structured repository mapping secure URLs to external cloud storage or corporate network paths.
 *   **Mandatory Phase Gates:** Enforces clear validation criteria across critical business milestones (e.g., an execution block requires a verified *Statement of Work [SOW]* link to authorize initialization, while a production deployment request requires an absolute sign-off validation entry from the lead QA team).
 
 ### Financial Invoicing Engines (FB & TnM)
-ProjectFlow contains dual financial computation architectures driven by your chosen project pricing model:
+Workwayz contains dual financial computation architectures driven by your chosen project pricing model:
 
 #### 1. Fixed Bid (FB) Billing & Invoicing Ledger
 *   **Mechanics:** Compares fixed budget parameters against resource metrics drawn from the global user repository.

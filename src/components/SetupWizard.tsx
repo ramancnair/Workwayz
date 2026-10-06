@@ -346,7 +346,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-2">
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome to ProjectFlow Setup</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to Workwayz Setup</h1>
           <p className="text-muted-foreground text-lg">Let&apos;s configure your environment to get you started.</p>
         </div>
 
@@ -463,7 +463,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Defines how users sign into ProjectFlow.
+                    Defines how users sign into Workwayz.
                   </p>
                 </div>
 
@@ -598,7 +598,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 </div>
                 <h3 className="text-2xl font-bold">You&apos;re almost there!</h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Click &apos;Complete Setup&apos; below to save your configurations and boot up the ProjectFlow application.
+                  Click &apos;Complete Setup&apos; below to save your configurations and boot up the Workwayz application.
                 </p>
                 <div className="w-full bg-muted/30 p-4 rounded-lg mt-6 text-left border">
                   <h4 className="font-semibold text-sm mb-2 text-primary">Summary:</h4>

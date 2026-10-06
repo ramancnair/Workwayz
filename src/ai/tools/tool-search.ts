@@ -33,7 +33,7 @@ export const searchToolsTool = ai.defineTool(
   {
     name: 'searchTools',
     description:
-      'Discovers and loads specialized tools from the full ProjectFlow 200+ tool catalog by capability or keyword. Call this tool when your current candidate tools do not include the specific action requested by the user.',
+      'Discovers and loads specialized tools from the full Workwayz 200+ tool catalog by capability or keyword. Call this tool when your current candidate tools do not include the specific action requested by the user.',
     inputSchema: ToolSearchInputSchema,
     outputSchema: ToolSearchResultSchema,
   },

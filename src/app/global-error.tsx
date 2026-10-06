@@ -58,7 +58,7 @@ export default function GlobalError({
 
           <h1 className="text-2xl font-bold tracking-tight mb-2">Application Error</h1>
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-            ProjectFlow encountered a critical issue while initializing the root layout.
+            Workwayz encountered a critical issue while initializing the root layout.
           </p>
 
           {error.digest && (

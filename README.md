@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="public/logo.png" width="40" height="40" alt="ProjectFlow Logo" valign="middle" /> ProjectFlow
+# <img src="public/workwayz-icon.png" width="40" height="40" alt="Workwayz Logo" valign="middle" /> Workwayz
 
 ### The Enterprise-Grade AI-Powered Project & Portfolio Management Platform
 
@@ -19,13 +19,13 @@
 
 ---
 
-## Why ProjectFlow?
+## Why Workwayz?
 
-Most project management tools make you choose — strategy **or** execution, cloud **or** offline. ProjectFlow makes no such compromise.
+Most project management tools make you choose — strategy **or** execution, cloud **or** offline. Workwayz makes no such compromise.
 
 It is the **only PPM platform** that natively supports **SAFe Agile and Hybrid delivery methodologies** in a single unified workspace. Layered on top is a deep AI integration that eliminates the most time-consuming parts of project management — estimations, story writing, test case generation, and more.
 
-Whether you are running a startup or a large enterprise PMO, ProjectFlow scales with you — and can run entirely **offline** if needed.
+Whether you are running a startup or a large enterprise PMO, Workwayz scales with you — and can run entirely **offline** if needed.
 
 ---
 
@@ -38,7 +38,7 @@ Whether you are running a startup or a large enterprise PMO, ProjectFlow scales 
 - **Development Dashboard** — Engineering-focused view with sprint progress, backlog health, and delivery metrics
 
 ### AI-Powered Automation *(The Game Changer)*
-ProjectFlow is **tightly integrated with AI** to eliminate repetitive, time-consuming work:
+Workwayz is **tightly integrated with AI** to eliminate repetitive, time-consuming work:
 
 | AI Capability | What It Does |
 |---|---|
@@ -54,7 +54,7 @@ ProjectFlow is **tightly integrated with AI** to eliminate repetitive, time-cons
 - Link test cases directly to requirements and user stories
 - Track test execution, results, and defect traceability — all in one place
 
-### RAID Tracker *(Unique to ProjectFlow)*
+### RAID Tracker *(Unique to Workwayz)*
 > No other project management software has this built in.
 
 - Centralized **Risks, Assumptions, Issues & Dependencies** register
@@ -132,7 +132,7 @@ npm install
 
 ## Quick Start & Deployment Options
 
-ProjectFlow can be run in two ways depending on your use case:
+Workwayz can be run in two ways depending on your use case:
 * **Option 1: Docker Compose + In-App Setup Wizard** — *Zero-config setup for self-hosters & on-premise.*
 * **Option 2: Local Development / Cloud Hosting via `.env`** — *Ideal for contributors, DevOps, and cloud deployment.*
 
@@ -140,7 +140,7 @@ ProjectFlow can be run in two ways depending on your use case:
 
 ### Option 1 — Docker Compose (Recommended for Self-Hosting)
 
-The fastest way to deploy ProjectFlow locally or on a server:
+The fastest way to deploy Workwayz locally or on a server:
 
 ```bash
 # 1. Clone the repository
@@ -152,7 +152,7 @@ docker compose up -d
 ```
 
 1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
-2. If this is your first run, ProjectFlow will launch the **In-App Setup Wizard** (`/setup-wizard`).
+2. If this is your first run, Workwayz will launch the **In-App Setup Wizard** (`/setup-wizard`).
 3. Follow the on-screen steps to select your backend (**Firebase**, **Supabase Cloud**, or **Supabase Docker**) and enter your API keys.
 4. Settings are automatically persisted inside the Docker named volume (`projectflow-data`), surviving restarts and updates.
 
@@ -223,7 +223,7 @@ npm start
 
 ## Quality Assurance & Automated Testing
 
-ProjectFlow features an enterprise-grade automated testing system:
+Workwayz features an enterprise-grade automated testing system:
 
 ### 1. Unit & Component Testing (Vitest)
 ```bash
