@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
     if (rawSupaUrl && rawSupaUrl.startsWith('http')) {
       supaHost = new URL(rawSupaUrl).host;
     }
-  } catch {}
+  } catch { }
 
   const supaConnect = supaHost ? `https://${supaHost} wss://${supaHost}` : '';
   const supaImg = supaHost ? `https://${supaHost}` : '';
@@ -23,6 +23,9 @@ export function proxy(request: NextRequest) {
     ? `'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
     : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
 
+  const currentHost = request.headers.get('host') || '';
+  const devConnect = isDev ? `http://${currentHost} ws://${currentHost} ws: wss:` : '';
+
   // Policy without any wildcard '*' directives
   const cspHeader = `
     default-src 'self';
@@ -32,12 +35,12 @@ export function proxy(request: NextRequest) {
     style-src-elem 'self' 'nonce-${nonce}' 'unsafe-inline';
     img-src 'self' data: blob: https://placehold.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com ${supaImg};
     font-src 'self' data:;
-    connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://api.github.com ${supaConnect} http://localhost:3000 http://127.0.0.1:3000;
+    connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://api.github.com ${supaConnect} http://localhost:3000 http://127.0.0.1:3000 ${devConnect};
     frame-ancestors 'none';
     form-action 'self';
     object-src 'none';
     base-uri 'self';
-    upgrade-insecure-requests;
+    ${!isDev ? 'upgrade-insecure-requests;' : ''}
   `.replace(/\s{2,}/g, ' ').trim();
 
   const requestHeaders = new Headers(request.headers);
@@ -55,7 +58,9 @@ export function proxy(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  if (!isDev) {
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
 
   return response;
@@ -72,9 +77,10 @@ export const config = {
      * - _next/static (static chunks and bundles)
      * - _next/image (image optimization endpoints)
      * - favicon.ico (favicon file)
+     * - static image/asset extensions (.png, .jpg, .svg, etc.)
      */
     {
-      source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
+      source: '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2)$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },
