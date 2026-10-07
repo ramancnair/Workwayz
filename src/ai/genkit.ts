@@ -6,6 +6,7 @@ import { anthropic, claude35Sonnet, claude37Sonnet, claude3Opus, claude3Haiku, c
 import { ollama } from 'genkitx-ollama';
 import fs from 'fs';
 import path from 'path';
+import { getProfilesPath } from '@/lib/config-paths';
 
 export function getActiveAiConfig() {
   let provider = process.env.NEXT_PUBLIC_AI_PROVIDER || 'lmstudio';
@@ -15,7 +16,7 @@ export function getActiveAiConfig() {
 
   if (typeof window === 'undefined') {
     try {
-      const connsPath = path.join(process.cwd(), 'connections.json');
+      const connsPath = getProfilesPath();
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeAi = conns.ai?.find((p: any) => p.isActive) || conns.ai?.[0];

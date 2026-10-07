@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { db, doc, updateDoc, getDoc, collection, query, where, getDocs, isSupabaseActive } from '@/lib/db-provider';
 import fs from 'fs';
 import path from 'path';
+import { getProfilesPath } from '@/lib/config-paths';
 
 export async function POST(request: Request) {
     try {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
 
         if (!authProvider || !dbProvider) {
             try {
-                const connsPath = path.join(process.cwd(), 'connections.json');
+                const connsPath = getProfilesPath();
                 if (fs.existsSync(connsPath)) {
                     const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
                     const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];

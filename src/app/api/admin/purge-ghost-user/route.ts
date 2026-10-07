@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getEnvPath } from '@/lib/config-paths';
 
 /**
  * POST /api/admin/purge-ghost-user
@@ -32,9 +33,7 @@ export async function POST(request: Request) {
         }
 
         // Resolve Firebase API key from env
-        const envPathLocal = path.join(process.cwd(), '.env.local');
-        const envPathBase = path.join(process.cwd(), '.env');
-        const envPath = fs.existsSync(envPathLocal) ? envPathLocal : fs.existsSync(envPathBase) ? envPathBase : null;
+        const envPath = getEnvPath();
 
         let apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
         let projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '';

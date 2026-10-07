@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { syncConnectionsToEnv } from '@/lib/config-sync';
+import { getProfilesPath, getEnvPath, getEnvLocalPath } from '@/lib/config-paths';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         
         // Define path to .env.local
-        const envPath = path.join(process.cwd(), '.env.local');
+        const envPath = getEnvLocalPath();
         
         // Read existing .env.local if exists
         let envContent = '';
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
 
         // If activating from a saved profile, resolve the unmasked raw keys from connections.json
         if (body.makeActiveId) {
-            const profilesPath = path.join(process.cwd(), 'connections.json');
+            const profilesPath = getProfilesPath();
             if (fs.existsSync(profilesPath)) {
                 try {
                     const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
 
         // Update isActive flags in connections.json if we mapped via an ID
         if (body.makeActiveId) {
-             const profilesPath = path.join(process.cwd(), 'connections.json');
+             const profilesPath = getProfilesPath();
              if (fs.existsSync(profilesPath)) {
                  try {
                      const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
@@ -175,12 +176,9 @@ function maskKey(val: string) {
 
 export async function GET() {
     try {
-        const envPathLocal = path.join(process.cwd(), '.env.local');
-        const envPathBase = path.join(process.cwd(), '.env');
-        
+        const envPath = getEnvPath();
         let envContent = '';
-        if (fs.existsSync(envPathLocal)) envContent = fs.readFileSync(envPathLocal, 'utf8');
-        else if (fs.existsSync(envPathBase)) envContent = fs.readFileSync(envPathBase, 'utf8');
+        if (fs.existsSync(envPath)) envContent = fs.readFileSync(envPath, 'utf8');
 
         const envMap = new Map<string, string>();
         envContent.split('\n').forEach(line => {
@@ -244,7 +242,7 @@ export async function DELETE(request: Request) {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type');
         
-        const envPath = path.join(process.cwd(), '.env.local');
+        const envPath = getEnvLocalPath();
         if (!fs.existsSync(envPath)) return NextResponse.json({ success: true });
 
         const lines = fs.readFileSync(envPath, 'utf8').split('\n');

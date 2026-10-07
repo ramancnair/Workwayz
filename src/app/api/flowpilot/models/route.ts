@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { getActiveAiDetails } from '@/ai/flows/flowpilot-agent';
+import { getProfilesPath, getEnvLocalPath } from '@/lib/config-paths';
 
 // Cache for live models with 5-minute TTL
 let geminiModelCache: { timestamp: number; models: string[] } | null = null;
@@ -91,7 +92,7 @@ export async function GET() {
     // Resolve Gemini API key
     let geminiApiKey = process.env.GEMINI_API_KEY;
     try {
-      const connsPath = path.join(process.cwd(), 'connections.json');
+      const connsPath = getProfilesPath();
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const googleConfig = conns.ai?.find((p: any) => p.provider === 'google');
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Provider and model are required' }, { status: 400 });
     }
 
-    const connsPath = path.join(process.cwd(), 'connections.json');
+    const connsPath = getProfilesPath();
     if (fs.existsSync(connsPath)) {
       const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
       if (!conns.ai) conns.ai = [];
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
 
     // Also update .env.local if present
     try {
-      const envPath = path.join(process.cwd(), '.env.local');
+      const envPath = getEnvLocalPath();
       if (fs.existsSync(envPath)) {
         let envContent = fs.readFileSync(envPath, 'utf8');
         envContent = envContent.replace(/NEXT_PUBLIC_AI_PROVIDER=.*/g, `NEXT_PUBLIC_AI_PROVIDER="${provider}"`);

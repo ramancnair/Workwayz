@@ -30,8 +30,8 @@ if (typeof window !== 'undefined' && !firebaseConfig.projectId) {
 if (!firebaseConfig.projectId && typeof window === 'undefined') {
   try {
     const fs = require('fs');
-    const path = require('path');
-    const connsPath = path.join(process.cwd(), 'connections.json');
+    const { getProfilesPath } = require('./config-paths');
+    const connsPath = getProfilesPath();
     if (fs.existsSync(connsPath)) {
       const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
       const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];

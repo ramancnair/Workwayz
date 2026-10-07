@@ -112,8 +112,8 @@ export async function getActiveAiDetails(): Promise<AiDetails> {
   if (typeof window === 'undefined') {
     try {
       const fs = require('fs');
-      const path = require('path');
-      const connsPath = path.join(process.cwd(), 'connections.json');
+      const { getProfilesPath } = require('@/lib/config-paths');
+      const connsPath = getProfilesPath();
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeAi = conns.ai?.find((item: any) => item.isActive) || conns.ai?.[0];

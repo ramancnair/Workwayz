@@ -1,25 +1,14 @@
 import fs from 'fs';
 import path from 'path';
+import { getProfilesPath, getEnvPath, getEnvLocalPath, getDataDirectory } from './config-paths';
 
-export function getProfilesPath(): string {
-    return path.join(process.cwd(), 'connections.json');
-}
-
-export function getEnvPath(): string {
-    const local = path.join(process.cwd(), '.env.local');
-    if (fs.existsSync(local)) return local;
-    const base = path.join(process.cwd(), '.env');
-    if (fs.existsSync(base)) return local;
-    return local;
-}
+export { getProfilesPath, getEnvPath, getEnvLocalPath, getDataDirectory };
 
 export function readEnvMap(): Map<string, string> {
     const envMap = new Map<string, string>();
-    const envPathLocal = path.join(process.cwd(), '.env.local');
-    const envPathBase = path.join(process.cwd(), '.env');
-    const envPath = fs.existsSync(envPathLocal) ? envPathLocal : (fs.existsSync(envPathBase) ? envPathBase : null);
+    const envPath = getEnvPath();
 
-    if (envPath) {
+    if (fs.existsSync(envPath)) {
         const content = fs.readFileSync(envPath, 'utf8');
         content.split('\n').forEach(line => {
             if (!line || !line.includes('=')) return;
@@ -33,7 +22,7 @@ export function readEnvMap(): Map<string, string> {
 }
 
 export function writeEnvMap(envMap: Map<string, string>): void {
-    const envPath = path.join(process.cwd(), '.env.local');
+    const envPath = getEnvLocalPath();
     let newContent = '';
     envMap.forEach((val, key) => {
         newContent += `${key}=${val}\n`;

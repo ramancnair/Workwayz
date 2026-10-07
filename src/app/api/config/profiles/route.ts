@@ -3,16 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { syncConnectionsToEnv } from '@/lib/config-sync';
-
-const getProfilesPath = () => path.join(process.cwd(), 'connections.json');
+import { getProfilesPath, getEnvPath } from '@/lib/config-paths';
 
 const autoSeedFromEnv = (conns: any): boolean => {
     let changed = false;
-    let envPath = path.join(process.cwd(), '.env.local');
-    if (!fs.existsSync(envPath)) {
-        envPath = path.join(process.cwd(), '.env');
-        if (!fs.existsSync(envPath)) return false;
-    }
+    const envPath = getEnvPath();
+    if (!fs.existsSync(envPath)) return false;
 
     const envMap = new Map<string, string>();
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');

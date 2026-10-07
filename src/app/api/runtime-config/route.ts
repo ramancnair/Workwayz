@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getProfilesPath, getEnvPath } from '@/lib/config-paths';
 
 // This endpoint is called by the client to get runtime config.
 // It reads .env.local and connections.json server-side at runtime
@@ -10,11 +11,9 @@ export async function GET() {
         const envMap = new Map<string, string>();
 
         // 1. Read .env.local or .env if exists
-        const envPathLocal = path.join(process.cwd(), '.env.local');
-        const envPathBase = path.join(process.cwd(), '.env');
-        const envPath = fs.existsSync(envPathLocal) ? envPathLocal : fs.existsSync(envPathBase) ? envPathBase : null;
+        const envPath = getEnvPath();
 
-        if (envPath) {
+        if (fs.existsSync(envPath)) {
             const lines = fs.readFileSync(envPath, 'utf8').split('\n');
             lines.forEach(line => {
                 if (!line || !line.includes('=')) return;
@@ -26,7 +25,7 @@ export async function GET() {
         }
 
         // 2. Read connections.json (supports UI profile switching & wizard setup)
-        const connsPath = path.join(process.cwd(), 'connections.json');
+        const connsPath = getProfilesPath();
         if (fs.existsSync(connsPath)) {
             try {
                 const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));

@@ -21,9 +21,12 @@ const nodeOptions = currentOptions.includes('resolve-hook.js')
   ? currentOptions
   : `${currentOptions} "--require" "${normalizedHookPath}"`.trim();
 
+const callerCwd = process.cwd();
+
 const env = {
   ...process.env,
   NODE_OPTIONS: nodeOptions,
+  CALLER_CWD: callerCwd,
 };
 
 // Check if a standalone server bundle is present in .next/standalone

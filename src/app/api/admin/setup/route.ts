@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getProfilesPath, getEnvPath } from '@/lib/config-paths';
 
 export async function POST(request: Request) {
     try {
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
         let effectiveSupaUrl = supaUrl || '';
         let effectiveSupaKey = supaKey || '';
         
-        const profilesPath = path.join(process.cwd(), 'connections.json');
+        const profilesPath = getProfilesPath();
         if (fs.existsSync(profilesPath)) {
             try {
                 const conns = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
@@ -37,11 +38,8 @@ export async function POST(request: Request) {
 
         // Fallback to env file
         if (!apiKey || !projectId || !effectiveSupaUrl || !effectiveSupaKey) {
-            const envPathLocal = path.join(process.cwd(), '.env.local');
-            const envPathBase = path.join(process.cwd(), '.env');
-            const envPath = fs.existsSync(envPathLocal) ? envPathLocal : fs.existsSync(envPathBase) ? envPathBase : null;
-            
-            if (envPath) {
+            const envPath = getEnvPath();
+            if (fs.existsSync(envPath)) {
                 const envMap = new Map<string, string>();
                 fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
                     if (!line || !line.includes('=')) return;

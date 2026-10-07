@@ -13,6 +13,7 @@ services:
       - projectflow-data:/app/data
     environment:
       - NODE_ENV=production
+      - WORKWAYZ_DATA_DIR=/app/data
     restart: always
 
 volumes:
