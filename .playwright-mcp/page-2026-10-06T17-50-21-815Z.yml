@@ -1,6 +1,0 @@
-- generic [active] [ref=e1]:
-  - paragraph [ref=e5]: Loading project data...
-  - region "Notifications (F8)":
-    - list
-  - button "Open Next.js Dev Tools" [ref=e13]
-  - alert [ref=e17]

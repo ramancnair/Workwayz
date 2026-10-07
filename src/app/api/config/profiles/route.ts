@@ -52,7 +52,7 @@ const autoSeedFromEnv = (conns: any): boolean => {
             else if (aiProvider === 'openai') ai.apiKey = envMap.get('OPENAI_API_KEY');
             else if (aiProvider === 'anthropic') ai.apiKey = envMap.get('ANTHROPIC_API_KEY');
             else if (['lmstudio', 'ollama'].includes(aiProvider)) ai.baseUrl = envMap.get('LOCAL_AI_BASE_URL');
-            
+
             if (envMap.get('AI_DEFAULT_MODEL')) ai.model = envMap.get('AI_DEFAULT_MODEL');
             conns.ai = [ai];
             changed = true;
@@ -61,14 +61,14 @@ const autoSeedFromEnv = (conns: any): boolean => {
 
     if (!conns.authentication || conns.authentication.length === 0) {
         let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : 'firebase');
-        const auth: any = { 
-             id: crypto.randomUUID(), 
-             profileName: 'Primary .env Auth', 
-             provider: authProvider, 
-             googleSso: false,
-             facebookSso: false,
-             appleSso: false,
-             isActive: true 
+        const auth: any = {
+            id: crypto.randomUUID(),
+            profileName: 'Primary .env Auth',
+            provider: authProvider,
+            googleSso: false,
+            facebookSso: false,
+            appleSso: false,
+            isActive: true
         };
         conns.authentication = [auth];
         changed = true;
@@ -85,12 +85,12 @@ const getConnections = () => {
             conns = JSON.parse(fs.readFileSync(p, 'utf8'));
         } catch (e) { }
     }
-    
+
     // Auto-seed existing variables if arrays are empty so they appear on UI
     if (autoSeedFromEnv(conns)) {
         saveConnections(conns);
     }
-    
+
     return conns;
 };
 
@@ -132,49 +132,71 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { type, profile } = body;
-
-        if (!profile.id) {
-            profile.id = crypto.randomUUID();
-        }
-
         const conns: any = getConnections();
-        if (!conns[type]) conns[type] = [];
 
-        const idx = conns[type].findIndex((p: any) => p.id === profile.id);
-        const isExistingActive = idx >= 0 ? !!conns[type][idx].isActive : false;
-        const shouldBeActive = profile.isActive === true || isExistingActive || conns[type].length === 0;
+        const items: Array<{ type: string; profile: any }> = Array.isArray(body.batch)
+            ? body.batch
+            : (body.type && body.profile ? [{ type: body.type, profile: body.profile }] : []);
 
-        if (idx >= 0) {
-            const existing = conns[type][idx];
-            if (type === 'database') {
-                if (profile.provider === existing.provider) {
-                    if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
-                    if (!profile.supabaseAnonKey || profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
-                    if (!profile.connectionString || profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
-                } else {
-                    if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
-                    if (profile.supabaseAnonKey && profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
-                    if (profile.connectionString && profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
-                }
-            } else {
-                if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
-            }
-            conns[type][idx] = { ...existing, ...profile };
-        } else {
-            conns[type].push(profile);
+        if (items.length === 0) {
+            return NextResponse.json({ success: false, error: 'No profile data provided' }, { status: 400 });
         }
 
-        if (shouldBeActive) {
-            conns[type].forEach((p: any) => {
-                p.isActive = (p.id === profile.id);
-            });
+        let lastSavedProfile: any = null;
+        let lastType: any = null;
+
+        for (const item of items) {
+            const { type, profile } = item;
+            if (!type || !profile) continue;
+
+            if (!profile.id) {
+                profile.id = crypto.randomUUID();
+            }
+
+            if (!conns[type]) conns[type] = [];
+
+            const idx = conns[type].findIndex((p: any) => p.id === profile.id);
+            const isExistingActive = idx >= 0 ? !!conns[type][idx].isActive : false;
+            const shouldBeActive = profile.isActive === true || isExistingActive || conns[type].length === 0;
+
+            if (idx >= 0) {
+                const existing = conns[type][idx];
+                if (type === 'database') {
+                    if (profile.provider === existing.provider) {
+                        if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                        if (!profile.supabaseAnonKey || profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
+                        if (!profile.connectionString || profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
+                    } else {
+                        if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                        if (profile.supabaseAnonKey && profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
+                        if (profile.connectionString && profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
+                    }
+                } else {
+                    if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                }
+                conns[type][idx] = { ...existing, ...profile };
+            } else {
+                conns[type].push(profile);
+            }
+
+            if (shouldBeActive) {
+                conns[type].forEach((p: any) => {
+                    p.isActive = (p.id === profile.id);
+                });
+            }
+
+            lastSavedProfile = conns[type].find((p: any) => p.id === profile.id);
+            lastType = type;
         }
 
         saveConnections(conns);
         syncConnectionsToEnv(conns);
 
-        return NextResponse.json({ success: true, profile: maskProfile(conns[type].find((p: any) => p.id === profile.id), type) });
+        const masked = lastSavedProfile && (lastType === 'database' || lastType === 'ai')
+            ? maskProfile(lastSavedProfile, lastType)
+            : lastSavedProfile;
+
+        return NextResponse.json({ success: true, profile: masked });
     } catch (e) {
         console.error('Failed to save profile', e);
         return NextResponse.json({ success: false, error: 'Failed to save profile' }, { status: 500 });

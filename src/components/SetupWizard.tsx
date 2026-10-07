@@ -74,6 +74,21 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         if (dbSetup || authSetup || aiSetup) {
           setIsFirstRun(false);
 
+          if (!onClose) {
+            const storedUser = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+            if (storedUser) {
+              try {
+                const user = JSON.parse(storedUser);
+                if (user?.email && (user?.uid || user?.empId)) {
+                  router.replace('/my-projects');
+                  return;
+                }
+              } catch (_) {}
+            }
+            router.replace('/login');
+            return;
+          }
+
           if (dbSetup) {
             const activeDb = data.database.find((d: any) => d.isActive) || data.database[0];
             if (activeDb) {
@@ -121,7 +136,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         console.error("Failed to load profiles", err);
         setIsLoading(false);
       });
-  }, []);
+  }, [onClose, router]);
 
   const handleNext = () => {
     if (step === 3) {
@@ -154,6 +169,35 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   };
 
   const handleSave = async () => {
+    // Validate admin inputs if creating or updating admin credentials
+    if (!onClose || (adminEmail || adminPassword)) {
+      if (!adminFirstName.trim()) {
+        toast({ title: "Validation Error", description: "Admin First Name is required.", variant: "destructive" });
+        setStep(3);
+        return;
+      }
+      if (!adminLastName.trim()) {
+        toast({ title: "Validation Error", description: "Admin Last Name is required.", variant: "destructive" });
+        setStep(3);
+        return;
+      }
+      if (!adminEmail.trim()) {
+        toast({ title: "Validation Error", description: "Admin Email ID is required.", variant: "destructive" });
+        setStep(3);
+        return;
+      }
+      if (!adminPassword) {
+        toast({ title: "Validation Error", description: "Admin Password is required.", variant: "destructive" });
+        setStep(3);
+        return;
+      }
+      if (adminPassword !== adminConfirmPassword) {
+        toast({ title: "Validation Error", description: "Admin Passwords do not match.", variant: "destructive" });
+        setStep(3);
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       // Prepare DB payload
@@ -192,91 +236,91 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       }
       if (aiModel) aiProfile.model = aiModel;
 
-      // Make API calls in sequence
-      const dbRes = await fetch('/api/config/profiles', {
+      // 1. Save all profiles atomically in a single batch request
+      const configRes = await fetch('/api/config/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'database', profile: dbProfile })
+        body: JSON.stringify({
+          batch: [
+            { type: 'database', profile: dbProfile },
+            { type: 'authentication', profile: authProfile },
+            { type: 'ai', profile: aiProfile },
+          ]
+        })
       });
-      if (!dbRes.ok) throw new Error('Failed to save Database config');
-      const dbData = await dbRes.json();
+      if (!configRes.ok) throw new Error('Failed to save configuration profiles');
 
-      const authRes = await fetch('/api/config/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'authentication', profile: authProfile })
-      });
-      if (!authRes.ok) throw new Error('Failed to save Authentication config');
-      const authData = await authRes.json();
-
-      const aiRes = await fetch('/api/config/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'ai', profile: aiProfile })
-      });
-      if (!aiRes.ok) throw new Error('Failed to save AI config');
-      const aiData = await aiRes.json();
-
-      // Activate the profiles
-      if (dbData.profile?.id) {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'database', makeActiveId: dbData.profile.id })
-        });
-      }
-      if (authData.profile?.id) {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'authentication', makeActiveId: authData.profile.id })
-        });
-      }
-      if (aiData.profile?.id) {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'ai', makeActiveId: aiData.profile.id })
-        });
-      }
-
-      // CREATE ADMIN USER (Using backend API to bypass masked secrets)
+      // 2. Setup Super Admin User
       if (adminEmail && adminPassword) {
-        try {
-          const setupRes = await fetch('/api/admin/setup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              adminEmail,
-              adminPassword,
-              adminFirstName,
-              adminLastName,
-              adminName: `${adminFirstName} ${adminLastName}`.trim(),
-              dbProvider,
-              authProvider,
-              fbProjectId,
-              fbApiKey,
-              supaUrl,
-              supaKey,
-            })
-          });
+        const setupRes = await fetch('/api/admin/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            adminEmail,
+            adminPassword,
+            adminFirstName,
+            adminLastName,
+            adminName: `${adminFirstName} ${adminLastName}`.trim(),
+            dbProvider,
+            authProvider,
+            fbProjectId,
+            fbApiKey,
+            supaUrl,
+            supaKey,
+          })
+        });
 
-          const setupData = await setupRes.json();
-          if (!setupRes.ok || !setupData.success) {
-            throw new Error(setupData.error || 'Failed to create admin user');
+        const setupData = await setupRes.json();
+        if (!setupRes.ok || !setupData.success) {
+          throw new Error(setupData.error || 'Failed to create admin user');
+        }
+
+        if (setupData.user) {
+          const userSession = {
+            name: setupData.user.name || `${adminFirstName} ${adminLastName}`.trim(),
+            firstName: adminFirstName,
+            lastName: adminLastName,
+            email: adminEmail,
+            accessLevel: 'Super Admin',
+            empId: setupData.user.empId || 'E001',
+            uid: setupData.user.uid || '',
+            authProvider: authProvider,
+            issuedAt: Date.now(),
+            rememberMe: true,
+            needsPasswordReset: false,
+          };
+
+          // Store local storage session and cookie for immediate authorization
+          localStorage.setItem('projectflow_user', JSON.stringify(userSession));
+          localStorage.setItem('projectflow_last_activity', Date.now().toString());
+          document.cookie = 'projectflow_session_active=true; path=/';
+
+          // Client SDK authentication to populate client auth session
+          if (authProvider === 'firebase') {
+            try {
+              const { auth } = await import('@/lib/firebase');
+              if (auth) {
+                const { signInWithEmailAndPassword } = await import('firebase/auth');
+                await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+              }
+            } catch (clientAuthErr) {
+              console.warn('[SetupWizard] Client Firebase sign-in warning:', clientAuthErr);
+            }
+          } else if (authProvider === 'supabase') {
+            try {
+              const { supabase } = await import('@/lib/supabase');
+              if (supabase) {
+                await supabase.auth.signInWithPassword({
+                  email: adminEmail,
+                  password: adminPassword,
+                });
+              }
+            } catch (clientAuthErr) {
+              console.warn('[SetupWizard] Client Supabase sign-in warning:', clientAuthErr);
+            }
           }
 
-          if (setupData.user) {
-            localStorage.setItem('projectflow_user', JSON.stringify({
-              ...setupData.user,
-              accessLevel: 'Super Admin',
-              authProvider: authProvider,
-              issuedAt: Date.now(),
-            }));
-          }
-        } catch (userErr: any) {
-          console.error("Failed to create admin user:", userErr);
-          toast({ title: "Admin User Error", description: "Config saved, but admin user creation failed: " + userErr.message, variant: "destructive" });
+          window.dispatchEvent(new Event('user-profile-updated'));
         }
       }
 
@@ -295,15 +339,15 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
       toast({
         title: "Setup Complete!",
-        description: "Your configuration profiles have been saved.",
+        description: onClose ? "Your configuration profiles have been saved." : "Your environment is ready. Logging in...",
       });
 
-      // Full page redirect to cleanly re-bootstrap all runtime connections
+      // Redirect cleanly to /my-projects or reload if inside settings modal
       if (onClose) {
         onClose();
         window.location.reload();
       } else {
-        window.location.href = '/project-home';
+        window.location.href = '/my-projects';
       }
     } catch (err: any) {
       toast({
@@ -333,13 +377,10 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className={cn("min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4", !isFirstRun && "fixed inset-0 z-50 bg-background/60 backdrop-blur-sm")}>
-      <div className={cn("w-full max-w-3xl space-y-8", !isFirstRun && "bg-background border rounded-xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col")}>
-        {!isFirstRun && (
-          <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10" onClick={() => {
-            if (onClose) onClose();
-            else router.push('/project-home');
-          }}>
+    <div className={cn("min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4", onClose && "fixed inset-0 z-50 bg-background/60 backdrop-blur-sm")}>
+      <div className={cn("w-full max-w-3xl space-y-8", onClose && "bg-background border rounded-xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col")}>
+        {onClose && (
+          <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         )}
@@ -371,9 +412,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           {steps.map((s) => (
             <div
               key={s.num}
-              className={cn("flex flex-col items-center flex-1 gap-2 text-center transition-transform", !isFirstRun || step >= s.num ? "cursor-pointer hover:scale-105" : "cursor-not-allowed opacity-70")}
+              className={cn("flex flex-col items-center flex-1 gap-2 text-center transition-transform", onClose || step >= s.num ? "cursor-pointer hover:scale-105" : "cursor-not-allowed opacity-70")}
               onClick={() => {
-                if (!isFirstRun || step >= s.num) setStep(s.num);
+                if (onClose || step >= s.num) setStep(s.num);
               }}
             >
               <div
@@ -650,7 +691,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             </Button>
 
             <div className="flex gap-2">
-              {!isFirstRun && step < 5 && (
+              {onClose && step < 5 && (
                 <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
                   {isSaving ? "Saving..." : "Save Changes"} <Save className="w-4 h-4 ml-2" />
                 </Button>
@@ -661,8 +702,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 </Button>
               ) : (
                 <Button onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
-                  {isSaving ? "Saving..." : (!isFirstRun ? "Save Changes" : "Complete Setup")}
-                  {!isFirstRun ? <Save className="w-4 h-4 ml-2" /> : <CheckCircle2 className="w-4 h-4 ml-2" />}
+                  {isSaving ? "Saving..." : (onClose ? "Save Changes" : "Complete Setup")}
+                  {onClose ? <Save className="w-4 h-4 ml-2" /> : <CheckCircle2 className="w-4 h-4 ml-2" />}
                 </Button>
               )}
             </div>

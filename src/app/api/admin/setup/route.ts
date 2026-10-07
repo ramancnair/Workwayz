@@ -231,31 +231,41 @@ export async function POST(request: Request) {
             }
 
             if (!empId) {
-                const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
                 let highestId = 0;
-                usersSnapshot.forEach(docSnap => {
-                    if (docSnap.id.startsWith('E')) {
-                        const num = parseInt(docSnap.id.substring(1));
-                        if (!isNaN(num) && num > highestId) highestId = num;
-                    }
-                });
+                try {
+                    const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
+                    usersSnapshot.forEach(docSnap => {
+                        if (docSnap.id.startsWith('E')) {
+                            const num = parseInt(docSnap.id.substring(1));
+                            if (!isNaN(num) && num > highestId) highestId = num;
+                        }
+                    });
+                } catch (e) {
+                    console.warn('Could not query employees collection:', e);
+                }
                 empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-                await setDoc(doc(tempDb, 'employees', empId), {
-                    empId,
-                    firstName,
-                    lastName,
-                    email: adminEmail,
-                    phone: 'N/A',
-                    experience: 0,
-                    accessLevel: 'Super Admin',
-                    avatar: 'https://placehold.co/40x40.png',
-                    isDeleted: false,
-                    isEnabled: true,
-                    uid
-                });
+                try {
+                    await setDoc(doc(tempDb, 'employees', empId), {
+                        empId,
+                        firstName,
+                        lastName,
+                        email: adminEmail,
+                        phone: 'N/A',
+                        experience: 0,
+                        accessLevel: 'Super Admin',
+                        avatar: 'https://placehold.co/40x40.png',
+                        isDeleted: false,
+                        isEnabled: true,
+                        uid
+                    });
+                } catch (dbErr) {
+                    console.warn('Could not write employee to Firestore:', dbErr);
+                }
             }
 
-            await deleteApp(tempApp);
+            try {
+                await deleteApp(tempApp);
+            } catch (_) {}
         }
 
         return NextResponse.json({ 

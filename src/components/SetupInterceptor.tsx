@@ -27,10 +27,19 @@ export function SetupInterceptor() {
             }
           } else {
             // It is configured.
-            // Removed the auth check here because if the database is swapped, 
-            // the user might need to run the wizard again without being logged in.
+            // If user is currently on /setup-wizard and the app is already configured, redirect them out
             if (pathname.startsWith('/setup-wizard')) {
-                // Allow them to access the wizard
+              const storedUser = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+              if (storedUser) {
+                try {
+                  const user = JSON.parse(storedUser);
+                  if (user?.email && (user?.uid || user?.empId)) {
+                    router.replace('/my-projects');
+                    return;
+                  }
+                } catch (_) {}
+              }
+              router.replace('/login');
             }
           }
         }
