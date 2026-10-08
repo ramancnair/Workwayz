@@ -16,7 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Disable Next.js telemetry
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the project
 RUN npm run build
@@ -24,8 +24,8 @@ RUN npm run build
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy public directory and standalone trace
 COPY --from=builder /app/public ./public
@@ -35,9 +35,9 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Expose the port
 EXPOSE 3000
-ENV PORT 3000
+ENV PORT=3000
 # Ensure hostname allows external connections
-ENV HOSTNAME "0.0.0.0"
+ENV HOSTNAME="0.0.0.0"
 
 # Make entrypoint script executable and normalize line endings
 RUN apk add --no-cache dos2unix && \
