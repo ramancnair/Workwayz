@@ -54,8 +54,15 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
 
       # --- 5. Publish to NPM Registry ---
+      - name: Verify NPM Credentials
+        run: |
+          echo "Verifying npm authentication..."
+          npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to NPM Registry
-        run: npm publish --access public
+        run: npm publish --access public --verbose
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
