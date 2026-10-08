@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Polyfill worker_threads.markAsUncloneable if missing in older environments
+try {
+  const wt = require('node:worker_threads');
+  if (wt && typeof wt.markAsUncloneable !== 'function') {
+    wt.markAsUncloneable = (val: any) => val;
+  }
+} catch (_) {}
+
 // Mock window.matchMedia
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
