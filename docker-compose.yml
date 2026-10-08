@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  projectflow-web:
-    image: projectflow-web:latest
+  workwayz-web:
+    image: ${WORKWAYZ_IMAGE:-workwayz/workwayz:latest}
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: projectflow-web
+    container_name: workwayz-web
     ports:
       - "3000:3000"
     volumes:
-      - projectflow-data:/app/data
+      - workwayz-data:/app/data
     environment:
       - NODE_ENV=production
       - WORKWAYZ_DATA_DIR=/app/data
     restart: always
 
 volumes:
-  projectflow-data:
+  workwayz-data:
 

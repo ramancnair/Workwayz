@@ -3,6 +3,25 @@
   "version": "0.1.0",
   "private": false,
   "description": "Workwayz - Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
+  "author": "Workwayz <workwayzce@gmail.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ramancnair/ProjectFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ramancnair/ProjectFlow/issues"
+  },
+  "keywords": [
+    "workwayz",
+    "project-management",
+    "portfolio-management",
+    "ppm",
+    "safe-agile",
+    "hybrid-delivery",
+    "ai-estimation",
+    "genkit"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/ramancnair/ProjectFlow.git"

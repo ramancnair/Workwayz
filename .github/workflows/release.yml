@@ -3,41 +3,63 @@ name: Publish Release Artifacts
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag override (e.g. v0.1.0)'
+        required: false
+        default: ''
 
 jobs:
   build_and_publish:
-    name: Build & Publish Release Packages
+    name: Build, Test & Publish (NPM + Docker Hub + GitHub Release)
     runs-on: ubuntu-latest
     permissions:
       contents: write   # Needed to upload release assets
       packages: write   # Needed to push Docker images to GitHub Container Registry (ghcr.io)
+      id-token: write   # Needed for provenance if configured
 
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
       # --- 1. Node.js Setup & Dependencies ---
-      - name: Set up Node.js
+      - name: Set up Node.js for Build & NPM Registry
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
+      - name: Install dependencies cleanly
         run: npm ci
 
+      # --- 2. Automated Quality Gate ---
+      - name: Run Test Suite
+        run: npm test
+
+      # --- 3. Synchronize Version to Git Tag ---
       - name: Synchronize package version to git tag
         run: |
-          CLEAN_VERSION="${GITHUB_REF_NAME#v}"
+          RAW_TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          CLEAN_VERSION="${RAW_TAG#v}"
           npm version "$CLEAN_VERSION" --no-git-tag-version --allow-same-version
           echo "RELEASE_TAG=v${CLEAN_VERSION}" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
+      # --- 4. Build Next.js Application ---
       - name: Build Next.js Application
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      # --- 2. Package Standalone Bundle & NPM Tarball ---
+      # --- 5. Publish to NPM Registry ---
+      - name: Publish to NPM Registry
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # --- 6. Package Standalone Bundle for Self-Hosters ---
       - name: Package Standalone npm Bundle
         run: |
           mkdir -p dist
@@ -63,51 +85,50 @@ jobs:
             };
             require("fs").writeFileSync("dist/package.json", JSON.stringify(standalonePkg, null, 2));
           '
-          tar -czf projectflow-standalone-${{ env.RELEASE_TAG }}.tar.gz -C dist .
+          tar -czf workwayz-standalone-${{ env.RELEASE_TAG }}.tar.gz -C dist .
 
-      - name: Create npm package tarball
-        run: |
-          npm pack
-          mv projectflow-*.tgz projectflow-npm-${{ env.RELEASE_TAG }}.tgz
+      # --- 7. Docker Build & Push to Docker Hub and GHCR ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # --- 3. Docker Build & Push to GitHub Container Registry (ghcr.io) ---
-      - name: Set lowercased image name
-        run: |
-          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_NAME=ghcr.io/${REPO_LOWER}" >> $GITHUB_ENV
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry (ghcr.io)
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker Image (Single Build for GHCR & Offline Export)
-        run: |
-          docker build \
-            -t ${{ env.IMAGE_NAME }}:latest \
-            -t ${{ env.IMAGE_NAME }}:${{ env.RELEASE_TAG }} \
-            -t projectflow-web:latest \
-            .
+      - name: Extract Docker metadata & tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/workwayz
+            ghcr.io/${{ github.repository_owner }}/workwayz
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ env.RELEASE_TAG }}
 
-      - name: Push Docker Image to GHCR
-        run: |
-          docker push ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:${{ env.RELEASE_TAG }}
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Export and Compress Offline Docker Image
-        run: |
-          docker save projectflow-web:latest | gzip -9 > ./projectflow-web-image-${{ env.RELEASE_TAG }}.tar.gz
-
-      # --- 4. Upload All Artifacts to GitHub Release ---
+      # --- 8. Upload Release Assets to GitHub Release ---
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            projectflow-standalone-${{ env.RELEASE_TAG }}.tar.gz
-            projectflow-npm-${{ env.RELEASE_TAG }}.tgz
-            projectflow-web-image-${{ env.RELEASE_TAG }}.tar.gz
+            workwayz-standalone-${{ env.RELEASE_TAG }}.tar.gz
             docker-compose.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
