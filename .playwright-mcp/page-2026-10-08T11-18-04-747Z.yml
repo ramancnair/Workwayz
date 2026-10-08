@@ -1,0 +1,49 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e16]:
+      - img "Workwayz Logo" [ref=f1e19]
+      - heading "Welcome to Workwayz Setup" [level=1] [ref=f1e20]
+      - paragraph [ref=f1e21]: Let's configure your environment to get you started.
+    - generic [ref=f1e22]:
+      - generic [ref=f1e25] [cursor=pointer]: Database
+      - generic [ref=f1e32] [cursor=pointer]: Authentication
+      - generic [ref=f1e39] [cursor=pointer]: Admin User
+      - generic [ref=f1e45]: AI Configuration
+      - generic [ref=f1e51]: Finish
+    - generic [ref=f1e57]:
+      - generic [ref=f1e58]:
+        - heading "Admin User Setup" [level=3] [ref=f1e80]
+        - paragraph [ref=f1e60]: Connect to an existing Super Admin account from your database.
+      - generic [ref=f1e81]:
+        - generic [ref=f1e82]:
+          - button "Create New Super Admin" [ref=f1e83] [cursor=pointer]
+          - button "Use Existing Credentials" [ref=f1e88] [cursor=pointer]
+        - generic [ref=f1e93]: Reconnecting after reinstallation? Link your existing Super Admin account without resetting data.
+        - generic [ref=f1e173]:
+          - generic [ref=f1e177]:
+            - paragraph [ref=f1e178]: Authentication Failed
+            - paragraph [ref=f1e179]: Email or password doesn't match the existing database credentials.
+          - button "Create New Super Admin" [ref=f1e181] [cursor=pointer]
+        - generic [ref=f1e94]:
+          - generic [ref=f1e95]:
+            - text: Existing Super Admin Email *
+            - textbox "admin@example.com" [ref=f1e165]: admin@invalidtest.com
+          - generic [ref=f1e97]:
+            - text: Existing Super Admin Password *
+            - generic [ref=f1e166]:
+              - textbox "Enter your existing password" [ref=f1e167]: wrongpassword
+              - button [ref=f1e168] [cursor=pointer]
+          - button "Verify Credentials" [ref=f1e172] [cursor=pointer]
+      - generic [ref=f1e76]:
+        - button "Back" [ref=f1e77] [cursor=pointer]
+        - button "Next" [active] [ref=f1e79] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list [ref=f1e135]:
+      - listitem [ref=f1e183]:
+        - generic [ref=f1e184]:
+          - generic [ref=f1e185]: Verification Failed
+          - generic [ref=f1e186]: Invalid email or password for existing database.
+        - button [ref=f1e187] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=f1e11]
+  - alert [ref=f1e15]
+  - status [ref=f1e192]: Notification Verification FailedInvalid email or password for existing database.

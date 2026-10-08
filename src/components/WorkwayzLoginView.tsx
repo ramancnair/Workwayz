@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, query, where, getDocs, setRuntimeDbProvider } from '@/lib/db-provider';
 import { WorkwayzBackground } from './WorkwayzBackground';
+import { validateSession, USER_STORAGE_KEY, ACTIVITY_STORAGE_KEY } from '@/lib/session';
 
 export function WorkwayzLoginCard() {
   const router = useRouter();
@@ -22,15 +23,12 @@ export function WorkwayzLoginCard() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // If already logged in, redirect to application
+  // If already logged in with a valid, non-expired, non-timed-out session, redirect to application
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('projectflow_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.email && (parsed.uid || parsed.empId)) {
-          router.replace('/my-projects');
-        }
+      const { isValid } = validateSession(true);
+      if (isValid) {
+        router.replace('/my-projects');
       }
     } catch (_) {}
   }, [router]);
@@ -79,11 +77,12 @@ export function WorkwayzLoginCard() {
         const q = query(collection(db, 'employees'), where('email', '==', emailInput));
         const querySnapshot = await getDocs(q);
 
+        const loginTimestamp = Date.now();
         let userData = {
           name: emailInput.split('@')[0],
           email: emailInput,
           accessLevel: 'Team Member',
-          empId: '',
+          empId: user.id,
           avatar: '',
           uid: user.id,
         };
@@ -97,7 +96,7 @@ export function WorkwayzLoginCard() {
             name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
             email: data.email || emailInput,
             accessLevel: data.accessLevel || 'Team Member',
-            empId: data.empId || docSnap.id,
+            empId: data.empId || docSnap.id || user.id,
             avatar: data.avatar || '',
             uid: user.id,
           };
@@ -107,16 +106,16 @@ export function WorkwayzLoginCard() {
         const requiresPasswordReset = isDefaultPassword || docNeedsReset;
 
         localStorage.setItem(
-          'projectflow_user',
+          USER_STORAGE_KEY,
           JSON.stringify({
             ...userData,
             authProvider: 'supabase',
-            issuedAt: Date.now(),
+            issuedAt: loginTimestamp,
             needsPasswordReset: requiresPasswordReset,
             rememberMe: rememberMe,
           })
         );
-        localStorage.setItem('projectflow_last_activity', Date.now().toString());
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, loginTimestamp.toString());
 
         if (!rememberMe) {
           document.cookie = 'projectflow_session_active=true; path=/';
@@ -129,11 +128,12 @@ export function WorkwayzLoginCard() {
         const q = query(collection(db, 'employees'), where('email', '==', emailInput));
         const querySnapshot = await getDocs(q);
 
+        const loginTimestamp = Date.now();
         let userData = {
           name: emailInput.split('@')[0],
           email: emailInput,
           accessLevel: 'Team Member',
-          empId: '',
+          empId: user.uid,
           avatar: '',
           uid: user.uid,
         };
@@ -146,7 +146,7 @@ export function WorkwayzLoginCard() {
             name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
             email: data.email || emailInput,
             accessLevel: data.accessLevel || 'Team Member',
-            empId: data.empId || docSnap.id,
+            empId: data.empId || docSnap.id || user.uid,
             avatar: data.avatar || '',
             uid: user.uid,
           };
@@ -158,16 +158,16 @@ export function WorkwayzLoginCard() {
         }
 
         localStorage.setItem(
-          'projectflow_user',
+          USER_STORAGE_KEY,
           JSON.stringify({
             ...userData,
             authProvider: 'firebase',
-            issuedAt: Date.now(),
+            issuedAt: loginTimestamp,
             needsPasswordReset: passwordInput === 'P@ssw0rd' || !!data.needsPasswordReset,
             rememberMe: rememberMe,
           })
         );
-        localStorage.setItem('projectflow_last_activity', Date.now().toString());
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, loginTimestamp.toString());
 
         if (!rememberMe) {
           document.cookie = 'projectflow_session_active=true; path=/';

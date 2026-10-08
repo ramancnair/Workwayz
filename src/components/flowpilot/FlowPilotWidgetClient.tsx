@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
+import { validateSession } from '@/lib/session';
 
 const FlowPilotChatWidget = dynamic(
   () => import('./FlowPilotChatWidget').then((mod) => mod.FlowPilotChatWidget),
@@ -12,15 +13,7 @@ const FlowPilotChatWidget = dynamic(
 const PUBLIC_PATHS = ['/', '/login', '/signup', '/setup-wizard'];
 
 function isUserAuthenticated(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const userStr = localStorage.getItem('projectflow_user');
-    if (!userStr) return false;
-    const session = JSON.parse(userStr);
-    return Boolean(session && (session.email || session.empId || session.uid));
-  } catch {
-    return false;
-  }
+  return validateSession(false).isValid;
 }
 
 export function FlowPilotWidgetClient() {

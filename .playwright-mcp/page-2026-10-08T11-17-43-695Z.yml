@@ -1,0 +1,51 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e16]:
+      - img "Workwayz Logo" [ref=f1e19]
+      - heading "Welcome to Workwayz Setup" [level=1] [ref=f1e20]
+      - paragraph [ref=f1e21]: Let's configure your environment to get you started.
+    - generic [ref=f1e22]:
+      - generic [ref=f1e25] [cursor=pointer]: Database
+      - generic [ref=f1e32] [cursor=pointer]: Authentication
+      - generic [ref=f1e39] [cursor=pointer]: Admin User
+      - generic [ref=f1e45]: AI Configuration
+      - generic [ref=f1e51]: Finish
+    - generic [ref=f1e57]:
+      - generic [ref=f1e58]:
+        - heading "Admin User Setup" [level=3] [ref=f1e80]
+        - paragraph [ref=f1e60]: Create the master Super Admin account for the system.
+      - generic [ref=f1e81]:
+        - generic [ref=f1e82]:
+          - button "Create New Super Admin" [ref=f1e83] [cursor=pointer]
+          - button "Use Existing Credentials" [ref=f1e88] [cursor=pointer]
+        - generic [ref=f1e93]: Create a fresh master Super Admin account for your system.
+        - generic [ref=f1e94]:
+          - generic [ref=f1e95]:
+            - text: First Name *
+            - textbox "John" [ref=f1e146]
+          - generic [ref=f1e97]:
+            - text: Last Name *
+            - textbox "Doe" [ref=f1e147]
+          - generic [ref=f1e99]:
+            - text: Email ID *
+            - textbox "admin@example.com" [ref=f1e148]: admin@invalidtest.com
+          - generic [ref=f1e149]:
+            - text: Role
+            - textbox [disabled] [ref=f1e150]: Super Admin
+          - generic [ref=f1e151]:
+            - text: Password *
+            - generic [ref=f1e152]:
+              - textbox [ref=f1e153]: wrongpassword
+              - button [ref=f1e154] [cursor=pointer]
+          - generic [ref=f1e158]:
+            - text: Re-enter Password *
+            - generic [ref=f1e159]:
+              - textbox [ref=f1e160]
+              - button [ref=f1e161] [cursor=pointer]
+      - generic [ref=f1e76]:
+        - button "Back" [ref=f1e77] [cursor=pointer]
+        - button "Next" [ref=f1e79] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - button "Open Next.js Dev Tools" [ref=f1e11]
+  - alert [ref=f1e15]

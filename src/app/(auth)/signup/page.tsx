@@ -98,6 +98,7 @@ export default function SignupPage() {
         }
 
         // 4. Update localStorage
+        const now = Date.now();
         localStorage.setItem('projectflow_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
@@ -105,9 +106,10 @@ export default function SignupPage() {
           avatar: '',
           uid: user.id,
           authProvider: 'supabase',
-          issuedAt: Date.now(),
+          issuedAt: now,
+          rememberMe: true,
         }));
-        localStorage.setItem('projectflow_last_activity', Date.now().toString());
+        localStorage.setItem('projectflow_last_activity', now.toString());
 
       } else {
         if (!auth || !db) {
@@ -143,6 +145,7 @@ export default function SignupPage() {
         await setDoc(userRef, newUser);
 
         // 4. Update localStorage
+        const now = Date.now();
         localStorage.setItem('projectflow_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
@@ -150,9 +153,10 @@ export default function SignupPage() {
           avatar: '',
           uid: user.uid,
           authProvider: 'firebase',
-          issuedAt: Date.now(),
+          issuedAt: now,
+          rememberMe: true,
         }));
-        localStorage.setItem('projectflow_last_activity', Date.now().toString());
+        localStorage.setItem('projectflow_last_activity', now.toString());
       }
 
       toast({

@@ -6,48 +6,7 @@ import { auth } from '@/lib/firebase';
 import { db, doc, onSnapshot } from '@/lib/db-provider';
 import { ShieldAlert } from 'lucide-react';
 import { getPageNameForRoute, hasPagePermission, getPermittedFallbackRoute } from '@/lib/permissions';
-
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-/**
- * Validates the session stored in localStorage against:
- * 1. Structural integrity — must be valid JSON with required fields
- * 2. Provider binding  — session must have been issued by the current active auth provider
- * 3. Expiry            — sessions older than SESSION_TTL_MS are rejected
- *
- * Returns true only if the session passes ALL checks.
- * Side effect: removes the key from localStorage if invalid.
- */
-function validateSession(): boolean {
-  if (typeof window === 'undefined') return false;
-  const userStr = localStorage.getItem('projectflow_user');
-  if (!userStr) return false;
-
-  let session: Record<string, any>;
-  try {
-    session = JSON.parse(userStr);
-  } catch {
-    localStorage.removeItem('projectflow_user');
-    return false;
-  }
-
-  // 1. Structural check — must have at minimum an email and (uid or empId)
-  if (!session.email || (!session.uid && !session.empId)) {
-    console.warn('[AuthGuard] Session rejected: missing required fields (email, uid/empId).');
-    localStorage.removeItem('projectflow_user');
-    return false;
-  }
-
-  // 2. Expiry check — sessions older than SESSION_TTL_MS are rejected
-  const issuedAt: number | undefined = session.issuedAt;
-  if (issuedAt && Date.now() - issuedAt > SESSION_TTL_MS) {
-    console.warn('[AuthGuard] Session rejected: expired timestamp.');
-    localStorage.removeItem('projectflow_user');
-    return false;
-  }
-
-  return true;
-}
+import { validateSession } from '@/lib/session';
 
 function ResetPasswordScreen({ user, onComplete }: { user: any; onComplete: () => void }) {
   const [newPassword, setNewPassword] = useState('');
@@ -225,9 +184,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const isPublicPath =
       pathname === '/login' || pathname === '/signup' || pathname === '/' || pathname === '/setup-wizard';
 
-    const valid = validateSession();
+    const { isValid, session } = validateSession(true);
 
-    if (!valid) {
+    if (!isValid || !session) {
       setIsAuthenticated(false);
       setNeedsReset(false);
       setSessionUser(null);
@@ -235,17 +194,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/login');
       }
     } else {
-      const userStr = localStorage.getItem('projectflow_user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          setSessionUser(user);
-          if (user.needsPasswordReset) {
-            setNeedsReset(true);
-          }
-        } catch {
-          // ignore parse error
-        }
+      setSessionUser(session);
+      if (session.needsPasswordReset) {
+        setNeedsReset(true);
+      } else {
+        setNeedsReset(false);
       }
 
       setIsAuthenticated(true);

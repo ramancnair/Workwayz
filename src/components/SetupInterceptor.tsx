@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { validateSession } from '@/lib/session';
 
 export function SetupInterceptor() {
   const pathname = usePathname();
@@ -29,15 +30,13 @@ export function SetupInterceptor() {
             // It is configured.
             // If user is currently on /setup-wizard and the app is already configured, redirect them out
             if (pathname.startsWith('/setup-wizard')) {
-              const storedUser = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
-              if (storedUser) {
-                try {
-                  const user = JSON.parse(storedUser);
-                  if (user?.email && (user?.uid || user?.empId)) {
-                    router.replace('/my-projects');
-                    return;
-                  }
-                } catch (_) {}
+              const isForced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('force') === 'true';
+              if (isForced) return;
+
+              const { isValid } = validateSession(false);
+              if (isValid) {
+                router.replace('/my-projects');
+                return;
               }
               router.replace('/login');
             }

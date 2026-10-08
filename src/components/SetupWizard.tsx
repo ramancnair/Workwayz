@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff } from 'lucide-react';
+import { Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff, UserPlus, KeyRound, AlertTriangle, AlertCircle, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function SetupWizard({ onClose }: { onClose?: () => void }) {
@@ -38,6 +38,24 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [authProvider, setAuthProvider] = useState('supabase');
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
+
+  // Admin Credentials & Mode
+  const [adminMode, setAdminMode] = useState<'create' | 'existing'>('create');
+  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
+  const [verifiedAdminProfile, setVerifiedAdminProfile] = useState<{
+    name: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    accessLevel: string;
+    empId?: string;
+    uid?: string;
+  } | null>(null);
+  const [adminVerifyError, setAdminVerifyError] = useState<{
+    code: string;
+    message: string;
+    currentRole?: string;
+  } | null>(null);
 
   const [adminFirstName, setAdminFirstName] = useState('');
   const [adminLastName, setAdminLastName] = useState('');
@@ -74,7 +92,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         if (dbSetup || authSetup || aiSetup) {
           setIsFirstRun(false);
 
-          if (!onClose) {
+          const isForced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('force') === 'true';
+          if (!onClose && !isForced) {
             const storedUser = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
             if (storedUser) {
               try {
@@ -138,27 +157,117 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       });
   }, [onClose, router]);
 
-  const handleNext = () => {
+  const verifyExistingAdmin = async (emailToVerify?: string, passwordToVerify?: string): Promise<boolean> => {
+    const email = (emailToVerify ?? adminEmail).trim();
+    const password = passwordToVerify ?? adminPassword;
+
+    if (!email) {
+      toast({ title: "Validation Error", description: "Email ID is required.", variant: "destructive" });
+      return false;
+    }
+    if (!password) {
+      toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
+      return false;
+    }
+
+    setIsVerifyingAdmin(true);
+    setAdminVerifyError(null);
+
+    try {
+      const res = await fetch('/api/admin/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          mode: 'existing',
+          adminEmail: email,
+          adminPassword: password,
+          dbProvider,
+          authProvider,
+          fbProjectId,
+          fbApiKey,
+          supaUrl,
+          supaKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setVerifiedAdminProfile(null);
+        setAdminVerifyError({
+          code: data.code || 'UNKNOWN_ERROR',
+          message: data.error || 'Failed to verify account.',
+          currentRole: data.currentRole,
+        });
+        toast({
+          title: data.code === 'NOT_SUPER_ADMIN' ? "Not a Super Admin" : "Verification Failed",
+          description: data.error || "Could not link this existing account.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      setVerifiedAdminProfile(data.user);
+      setAdminVerifyError(null);
+      toast({
+        title: "Account Verified!",
+        description: `Welcome back, ${data.user.name}. Super Admin privileges confirmed.`,
+      });
+      return true;
+    } catch (err: any) {
+      setVerifiedAdminProfile(null);
+      setAdminVerifyError({
+        code: 'NETWORK_ERROR',
+        message: err.message || 'Network error verifying credentials.',
+      });
+      toast({
+        title: "Network Error",
+        description: err.message || 'Could not verify credentials with server.',
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsVerifyingAdmin(false);
+    }
+  };
+
+  const handleNext = async () => {
     if (step === 3) {
-      if (!adminFirstName.trim()) {
-        toast({ title: "Validation Error", description: "First Name is required.", variant: "destructive" });
-        return;
-      }
-      if (!adminLastName.trim()) {
-        toast({ title: "Validation Error", description: "Last Name is required.", variant: "destructive" });
-        return;
-      }
-      if (!adminEmail.trim()) {
-        toast({ title: "Validation Error", description: "Email ID is required.", variant: "destructive" });
-        return;
-      }
-      if (!adminPassword) {
-        toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
-        return;
-      }
-      if (adminPassword !== adminConfirmPassword) {
-        toast({ title: "Validation Error", description: "Passwords do not match.", variant: "destructive" });
-        return;
+      if (adminMode === 'existing') {
+        if (!adminEmail.trim()) {
+          toast({ title: "Validation Error", description: "Email ID is required.", variant: "destructive" });
+          return;
+        }
+        if (!adminPassword) {
+          toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
+          return;
+        }
+        // If not already verified with the current credentials, verify now
+        if (!verifiedAdminProfile || verifiedAdminProfile.email !== adminEmail.trim()) {
+          const ok = await verifyExistingAdmin();
+          if (!ok) return;
+        }
+      } else {
+        if (!adminFirstName.trim()) {
+          toast({ title: "Validation Error", description: "First Name is required.", variant: "destructive" });
+          return;
+        }
+        if (!adminLastName.trim()) {
+          toast({ title: "Validation Error", description: "Last Name is required.", variant: "destructive" });
+          return;
+        }
+        if (!adminEmail.trim()) {
+          toast({ title: "Validation Error", description: "Email ID is required.", variant: "destructive" });
+          return;
+        }
+        if (!adminPassword) {
+          toast({ title: "Validation Error", description: "Password is required.", variant: "destructive" });
+          return;
+        }
+        if (adminPassword !== adminConfirmPassword) {
+          toast({ title: "Validation Error", description: "Passwords do not match.", variant: "destructive" });
+          return;
+        }
       }
     }
     if (step < 5) setStep(step + 1);
@@ -171,30 +280,43 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const handleSave = async () => {
     // Validate admin inputs if creating or updating admin credentials
     if (!onClose || (adminEmail || adminPassword)) {
-      if (!adminFirstName.trim()) {
-        toast({ title: "Validation Error", description: "Admin First Name is required.", variant: "destructive" });
-        setStep(3);
-        return;
-      }
-      if (!adminLastName.trim()) {
-        toast({ title: "Validation Error", description: "Admin Last Name is required.", variant: "destructive" });
-        setStep(3);
-        return;
-      }
-      if (!adminEmail.trim()) {
-        toast({ title: "Validation Error", description: "Admin Email ID is required.", variant: "destructive" });
-        setStep(3);
-        return;
-      }
-      if (!adminPassword) {
-        toast({ title: "Validation Error", description: "Admin Password is required.", variant: "destructive" });
-        setStep(3);
-        return;
-      }
-      if (adminPassword !== adminConfirmPassword) {
-        toast({ title: "Validation Error", description: "Admin Passwords do not match.", variant: "destructive" });
-        setStep(3);
-        return;
+      if (adminMode === 'create') {
+        if (!adminFirstName.trim()) {
+          toast({ title: "Validation Error", description: "Admin First Name is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+        if (!adminLastName.trim()) {
+          toast({ title: "Validation Error", description: "Admin Last Name is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+        if (!adminEmail.trim()) {
+          toast({ title: "Validation Error", description: "Admin Email ID is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+        if (!adminPassword) {
+          toast({ title: "Validation Error", description: "Admin Password is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+        if (adminPassword !== adminConfirmPassword) {
+          toast({ title: "Validation Error", description: "Admin Passwords do not match.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+      } else {
+        if (!adminEmail.trim()) {
+          toast({ title: "Validation Error", description: "Admin Email ID is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
+        if (!adminPassword) {
+          toast({ title: "Validation Error", description: "Admin Password is required.", variant: "destructive" });
+          setStep(3);
+          return;
+        }
       }
     }
 
@@ -256,11 +378,13 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            mode: adminMode,
+            action: 'setup',
             adminEmail,
             adminPassword,
-            adminFirstName,
-            adminLastName,
-            adminName: `${adminFirstName} ${adminLastName}`.trim(),
+            adminFirstName: adminMode === 'existing' ? (verifiedAdminProfile?.firstName || '') : adminFirstName,
+            adminLastName: adminMode === 'existing' ? (verifiedAdminProfile?.lastName || '') : adminLastName,
+            adminName: adminMode === 'existing' ? (verifiedAdminProfile?.name || '') : `${adminFirstName} ${adminLastName}`.trim(),
             dbProvider,
             authProvider,
             fbProjectId,
@@ -272,17 +396,37 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
         const setupData = await setupRes.json();
         if (!setupRes.ok || !setupData.success) {
-          throw new Error(setupData.error || 'Failed to create admin user');
+          if (setupData.code === 'EMAIL_EXISTS') {
+            setAdminVerifyError({
+              code: 'EMAIL_EXISTS',
+              message: setupData.error || 'An account with this email already exists in the database.',
+            });
+            setStep(3);
+          } else if (setupData.code === 'NOT_SUPER_ADMIN') {
+            setAdminVerifyError({
+              code: 'NOT_SUPER_ADMIN',
+              message: setupData.error,
+              currentRole: setupData.currentRole,
+            });
+            setStep(3);
+          } else if (setupData.code === 'AUTH_FAILED') {
+            setAdminVerifyError({
+              code: 'AUTH_FAILED',
+              message: setupData.error,
+            });
+            setStep(3);
+          }
+          throw new Error(setupData.error || 'Failed to setup admin user');
         }
 
         if (setupData.user) {
           const userSession = {
-            name: setupData.user.name || `${adminFirstName} ${adminLastName}`.trim(),
-            firstName: adminFirstName,
-            lastName: adminLastName,
+            name: setupData.user.name || (adminMode === 'existing' && verifiedAdminProfile?.name) || `${adminFirstName} ${adminLastName}`.trim(),
+            firstName: setupData.user.firstName || (adminMode === 'existing' && verifiedAdminProfile?.firstName) || adminFirstName,
+            lastName: setupData.user.lastName || (adminMode === 'existing' && verifiedAdminProfile?.lastName) || adminLastName,
             email: adminEmail,
             accessLevel: 'Super Admin',
-            empId: setupData.user.empId || 'E001',
+            empId: setupData.user.empId || (adminMode === 'existing' && verifiedAdminProfile?.empId) || 'E001',
             uid: setupData.user.uid || '',
             authProvider: authProvider,
             issuedAt: Date.now(),
@@ -444,7 +588,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             <CardDescription>
               {step === 1 && "Configure your primary database connection."}
               {step === 2 && "Set up identity and authentication providers."}
-              {step === 3 && "Create the master Super Admin account for the system."}
+              {step === 3 && (adminMode === 'existing' ? "Connect to an existing Super Admin account from your database." : "Create the master Super Admin account for the system.")}
               {step === 4 && "Enable intelligent features by connecting an AI provider."}
               {step === 5 && "Review and finalize your setup configuration."}
             </CardDescription>
@@ -541,62 +685,305 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             {/* Step 3: Admin */}
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>First Name *</Label>
-                    <Input placeholder="John" value={adminFirstName} onChange={e => setAdminFirstName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Last Name *</Label>
-                    <Input placeholder="Doe" value={adminLastName} onChange={e => setAdminLastName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email ID *</Label>
-                    <Input type="email" placeholder="admin@example.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Input value="Super Admin" disabled className="bg-muted text-foreground font-semibold" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Password *</Label>
-                    <div className="relative">
-                      <Input
-                        type={showAdminPassword ? "text" : "password"}
-                        placeholder=""
-                        value={adminPassword}
-                        onChange={e => setAdminPassword(e.target.value)}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdminPassword(!showAdminPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Re-enter Password *</Label>
-                    <div className="relative">
-                      <Input
-                        type={showAdminConfirmPassword ? "text" : "password"}
-                        placeholder=""
-                        value={adminConfirmPassword}
-                        onChange={e => setAdminConfirmPassword(e.target.value)}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAdminConfirmPassword(!showAdminConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showAdminConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
+                {/* Mode Selector Toggle */}
+                <div className="flex p-1 bg-muted rounded-lg border border-border/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminMode('create');
+                      setAdminVerifyError(null);
+                    }}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-medium rounded-md transition-all",
+                      adminMode === 'create'
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Create New Super Admin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminMode('existing');
+                      setAdminVerifyError(null);
+                    }}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-medium rounded-md transition-all",
+                      adminMode === 'existing'
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>Use Existing Credentials</span>
+                  </button>
                 </div>
+
+                <div className="text-xs text-muted-foreground">
+                  {adminMode === 'create' ? (
+                    <span>Create a fresh master Super Admin account for your system.</span>
+                  ) : (
+                    <span>Reconnecting after reinstallation? Link your existing Super Admin account without resetting data.</span>
+                  )}
+                </div>
+
+                {/* Error Banner: NOT_SUPER_ADMIN */}
+                {adminVerifyError && adminVerifyError.code === 'NOT_SUPER_ADMIN' && (
+                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-sm text-amber-900 dark:text-amber-100">Account is not a Super Admin</p>
+                        <p className="text-amber-800 dark:text-amber-300">
+                          This account has the role <span className="font-bold underline">{adminVerifyError.currentRole || 'User'}</span>. For security, only accounts with the &quot;Super Admin&quot; role can be linked during setup.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-1 flex items-center justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-500/40 hover:bg-amber-500/10 text-amber-900 dark:text-amber-100 text-xs"
+                        onClick={() => {
+                          setAdminMode('create');
+                          setAdminVerifyError(null);
+                        }}
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                        Create New Super Admin
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner: AUTH_FAILED */}
+                {adminVerifyError && adminVerifyError.code === 'AUTH_FAILED' && (
+                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-950 dark:text-red-200 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-sm text-red-900 dark:text-red-100">Authentication Failed</p>
+                        <p className="text-red-800 dark:text-red-300">
+                          Email or password doesn&apos;t match the existing database credentials.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-1 flex items-center justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-red-500/40 hover:bg-red-500/10 text-red-900 dark:text-red-100 text-xs"
+                        onClick={() => {
+                          setAdminMode('create');
+                          setAdminVerifyError(null);
+                        }}
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                        Create New Super Admin
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner: EMAIL_EXISTS (when create fails because already taken) */}
+                {adminVerifyError && adminVerifyError.code === 'EMAIL_EXISTS' && (
+                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-sm text-amber-900 dark:text-amber-100">Account Already Exists</p>
+                        <p className="text-amber-800 dark:text-amber-300">
+                          {adminVerifyError.message}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-1 flex items-center justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-500/40 hover:bg-amber-500/10 text-amber-900 dark:text-amber-100 text-xs"
+                        onClick={() => {
+                          setAdminMode('existing');
+                          setAdminVerifyError(null);
+                        }}
+                      >
+                        <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                        Use Existing Credentials
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Banner: Generic / Network */}
+                {adminVerifyError && !['NOT_SUPER_ADMIN', 'AUTH_FAILED', 'EMAIL_EXISTS'].includes(adminVerifyError.code) && (
+                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-950 dark:text-red-200 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-semibold text-sm text-red-900 dark:text-red-100">Verification Error</p>
+                        <p className="text-red-800 dark:text-red-300">
+                          {adminVerifyError.message}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-1 flex items-center justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-red-500/40 hover:bg-red-500/10 text-red-900 dark:text-red-100 text-xs"
+                        onClick={() => {
+                          setAdminMode('create');
+                          setAdminVerifyError(null);
+                        }}
+                      >
+                        <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                        Create New Super Admin
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verified Profile Success Card */}
+                {adminMode === 'existing' && verifiedAdminProfile && (
+                  <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-950 dark:text-emerald-200 space-y-2.5 animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-semibold text-sm text-emerald-900 dark:text-emerald-100">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        <span>Super Admin Verified</span>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-medium">
+                        {verifiedAdminProfile.empId || 'Super Admin'}
+                      </span>
+                    </div>
+                    <div className="text-xs space-y-1 text-emerald-800 dark:text-emerald-300/90">
+                      <p><strong className="text-emerald-950 dark:text-emerald-100">Name:</strong> {verifiedAdminProfile.name}</p>
+                      <p><strong className="text-emerald-950 dark:text-emerald-100">Email:</strong> {verifiedAdminProfile.email}</p>
+                      <p><strong className="text-emerald-950 dark:text-emerald-100">Role:</strong> Super Admin</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Form Fields: Create Mode */}
+                {adminMode === 'create' ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>First Name *</Label>
+                      <Input placeholder="John" value={adminFirstName} onChange={e => setAdminFirstName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Last Name *</Label>
+                      <Input placeholder="Doe" value={adminLastName} onChange={e => setAdminLastName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email ID *</Label>
+                      <Input type="email" placeholder="admin@example.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Input value="Super Admin" disabled className="bg-muted text-foreground font-semibold" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password *</Label>
+                      <div className="relative">
+                        <Input
+                          type={showAdminPassword ? "text" : "password"}
+                          placeholder=""
+                          value={adminPassword}
+                          onChange={e => setAdminPassword(e.target.value)}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Re-enter Password *</Label>
+                      <div className="relative">
+                        <Input
+                          type={showAdminConfirmPassword ? "text" : "password"}
+                          placeholder=""
+                          value={adminConfirmPassword}
+                          onChange={e => setAdminConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminConfirmPassword(!showAdminConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showAdminConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Form Fields: Existing Mode */
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Existing Super Admin Email *</Label>
+                      <Input
+                        type="email"
+                        placeholder="admin@example.com"
+                        value={adminEmail}
+                        onChange={e => {
+                          setAdminEmail(e.target.value);
+                          if (verifiedAdminProfile) setVerifiedAdminProfile(null);
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Existing Super Admin Password *</Label>
+                      <div className="relative">
+                        <Input
+                          type={showAdminPassword ? "text" : "password"}
+                          placeholder="Enter your existing password"
+                          value={adminPassword}
+                          onChange={e => {
+                            setAdminPassword(e.target.value);
+                            if (verifiedAdminProfile) setVerifiedAdminProfile(null);
+                          }}
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => verifyExistingAdmin()}
+                        disabled={isVerifyingAdmin || !adminEmail.trim() || !adminPassword}
+                        className="gap-2"
+                      >
+                        {isVerifyingAdmin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        {isVerifyingAdmin ? "Verifying Credentials..." : "Verify Credentials"}
+                      </Button>
+                      {verifiedAdminProfile && (
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Verified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -665,12 +1052,26 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">Admin Account:</span>
                       <span className="font-medium truncate max-w-[240px]">
-                        {adminEmail ? `${adminFirstName ? `${adminFirstName} ${adminLastName}`.trim() : 'Super Admin'} (${adminEmail})` : 'Pending'}
+                        {adminMode === 'existing'
+                          ? (verifiedAdminProfile
+                              ? `${verifiedAdminProfile.name} (${verifiedAdminProfile.email})`
+                              : (adminEmail ? `${adminEmail} (Existing)` : 'Pending'))
+                          : (adminEmail
+                              ? `${adminFirstName ? `${adminFirstName} ${adminLastName}`.trim() : 'Super Admin'} (${adminEmail})`
+                              : 'Pending')}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-muted-foreground">Admin Mode:</span>
+                      <span className="font-medium">
+                        {adminMode === 'existing' ? 'Linked Existing Account' : 'New Account Creation'}
                       </span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">Role:</span>
-                      <span className="font-semibold text-purple-600 dark:text-purple-400">Super Admin</span>
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">
+                        Super Admin {adminMode === 'existing' && verifiedAdminProfile ? '(Verified)' : ''}
+                      </span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">AI Integration:</span>

@@ -3,19 +3,20 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-
-const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
-const ACTIVITY_STORAGE_KEY = 'projectflow_last_activity';
-const USER_STORAGE_KEY = 'projectflow_user';
+import { INACTIVITY_TIMEOUT_MS, ACTIVITY_STORAGE_KEY, USER_STORAGE_KEY, clearSession } from '@/lib/session';
 
 export function SessionManager() {
   const router = useRouter();
 
   const handleLogout = useCallback(async () => {
+    if (typeof window !== 'undefined' && (window as any).__isLoggingOut) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      (window as any).__isLoggingOut = true;
+    }
+
     try {
-      if (typeof window !== 'undefined') {
-        (window as any).__isLoggingOut = true;
-      }
       try {
         const { unsubscribeAllListeners } = await import('@/lib/db-provider');
         unsubscribeAllListeners();
@@ -24,9 +25,7 @@ export function SessionManager() {
       const userStr = localStorage.getItem(USER_STORAGE_KEY);
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem(ACTIVITY_STORAGE_KEY);
-      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      clearSession();
 
       if (sessionProvider === 'supabase') {
         try {
@@ -43,6 +42,7 @@ export function SessionManager() {
       window.location.href = '/login';
     } catch (error) {
       console.error("Error during timeout logout:", error);
+      clearSession();
       window.location.href = '/login';
     }
   }, []);
@@ -70,11 +70,14 @@ export function SessionManager() {
       return;
     }
 
-    // Initialize last activity if missing or if it predates the current session's login timestamp
+    const now = Date.now();
     const lastActivityStr = localStorage.getItem(ACTIVITY_STORAGE_KEY);
     const lastActivity = lastActivityStr ? parseInt(lastActivityStr, 10) : 0;
-    if (!lastActivity || (issuedAt > 0 && lastActivity < issuedAt)) {
-      localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
+    const isFreshLogin = issuedAt > 0 && now - issuedAt < 60_000;
+
+    // Initialize last activity if missing, if it predates login timestamp, or if login is brand new
+    if (!lastActivity || isFreshLogin || (issuedAt > 0 && lastActivity < issuedAt)) {
+      localStorage.setItem(ACTIVITY_STORAGE_KEY, now.toString());
     }
 
     const updateActivity = () => {
@@ -89,18 +92,25 @@ export function SessionManager() {
 
     const checkInactivity = () => {
       const currentActivityStr = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+      const currentTime = Date.now();
       if (!currentActivityStr) {
-        localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
+        localStorage.setItem(ACTIVITY_STORAGE_KEY, currentTime.toString());
         return;
       }
 
       const currentActivity = parseInt(currentActivityStr, 10);
-      if (issuedAt > 0 && currentActivity < issuedAt) {
-        localStorage.setItem(ACTIVITY_STORAGE_KEY, Date.now().toString());
-        return;
+
+      // Safety guard: If the session was created recently (within INACTIVITY_TIMEOUT_MS),
+      // it cannot have genuinely timed out due to 2 hours of inactivity.
+      // Refresh current activity if it was stale or predates issuedAt.
+      if (issuedAt > 0 && currentTime - issuedAt < INACTIVITY_TIMEOUT_MS) {
+        if (currentActivity < issuedAt || currentTime - currentActivity > INACTIVITY_TIMEOUT_MS) {
+          localStorage.setItem(ACTIVITY_STORAGE_KEY, currentTime.toString());
+          return;
+        }
       }
 
-      if (Date.now() - currentActivity > INACTIVITY_TIMEOUT_MS) {
+      if (currentTime - currentActivity > INACTIVITY_TIMEOUT_MS) {
         console.warn('[SessionManager] Session timed out due to inactivity.');
         handleLogout();
       }

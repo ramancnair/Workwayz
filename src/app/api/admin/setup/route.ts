@@ -6,10 +6,24 @@ import { getProfilesPath, getEnvPath } from '@/lib/config-paths';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        let { adminEmail, adminPassword, adminName, adminFirstName, adminLastName, dbProvider, fbApiKey, fbProjectId, supaUrl, supaKey, authProvider } = body;
+        let {
+            adminEmail,
+            adminPassword,
+            adminName,
+            adminFirstName,
+            adminLastName,
+            dbProvider,
+            fbApiKey,
+            fbProjectId,
+            supaUrl,
+            supaKey,
+            authProvider,
+            mode = 'create', // 'create' | 'existing'
+            action = 'setup', // 'setup' | 'verify'
+        } = body;
 
         if (!adminEmail || !adminPassword) {
-            return NextResponse.json({ success: false, error: 'Missing email or password' }, { status: 400 });
+            return NextResponse.json({ success: false, code: 'MISSING_FIELDS', error: 'Missing email or password' }, { status: 400 });
         }
 
         // Get unmasked firebase credentials
@@ -57,10 +71,10 @@ export async function POST(request: Request) {
 
         if (!isSupabase) {
             if (!projectId) {
-                return NextResponse.json({ success: false, error: 'Firebase Project ID is missing. Please configure it in the Database step.' }, { status: 400 });
+                return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Firebase Project ID is missing. Please configure it in the Database step.' }, { status: 400 });
             }
             if (!apiKey) {
-                return NextResponse.json({ success: false, error: 'Firebase API Key is missing. Please configure it in the Database step.' }, { status: 400 });
+                return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Firebase API Key is missing. Please configure it in the Database step.' }, { status: 400 });
             }
         }
 
@@ -76,6 +90,8 @@ export async function POST(request: Request) {
         if (!firstName) firstName = 'Super';
         if (!lastName) lastName = 'Admin';
 
+        const isExistingMode = mode === 'existing' || action === 'verify';
+
         if (isSupabase) {
             const { createClient } = await import('@supabase/supabase-js');
             
@@ -83,12 +99,83 @@ export async function POST(request: Request) {
             const finalSupaKey = effectiveSupaKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
             if (!finalSupaUrl || !finalSupaKey) {
-                return NextResponse.json({ success: false, error: 'Supabase URL or Publishable Key is missing.' }, { status: 400 });
+                return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Supabase URL or Publishable Key is missing.' }, { status: 400 });
             }
 
             const supabaseAdmin = createClient(finalSupaUrl, finalSupaKey);
 
-            // 1. Authenticate / Create Admin in Supabase Auth
+            if (isExistingMode) {
+                // Authenticate existing credentials
+                const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+                    email: adminEmail,
+                    password: adminPassword,
+                });
+
+                if (signInError || !signInData?.user) {
+                    return NextResponse.json({
+                        success: false,
+                        code: 'AUTH_FAILED',
+                        error: 'Invalid email or password for existing database.'
+                    }, { status: 400 });
+                }
+
+                uid = signInData.user.id;
+
+                // Check employee profile in database
+                const { data: existingEmps, error: empQueryErr } = await supabaseAdmin
+                    .from('employees')
+                    .select('*')
+                    .eq('email', adminEmail);
+
+                if (empQueryErr || !existingEmps || existingEmps.length === 0) {
+                    return NextResponse.json({
+                        success: false,
+                        code: 'NOT_SUPER_ADMIN',
+                        currentRole: 'None',
+                        error: 'This account was authenticated, but no employee record was found in the database. Only existing Super Admins can be linked.'
+                    }, { status: 400 });
+                }
+
+                const emp = existingEmps[0];
+                if (emp.accessLevel !== 'Super Admin') {
+                    return NextResponse.json({
+                        success: false,
+                        code: 'NOT_SUPER_ADMIN',
+                        currentRole: emp.accessLevel || 'User',
+                        error: `This account exists with the role "${emp.accessLevel || 'User'}", not "Super Admin". Only existing Super Admins can be linked.`
+                    }, { status: 400 });
+                }
+
+                firstName = emp.firstName || firstName;
+                lastName = emp.lastName || lastName;
+                empId = emp.empId || emp.id;
+
+                // If executing setup, ensure the Super Admin is enabled
+                if (action === 'setup') {
+                    try {
+                        await supabaseAdmin
+                            .from('employees')
+                            .update({ isEnabled: true, isDeleted: false, uid })
+                            .eq('email', adminEmail);
+                    } catch (_) {}
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    isExisting: true,
+                    user: {
+                        name: `${firstName} ${lastName}`.trim() || 'Super Admin',
+                        firstName,
+                        lastName,
+                        email: adminEmail,
+                        accessLevel: 'Super Admin',
+                        empId,
+                        uid
+                    }
+                });
+            }
+
+            // Fresh Creation Flow
             let authData: any = null;
             let authError: any = null;
 
@@ -116,68 +203,44 @@ export async function POST(request: Request) {
             if (authError) {
                 const errLower = (authError.message || '').toLowerCase();
                 if (errLower.includes('already registered') || errLower.includes('already exists') || authError.status === 422) {
-                    const { data: signInData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
-                        email: adminEmail,
-                        password: adminPassword,
-                    });
-                    if (signInError) {
-                        throw new Error("An account with this email already exists in Supabase, but the password provided was incorrect.");
-                    }
-                    uid = signInData.user?.id || '';
-                } else {
-                    throw authError;
+                    return NextResponse.json({
+                        success: false,
+                        code: 'EMAIL_EXISTS',
+                        error: 'An account with this email already exists in the database. Please select "Use Existing Credentials" or choose a different email.'
+                    }, { status: 400 });
                 }
-            } else {
-                uid = authData.user?.id || '';
+                throw authError;
             }
 
-            // 2. Sync Admin into Supabase 'employees' table
-            try {
-                const { data: existingEmps } = await supabaseAdmin
-                    .from('employees')
-                    .select('*')
-                    .eq('email', adminEmail);
+            uid = authData.user?.id || '';
 
-                if (existingEmps && existingEmps.length > 0) {
-                    empId = existingEmps[0].empId || existingEmps[0].id;
-                    await supabaseAdmin
-                        .from('employees')
-                        .update({
-                            firstName,
-                            lastName,
-                            accessLevel: 'Super Admin',
-                            isEnabled: true,
-                            isDeleted: false,
-                            uid: uid || existingEmps[0].uid
-                        })
-                        .eq('email', adminEmail);
-                } else {
-                    const { data: allEmps } = await supabaseAdmin.from('employees').select('empId');
-                    let highestId = 0;
-                    if (allEmps) {
-                        allEmps.forEach((emp: any) => {
-                            if (emp.empId && emp.empId.startsWith('E')) {
-                                const num = parseInt(emp.empId.substring(1));
-                                if (!isNaN(num) && num > highestId) highestId = num;
-                            }
-                        });
-                    }
-                    empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-                    await supabaseAdmin.from('employees').insert([{
-                        id: empId,
-                        empId,
-                        firstName,
-                        lastName,
-                        email: adminEmail,
-                        phone: 'N/A',
-                        experience: 0,
-                        accessLevel: 'Super Admin',
-                        avatar: 'https://placehold.co/40x40.png',
-                        isDeleted: false,
-                        isEnabled: true,
-                        uid
-                    }]);
+            // Sync Admin into Supabase 'employees' table
+            try {
+                const { data: allEmps } = await supabaseAdmin.from('employees').select('empId');
+                let highestId = 0;
+                if (allEmps) {
+                    allEmps.forEach((emp: any) => {
+                        if (emp.empId && emp.empId.startsWith('E')) {
+                            const num = parseInt(emp.empId.substring(1));
+                            if (!isNaN(num) && num > highestId) highestId = num;
+                        }
+                    });
                 }
+                empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+                await supabaseAdmin.from('employees').insert([{
+                    id: empId,
+                    empId,
+                    firstName,
+                    lastName,
+                    email: adminEmail,
+                    phone: 'N/A',
+                    experience: 0,
+                    accessLevel: 'Super Admin',
+                    avatar: 'https://placehold.co/40x40.png',
+                    isDeleted: false,
+                    isEnabled: true,
+                    uid
+                }]);
             } catch (dbErr) {
                 console.warn('Could not write to native employees table:', dbErr);
             }
@@ -192,73 +255,123 @@ export async function POST(request: Request) {
             const tempAuth = getAuth(tempApp);
             const tempDb = getFirestore(tempApp);
 
-            let isNewUser = true;
+            if (isExistingMode) {
+                let userCred: any = null;
+                try {
+                    userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
+                    uid = userCred.user.uid;
+                } catch (signInErr: any) {
+                    try { await deleteApp(tempApp); } catch (_) {}
+                    return NextResponse.json({
+                        success: false,
+                        code: 'AUTH_FAILED',
+                        error: 'Invalid email or password for existing database.'
+                    }, { status: 400 });
+                }
 
+                // Query Firestore employees collection
+                const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
+                const qSnap = await getDocs(q);
+
+                if (qSnap.empty) {
+                    try { await deleteApp(tempApp); } catch (_) {}
+                    return NextResponse.json({
+                        success: false,
+                        code: 'NOT_SUPER_ADMIN',
+                        currentRole: 'None',
+                        error: 'This account was authenticated, but no employee record was found in Firestore. Only existing Super Admins can be linked.'
+                    }, { status: 400 });
+                }
+
+                const docSnap = qSnap.docs[0];
+                const empData = docSnap.data();
+
+                if (empData.accessLevel !== 'Super Admin') {
+                    try { await deleteApp(tempApp); } catch (_) {}
+                    return NextResponse.json({
+                        success: false,
+                        code: 'NOT_SUPER_ADMIN',
+                        currentRole: empData.accessLevel || 'User',
+                        error: `This account exists with the role "${empData.accessLevel || 'User'}", not "Super Admin". Only existing Super Admins can be linked.`
+                    }, { status: 400 });
+                }
+
+                firstName = empData.firstName || firstName;
+                lastName = empData.lastName || lastName;
+                empId = empData.empId || docSnap.id;
+
+                if (action === 'setup') {
+                    try {
+                        await setDoc(doc(tempDb, 'employees', docSnap.id), {
+                            isEnabled: true,
+                            isDeleted: false,
+                            uid
+                        }, { merge: true });
+                    } catch (_) {}
+                }
+
+                try { await deleteApp(tempApp); } catch (_) {}
+
+                return NextResponse.json({
+                    success: true,
+                    isExisting: true,
+                    user: {
+                        name: `${firstName} ${lastName}`.trim() || 'Super Admin',
+                        firstName,
+                        lastName,
+                        email: adminEmail,
+                        accessLevel: 'Super Admin',
+                        empId,
+                        uid
+                    }
+                });
+            }
+
+            // Fresh Creation Flow
             try {
                 const userCred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
                 uid = userCred.user.uid;
             } catch (authError: any) {
+                try { await deleteApp(tempApp); } catch (_) {}
                 if (authError.code === 'auth/email-already-in-use') {
-                    try {
-                        const userCred = await signInWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
-                        uid = userCred.user.uid;
-                        isNewUser = false;
-                    } catch (signInErr) { 
-                        throw new Error("Admin email exists, but the password provided is incorrect."); 
+                    return NextResponse.json({
+                        success: false,
+                        code: 'EMAIL_EXISTS',
+                        error: 'An account with this email already exists in the database. Please select "Use Existing Credentials" or choose a different email.'
+                    }, { status: 400 });
+                }
+                throw authError;
+            }
+
+            let highestId = 0;
+            try {
+                const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
+                usersSnapshot.forEach(docSnap => {
+                    if (docSnap.id.startsWith('E')) {
+                        const num = parseInt(docSnap.id.substring(1));
+                        if (!isNaN(num) && num > highestId) highestId = num;
                     }
-                } else {
-                    throw authError;
-                }
+                });
+            } catch (e) {
+                console.warn('Could not query employees collection:', e);
             }
-
-            // Sync with Firestore employees collection
-            if (!isNewUser) {
-                const q = query(collection(tempDb, 'employees'), where('email', '==', adminEmail));
-                const qSnap = await getDocs(q);
-                if (!qSnap.empty) {
-                    const docSnap = qSnap.docs[0];
-                    empId = docSnap.id;
-                    await setDoc(doc(tempDb, 'employees', docSnap.id), { 
-                        firstName,
-                        lastName,
-                        accessLevel: 'Super Admin', 
-                        isEnabled: true, 
-                        isDeleted: false 
-                    }, { merge: true });
-                }
-            }
-
-            if (!empId) {
-                let highestId = 0;
-                try {
-                    const usersSnapshot = await getDocs(collection(tempDb, 'employees'));
-                    usersSnapshot.forEach(docSnap => {
-                        if (docSnap.id.startsWith('E')) {
-                            const num = parseInt(docSnap.id.substring(1));
-                            if (!isNaN(num) && num > highestId) highestId = num;
-                        }
-                    });
-                } catch (e) {
-                    console.warn('Could not query employees collection:', e);
-                }
-                empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
-                try {
-                    await setDoc(doc(tempDb, 'employees', empId), {
-                        empId,
-                        firstName,
-                        lastName,
-                        email: adminEmail,
-                        phone: 'N/A',
-                        experience: 0,
-                        accessLevel: 'Super Admin',
-                        avatar: 'https://placehold.co/40x40.png',
-                        isDeleted: false,
-                        isEnabled: true,
-                        uid
-                    });
-                } catch (dbErr) {
-                    console.warn('Could not write employee to Firestore:', dbErr);
-                }
+            empId = `E${(highestId + 1).toString().padStart(3, '0')}`;
+            try {
+                await setDoc(doc(tempDb, 'employees', empId), {
+                    empId,
+                    firstName,
+                    lastName,
+                    email: adminEmail,
+                    phone: 'N/A',
+                    experience: 0,
+                    accessLevel: 'Super Admin',
+                    avatar: 'https://placehold.co/40x40.png',
+                    isDeleted: false,
+                    isEnabled: true,
+                    uid
+                });
+            } catch (dbErr) {
+                console.warn('Could not write employee to Firestore:', dbErr);
             }
 
             try {
