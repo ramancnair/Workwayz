@@ -1,6 +1,6 @@
 # Workwayz Comprehensive Quality Assurance & Test Plan
 
-This document outlines the enterprise testing architecture, automated test suites (Vitest & Playwright), living HTML matrices, and execution runbooks for ProjectFlow.
+This document outlines the enterprise testing architecture, automated test suites (Vitest & Playwright), living HTML matrices, and execution runbooks for Workwayz.
 
 ---
 
@@ -123,6 +123,6 @@ npm run test:e2e:install
 
 ## 4. Living Documentation Artifacts
 
-- [ProjectFlow_Test_Plan.html](../ProjectFlow_Test_Plan.html): Interactive publication-grade test matrix with live filtering, statistics, and test spec links.
-- [ProjectFlow_Sitemap.html](../ProjectFlow_Sitemap.html): Complete route topology and view hierarchy across Global Portfolio and Project Detail hubs.
+- [Workwayz_Test_Plan.html](../Workwayz_Test_Plan.html): Interactive publication-grade test matrix with live filtering, statistics, and test spec links.
+- [Workwayz_Sitemap.html](../Workwayz_Sitemap.html): Complete route topology and view hierarchy across Global Portfolio and Project Detail hubs.
 

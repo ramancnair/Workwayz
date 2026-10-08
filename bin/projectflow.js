@@ -55,6 +55,6 @@ try {
     if (signal) process.kill(process.pid, signal);
   });
 } catch (err) {
-  console.error('Failed to locate ProjectFlow runtime:', err);
+  console.error('Failed to locate Workwayz runtime:', err);
   process.exit(1);
 }

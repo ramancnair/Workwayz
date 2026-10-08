@@ -5,9 +5,9 @@
   "description": "Workwayz - Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
   "author": "Workwayz <workwayzce@gmail.com>",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/ramancnair/ProjectFlow#readme",
+  "homepage": "https://github.com/ramancnair/Workwayz#readme",
   "bugs": {
-    "url": "https://github.com/ramancnair/ProjectFlow/issues"
+    "url": "https://github.com/ramancnair/Workwayz/issues"
   },
   "keywords": [
     "workwayz",
@@ -24,11 +24,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ramancnair/ProjectFlow.git"
+    "url": "https://github.com/ramancnair/Workwayz.git"
   },
   "bin": {
-    "workwayz": "./bin/projectflow.js",
-    "projectflow": "./bin/projectflow.js"
+    "workwayz": "./bin/workwayz.js",
+    "projectflow": "./bin/workwayz.js"
   },
   "files": [
     ".next",

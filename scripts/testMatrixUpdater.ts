@@ -19,7 +19,7 @@ interface MatrixState {
 }
 
 const rootDir = process.cwd();
-const HTML_PATH = path.resolve(rootDir, 'ProjectFlow_Test_Plan.html');
+const HTML_PATH = path.resolve(rootDir, 'Workwayz_Test_Plan.html');
 const STATE_PATH = path.resolve(rootDir, 'scripts/.matrix-state.json');
 
 // Default known unit/component tests to seed if not present in state

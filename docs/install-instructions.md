@@ -5,8 +5,8 @@
 Clone the repository from GitHub:
 
 ```bash
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
+git clone https://github.com/ramancnair/Workwayz.git
+cd Workwayz
 ```
 
 ---
@@ -112,8 +112,8 @@ npm start        # Serve the production build
 ```text
 1.  Install Git
 2.  Install Node.js (v18+)
-3.  git clone https://github.com/ramancnair/ProjectFlow.git
-4.  cd ProjectFlow
+3.  git clone https://github.com/ramancnair/Workwayz.git
+4.  cd Workwayz
 5.  `npm install`
 6.  `npm run dev` to start the setup wizard
 7.  Configure Database and AI through the UI (Requires Administrator role)

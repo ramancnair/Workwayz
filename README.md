@@ -7,6 +7,7 @@
 **The only PPM tool that unifies SAFe Agile & Hybrid — in one intelligent platform.**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![npm version](https://img.shields.io/npm/v/workwayz.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/workwayz)
 [![Next.js](https://img.shields.io/badge/Next.js-Latest-black?logo=next.js)](https://nextjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=node.js)](https://nodejs.org/)
 [![AI-Powered](https://img.shields.io/badge/AI-Genkit%20%7C%20Gemini-orange?logo=google)](https://firebase.google.com/docs/genkit)
@@ -76,100 +77,92 @@ Workwayz is **tightly integrated with AI** to eliminate repetitive, time-consumi
 
 ## Download & Installation
 
+Workwayz can be run in three ways depending on your use case:
+
+| Method | Best For | Command |
+|---|---|---|
+| **Option 1: NPX / NPM** | Quickest evaluation, zero-clone local run | `npx workwayz` |
+| **Option 2: Docker Compose** | Self-hosting, team servers, containerized deployment | `docker compose up -d` |
+| **Option 3: From Source (Git)** | Local development, customization, contributing | `git clone ... && npm run dev` |
+
+---
+
 ### Prerequisites
 
 Ensure the following are installed on your machine before proceeding:
 
-| Requirement | Version | Install |
+| Requirement | Version | Install Link |
 |---|---|---|
-| **Node.js** | v18 or higher | [nodejs.org](https://nodejs.org/) |
+| **Node.js** | v18 or higher (v20+ recommended) | [nodejs.org](https://nodejs.org/) |
 | **npm** | v9 or higher (bundled with Node.js) | Included with Node.js |
-| **Git** | Latest | [git-scm.com](https://git-scm.com/) |
-| **Keycloak** *(optional)* | v26+ | See section below |
+| **Docker & Docker Compose** *(optional)* | Latest | [docker.com](https://www.docker.com/) |
+| **Git** *(optional for npx)* | Latest | [git-scm.com](https://git-scm.com/) |
+| **Keycloak** *(optional)* | v26+ | For enterprise Keycloak authentication |
 
 ---
 
-### Step 1 — Install Node.js & npm
+### Option 1 — Instant Run via NPX / NPM (Fastest & Zero Setup)
 
-**Linux (Ubuntu/Debian):**
+Workwayz is published on npm as [**`workwayz`**](https://www.npmjs.com/package/workwayz). You can launch it immediately with zero code downloads or manual repository setup:
+
+#### Run instantly:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+npx workwayz
 ```
 
-**macOS (via Homebrew):**
+#### Or install globally as a command-line tool:
 ```bash
-brew install node
+npm install -g workwayz
+workwayz
 ```
 
-**Windows:**
-Download the installer from [nodejs.org](https://nodejs.org/) and run it.
-
-Verify the installation:
-```bash
-node --version   # Should output v18.x.x or higher
-npm --version    # Should output v9.x.x or higher
-```
+1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
+2. If this is your first run, Workwayz will launch the **In-App Setup Wizard** (`/setup-wizard`).
+3. Follow the on-screen steps to select your backend (**Firebase**, **Supabase Cloud**, or **Supabase Docker**) and enter your Google Gemini API key.
+4. Settings are automatically persisted to your user directory (`~/.workwayz`), surviving package updates and restarts.
 
 ---
 
-### Step 2 — Clone the Repository
+### Option 2 — Docker Compose (Recommended for Self-Hosting)
 
-```bash
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
-```
-
----
-
-### Step 3 — Install Dependencies
-
-```bash
-npm install
-```
-
----
-
-## Quick Start & Deployment Options
-
-Workwayz can be run in two ways depending on your use case:
-* **Option 1: Docker Compose + In-App Setup Wizard** — *Zero-config setup for self-hosters & on-premise.*
-* **Option 2: Local Development / Cloud Hosting via `.env`** — *Ideal for contributors, DevOps, and cloud deployment.*
-
----
-
-### Option 1 — Docker Compose (Recommended for Self-Hosting)
-
-The fastest way to deploy Workwayz locally or on a server:
+The fastest way to deploy a production-ready Workwayz container locally or on a server:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
+git clone https://github.com/ramancnair/Workwayz.git
+cd Workwayz
 
 # 2. Start the container stack
 docker compose up -d
 ```
 
+#### Or run the pre-built Docker image directly:
+```bash
+docker run -d -p 3000:3000 -v workwayz-data:/app/data --name workwayz-web ghcr.io/ramancnair/workwayz:latest
+```
+
 1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
-2. If this is your first run, Workwayz will launch the **In-App Setup Wizard** (`/setup-wizard`).
-3. Follow the on-screen steps to select your backend (**Firebase**, **Supabase Cloud**, or **Supabase Docker**) and enter your API keys.
-4. Settings are automatically persisted inside the Docker named volume (`projectflow-data`), surviving restarts and updates.
+2. Follow the on-screen **In-App Setup Wizard** (`/setup-wizard`) to configure your database and AI services.
+3. Settings and persistent data are automatically saved inside the Docker named volume (`workwayz-data`), surviving container restarts and updates.
 
 ---
 
-### Option 2 — Local Development / Cloud Hosting
+### Option 3 — From Source (Local Development / Contributing)
 
-#### Step 1 — Install Dependencies
-Ensure you have **Node.js 18+** installed.
+#### Step 1 — Clone the Repository
 ```bash
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
+git clone https://github.com/ramancnair/Workwayz.git
+cd Workwayz
+```
+
+#### Step 2 — Install Dependencies
+```bash
 npm install
 ```
 
-#### Step 2 — Configure Environment Variables
-Copy the template `.env.example` to `.env.local`:
+#### Step 3 — Configure Environment Variables
+You can let the **In-App Setup Wizard** configure everything on first run, or copy the template `.env.example` to `.env.local` to configure manually:
+
 ```bash
 cp .env.example .env.local
 ```
@@ -207,13 +200,13 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 GEMINI_API_KEY=your_google_gemini_api_key
 ```
 
-#### Step 3 — Run the Development Server
+#### Step 4 — Run the Development Server
 ```bash
 npm run dev
 ```
 Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
-#### Step 4 — Production Build
+#### Step 5 — Production Build
 ```bash
 npm run build
 npm start
@@ -253,8 +246,8 @@ npm run test:e2e:install
 ```
 
 ### 3. Living Traceability & Sitemaps
-- **[ProjectFlow_Test_Plan.html](./ProjectFlow_Test_Plan.html)**: Interactive living test matrix covering 30+ enterprise verification checkpoints.
-- **[ProjectFlow_Sitemap.html](./ProjectFlow_Sitemap.html)**: Interactive application topology and view hierarchy across Global Portfolio and Project Detail hubs.
+- **[Workwayz_Test_Plan.html](./Workwayz_Test_Plan.html)**: Interactive living test matrix covering 30+ enterprise verification checkpoints.
+- **[Workwayz_Sitemap.html](./Workwayz_Sitemap.html)**: Interactive application topology and view hierarchy across Global Portfolio and Project Detail hubs.
 - **[docs/testplan.md](./docs/testplan.md)**: Markdown test plan with full traceability IDs and assertion criteria.
 
 ---
@@ -301,6 +294,6 @@ Distributed under the **Apache 2.0 License**. See `LICENSE` for more information
 
 **Built with precision. Powered by AI. Designed for delivery.**
 
-[Report a Bug](https://github.com/ramancnair/ProjectFlow/issues) · [Request a Feature](https://github.com/ramancnair/ProjectFlow/issues) · [Discussions](https://github.com/ramancnair/ProjectFlow/discussions)
+[Report a Bug](https://github.com/ramancnair/Workwayz/issues) · [Request a Feature](https://github.com/ramancnair/Workwayz/issues) · [Discussions](https://github.com/ramancnair/Workwayz/discussions)
 
 </div>
