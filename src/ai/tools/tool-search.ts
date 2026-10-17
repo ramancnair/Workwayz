@@ -26,7 +26,7 @@ export const ToolSearchResultSchema = z.object({
 
 /**
  * Anthropic-style deferred tool search meta-tool.
- * Allows FlowPilot to discover any of the 201 tools in the global catalog
+ * Allows WayFinder to discover any of the 201 tools in the global catalog
  * if the top-15 retrieved candidates did not include a specialized capability.
  */
 export const searchToolsTool = ai.defineTool(

@@ -1,6 +1,6 @@
 # Hierarchical Multi-Agent Architecture: Retrieval-Based Tool Selection (RAG over Tools)
 
-Move FlowPilot from a flat monolithic tool injection model (passing all 201+ tool schemas on every turn) to a **Two-Stage Hierarchical Retrieval Architecture** (RAG over tools).
+Move WayFinder from a flat monolithic tool injection model (passing all 201+ tool schemas on every turn) to a **Two-Stage Hierarchical Retrieval Architecture** (RAG over tools).
 
 This drastically reduces **Tokens Per Minute (TPM)** by over **90%** (from ~48,000+ prompt tokens per call down to ~3,500–4,500 tokens), speeds up model inference and time-to-first-token, prevents context pollution, and maintains 100% reasoning intelligence through multi-guardrail tool retrieval and dynamic tool search.
 
@@ -73,7 +73,7 @@ flowchart TD
 ## User Review Required
 
 > [!NOTE]
-> The catalog of 201 tools in ProjectFlow is static code in `flowpilot-tools.ts`. Precomputing and caching their embeddings in a local file (`src/ai/tools-cache.json`) means server restarts take < 5ms and require zero startup API calls.
+> The catalog of 201 tools in Workwayz is static code in `wayfinder-tools.ts`. Precomputing and caching their embeddings in a local file (`src/ai/tools-cache.json`) means server restarts take < 5ms and require zero startup API calls.
 > If you add or edit tools in the future, a build-time or lazy indexing step automatically refreshes the cache.
 
 > [!TIP]
@@ -85,25 +85,25 @@ flowchart TD
 
 ### AI Architecture & Tool Retrieval
 
-#### [NEW] [tool-catalog.ts](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/ai/tools/tool-catalog.ts)
-- Comprehensive metadata registry for all 201 FlowPilot tools.
+#### [NEW] [tool-catalog.ts](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/ai/tools/tool-catalog.ts)
+- Comprehensive metadata registry for all 201 WayFinder tools.
 - Maps tool names to categories, detailed descriptions, parameter shapes, domain aliases, synonyms, and trigger phrases.
 
-#### [NEW] [tool-retriever.ts](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/ai/tools/tool-retriever.ts)
+#### [NEW] [tool-retriever.ts](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/ai/tools/tool-retriever.ts)
 - In-memory hybrid vector & keyword retriever.
 - Manages embedding cache (`tools-cache.json`), computes query vector similarity (dot product/cosine), computes BM25 scores, ranks tools, and returns top $K$ candidate tool instances.
 - Handles contextual query formulation from multi-turn chat history.
 
-#### [NEW] [tool-search.ts](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/ai/tools/tool-search.ts)
+#### [NEW] [tool-search.ts](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/ai/tools/tool-search.ts)
 - Implements the `searchTools` meta-tool (Anthropic-style deferred tool loading).
 - Allows the main model to dynamically query the full 201-tool catalog if it detects a needed capability is absent from its 15 candidates.
 
-#### [MODIFY] [flowpilot-tools.ts](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/ai/flows/flowpilot-tools.ts)
-- Export a fast lookup `Map<string, any>` (`flowpilotToolMap`) indexed by tool name.
+#### [MODIFY] [wayfinder-tools.ts](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/ai/flows/wayfinder-tools.ts)
+- Export a fast lookup `Map<string, any>` (`wayfinderToolMap`) indexed by tool name.
 - Export anchor tools (`queryProjectContextTool`) and the new `searchToolsTool`.
 
-#### [MODIFY] [flowpilot-agent.ts](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/ai/flows/flowpilot-agent.ts)
-- Replace static `tools: allFlowPilotTools` (201 tools) with Stage 1 dynamic tool retrieval:
+#### [MODIFY] [wayfinder-agent.ts](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/ai/flows/wayfinder-agent.ts)
+- Replace static `tools: allWayFinderTools` (201 tools) with Stage 1 dynamic tool retrieval:
   - Formulate retrieval query from `lastUserMessage` + recent context.
   - Call `retrieveCandidateTools(query, { maxResults: 14 })`.
   - Pass the retrieved candidates + anchor tools + `searchToolsTool` to `ai.generate`.
@@ -127,7 +127,7 @@ flowchart TD
      - Before: ~48,000 tokens.
      - After: Target < 4,500 tokens (>90% reduction).
 3. **End-to-End Execution**:
-   - Run sample chat turn through `/api/flowpilot/chat` and verify:
+   - Run sample chat turn through `/api/wayfinder/chat` and verify:
      - Tool executes correctly.
      - Action is recorded in `executedActions`.
      - UI headers (`x-rate-tpm`, `x-rate-last-prompt-tokens`) show the reduced token metrics.

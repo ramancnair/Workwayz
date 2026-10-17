@@ -679,7 +679,7 @@ export default function FpDashboardPage() {
               </div>
               <div className="flex items-center gap-3 text-muted-foreground text-[11px]">
                 <span className={cn("font-semibold", response.isFallback ? "text-amber-400" : "text-emerald-400")}>
-                  {response.audit.provider || (response.isFallback ? 'Local Heuristic Engine' : 'FlowPilot AI Analytics')}
+                  {response.audit.provider || (response.isFallback ? 'Local Heuristic Engine' : 'WayFinder AI Analytics')}
                 </span>
                 <span>•</span>
                 <span>{new Date(response.audit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hasPagePermission, hasAnyProjectPermission, getPermittedFallbackRoute, isAssignableToProject } from '../permissions';
-import { getUserAccessLevel } from '@/components/flowpilot/FlowPilotChatWidget';
+import { getUserAccessLevel } from '@/components/wayfinder/WayFinderChatWidget';
 import { type User, type AccessLevel, ASSIGNABLE_ACCESS_LEVELS } from '@/types';
 
 describe('Super Admin Access Level & Governance Rules', () => {
@@ -40,7 +40,7 @@ describe('Super Admin Access Level & Governance Rules', () => {
     expect(getPermittedFallbackRoute('/portfolio-settings/database', 'Super Admin')).toBeNull();
   });
 
-  it('FlowPilot correctly normalizes Super Admin access level aliases', () => {
+  it('WayFinder correctly normalizes Super Admin access level aliases', () => {
     expect(getUserAccessLevel({ accessLevel: 'Super Admin' })).toBe('Super Admin');
     expect(getUserAccessLevel({ role: 'super admin' })).toBe('Super Admin');
     expect(getUserAccessLevel({ roleName: 'superadmin' })).toBe('Super Admin');

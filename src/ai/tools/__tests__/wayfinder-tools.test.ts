@@ -1,20 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { TOOL_CATALOG, TOOL_CATALOG_MAP } from '@/ai/tools/tool-catalog';
 import {
-  allFlowPilotTools,
-  flowpilotToolMap,
-  flowpilotAnchorTools,
+  allWayFinderTools,
+  wayfinderToolMap,
+  wayfinderAnchorTools,
   toolExecutionStore,
-} from '@/ai/flows/flowpilot-tools';
+} from '@/ai/flows/wayfinder-tools';
 
-describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)', () => {
+describe('Tier 1: WayFinder Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)', () => {
   it('registers all 201 tools defined in the tool catalog', () => {
     expect(TOOL_CATALOG.length).toBe(201);
-    expect(allFlowPilotTools.length).toBeGreaterThanOrEqual(199);
+    expect(allWayFinderTools.length).toBeGreaterThanOrEqual(199);
 
     const missingInMap: string[] = [];
     for (const toolMeta of TOOL_CATALOG) {
-      if (!flowpilotToolMap.has(toolMeta.name)) {
+      if (!wayfinderToolMap.has(toolMeta.name)) {
         missingInMap.push(toolMeta.name);
       }
     }
@@ -23,7 +23,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
   });
 
   it('verifies that every registered tool has a valid name, description, and schema', () => {
-    for (const tool of allFlowPilotTools) {
+    for (const tool of allWayFinderTools) {
       const action = (tool as any).__action || tool;
       const name = action.name;
       const description = action.description;
@@ -42,15 +42,15 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
   });
 
   it('provides the mandatory anchor tools for baseline agent grounding', () => {
-    expect(flowpilotAnchorTools.length).toBeGreaterThanOrEqual(2);
-    const anchorNames = flowpilotAnchorTools.map((t: any) => t.__action?.name || t.name);
+    expect(wayfinderAnchorTools.length).toBeGreaterThanOrEqual(2);
+    const anchorNames = wayfinderAnchorTools.map((t: any) => t.__action?.name || t.name);
     expect(anchorNames).toContain('queryProjectContext');
     expect(anchorNames).toContain('searchTools');
   });
 
   describe('Direct Tool Handler Execution & Action Recorder Containment', () => {
     it('executes createWorkItemTool and safely records action', async () => {
-      const tool = flowpilotToolMap.get('createWorkItem');
+      const tool = wayfinderToolMap.get('createWorkItem');
       expect(tool).toBeDefined();
 
       const executedActions: any[] = [];
@@ -73,7 +73,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('executes createPortfolioTool with fallback and action recording', async () => {
-      const tool = flowpilotToolMap.get('createPortfolio');
+      const tool = wayfinderToolMap.get('createPortfolio');
       expect(tool).toBeDefined();
 
       const executedActions: any[] = [];
@@ -92,7 +92,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('executes createSprintTool and tracks sprint metadata', async () => {
-      const tool = flowpilotToolMap.get('createSprint');
+      const tool = wayfinderToolMap.get('createSprint');
       expect(tool).toBeDefined();
 
       const executedActions: any[] = [];
@@ -113,7 +113,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('executes createRaidItemTool and captures risk parameters', async () => {
-      const tool = flowpilotToolMap.get('createRaidItem');
+      const tool = wayfinderToolMap.get('createRaidItem');
       expect(tool).toBeDefined();
 
       const executedActions: any[] = [];
@@ -135,7 +135,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('executes queryFbBillingSummaryTool safely and returns structured JSON', async () => {
-      const tool = flowpilotToolMap.get('queryFbBillingSummary');
+      const tool = wayfinderToolMap.get('queryFbBillingSummary');
       expect(tool).toBeDefined();
 
       const result = await tool({
@@ -149,7 +149,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('executes updateFbContractValueTool safely and records action', async () => {
-      const tool = flowpilotToolMap.get('updateFbContractValue');
+      const tool = wayfinderToolMap.get('updateFbContractValue');
       expect(tool).toBeDefined();
 
       const executedActions: any[] = [];
@@ -169,7 +169,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
 
   describe('Zod Schema Validation Rejections', () => {
     it('fails validation when mandatory fields are missing', async () => {
-      const tool = flowpilotToolMap.get('createWorkItem');
+      const tool = wayfinderToolMap.get('createWorkItem');
       expect(tool).toBeDefined();
 
       let errorThrown = false;
@@ -187,7 +187,7 @@ describe('Tier 1: FlowPilot Tool Contracts & Registry Parity (TC-AGENT-TOOL-001)
     });
 
     it('fails validation on invalid enum values', async () => {
-      const tool = flowpilotToolMap.get('createWorkItem');
+      const tool = wayfinderToolMap.get('createWorkItem');
       expect(tool).toBeDefined();
 
       let errorThrown = false;

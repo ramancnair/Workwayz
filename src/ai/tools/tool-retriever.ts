@@ -238,7 +238,7 @@ export async function retrieveCandidateTools(ctx: RetrievalContext): Promise<Too
   const combinedScores: Array<{ name: string; score: number; category: string }> = [];
 
   for (const tool of TOOL_CATALOG) {
-    if (tool.name === 'createUser') continue; // Restricted action: user creation through FlowPilot is disallowed
+    if (tool.name === 'createUser') continue; // Restricted action: user creation through WayFinder is disallowed
     let finalScore = 0;
 
     // Normalized BM25 score (0 to 1)

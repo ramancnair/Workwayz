@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
-import { FlowPilotWidgetClient } from "@/components/flowpilot/FlowPilotWidgetClient";
+import { WayFinderWidgetClient } from "@/components/wayfinder/WayFinderWidgetClient";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -48,7 +48,7 @@ export default async function RootLayout({
           <SupabaseBootstrap />
           <SetupInterceptor />
           {children}
-          <FlowPilotWidgetClient />
+          <WayFinderWidgetClient />
           <Toaster />
         </ThemeProvider>
       </body>

@@ -29,10 +29,10 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(page.locator('body')).toContainText(/Portfolio Dashboard|Overview|Projects|Health/i);
   });
 
-  test('TC-PORT-004: FlowPilot (FP) AI Dashboard renders intelligent operational insights', async ({ page }) => {
+  test('TC-PORT-004: WayFinder (FP) AI Dashboard renders intelligent operational insights', async ({ page }) => {
     await page.goto('/fp-portfolio-dash', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('body')).toContainText(/FP Portfolio Dash|FP Dashboard|FlowPilot|AI|Assistant|Insights/i);
+    await expect(page.locator('body')).toContainText(/FP Portfolio Dash|FP Dashboard|WayFinder|FlowPilot|AI|Assistant|Insights/i);
   });
 
   test('TC-PORT-005: Billing & Billing Rate views present financial ledgers and rate tables', async ({ page }) => {

@@ -6,6 +6,7 @@ const FILE_TO_TC_MAP: Record<string, string> = {
   'auth-utils.test.ts': 'TC-UNIT-AUTH-001',
   'StatsCard.test.tsx': 'TC-COMP-STAT-001',
   'PageHeader.test.tsx': 'TC-COMP-HDR-001',
+  'wayfinder-tools.test.ts': 'TC-AGENT-TOOL-001',
   'flowpilot-tools.test.ts': 'TC-AGENT-TOOL-001',
   'tool-retriever.test.ts': 'TC-AGENT-RETR-001',
 };

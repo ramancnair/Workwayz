@@ -717,7 +717,7 @@ export default function FpPmDashboardPage() {
                 </span>
                 <span className="hidden md:inline text-border">|</span>
                 <span className={cn("hidden md:inline font-mono text-[11px] font-medium", response.isFallback ? "text-amber-400" : "text-primary")}>
-                  {response.audit?.provider || (response.isFallback ? 'Local Heuristic Engine' : 'FlowPilot AI PM Intelligence')}
+                  {response.audit?.provider || (response.isFallback ? 'Local Heuristic Engine' : 'WayFinder AI PM Intelligence')}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">

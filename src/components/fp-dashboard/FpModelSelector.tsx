@@ -38,7 +38,7 @@ export function FpModelSelector({
     async function loadModels() {
       try {
         setIsLoading(true);
-        const res = await fetch('/api/flowpilot/models');
+        const res = await fetch('/api/wayfinder/models');
         if (res.ok) {
           const data = await res.json();
           const list: Array<{ id: string; name: string; tag?: string }> = [];
@@ -79,7 +79,7 @@ export function FpModelSelector({
     onModelChange(modelId);
     // Also save globally to flowpilot settings
     try {
-      await fetch('/api/flowpilot/models', {
+      await fetch('/api/wayfinder/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

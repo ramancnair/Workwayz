@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const filePath = path.join(__dirname, '../src/ai/flows/flowpilot-tools.ts');
+const filePath = path.join(__dirname, '../src/ai/flows/wayfinder-tools.ts');
 const content = fs.readFileSync(filePath, 'utf8');
 
 // Match each `export const <toolName> = ai.defineTool(...)`

@@ -62,7 +62,7 @@
     "test:e2e:install:all": "playwright install",
     "test:agent": "vitest run src/ai",
     "test:agent:eval": "tsx scripts/eval-agent.ts",
-    "test:agent:e2e": "playwright test e2e/09-flowpilot-agent.spec.ts"
+    "test:agent:e2e": "playwright test e2e/09-wayfinder-agent.spec.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

@@ -1,6 +1,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getActiveAiDetails } from './flowpilot-agent';
+import { getActiveAiDetails } from './wayfinder-agent';
 import { db, collection, getDocs, doc, getDoc } from '@/lib/db-provider';
 import { executeFpQuery } from '@/lib/fp-query-engine';
 import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
@@ -413,8 +413,8 @@ ${JSON.stringify(employeesList.slice(0, 30))}
       recordsAnalyzed: projectsContext.length,
       portfolioScope: portfolioName,
       timestamp: now,
-      provider: `FlowPilot AI Analytics (${aiDetails.displayName || aiDetails.provider})`,
-      confidence: '100% (Grounded in Live Database via FlowPilot Genkit AI)',
+      provider: `WayFinder AI Analytics (${aiDetails.displayName || aiDetails.provider})`,
+      confidence: '100% (Grounded in Live Database via WayFinder Genkit AI)',
     },
     followUpSuggestions: output.followUpSuggestions,
     isFallback: false,
@@ -535,7 +535,7 @@ async function executeProjectAiAnalytics(
     (worklogs || []).length +
     activePaymentMilestones.length;
 
-  const prompt = `You are FlowPilot Project Management Delivery Analytics Intelligence.
+  const prompt = `You are WayFinder Project Management Delivery Analytics Intelligence.
 You are tasked with analyzing live project deliverables, velocity, bugs, RAID risks, workload, and milestones for project "${project.name || projectId}" (${projectId}).
 
 === USER QUERY ===
@@ -599,8 +599,8 @@ ${JSON.stringify(activePaymentMilestones)}
       recordsAnalyzed: totalRecordsAnalyzed,
       portfolioScope: `Project: ${project.name || projectId} (${project.id || projectId})`,
       timestamp: now.toISOString(),
-      provider: `FlowPilot AI PM Intelligence (${aiDetails.displayName || aiDetails.provider})`,
-      confidence: '100% (Grounded in Live Project DB via FlowPilot Genkit AI)',
+      provider: `WayFinder AI PM Intelligence (${aiDetails.displayName || aiDetails.provider})`,
+      confidence: '100% (Grounded in Live Project DB via WayFinder Genkit AI)',
     },
     followUpSuggestions: output.followUpSuggestions,
     isFallback: false,

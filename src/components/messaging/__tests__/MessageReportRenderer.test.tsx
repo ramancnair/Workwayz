@@ -46,7 +46,7 @@ describe('MessageReportRenderer', () => {
       '• Identified 9 total logged defects in project.',
       `<!--fp-chart-start-->\n${JSON.stringify(chartSpec)}\n<!--fp-chart-end-->`,
       `<!--fp-kpis-start-->\n${JSON.stringify(kpiSpec)}\n<!--fp-kpis-end-->`,
-      '[FlowPilot Dashboard](/projects/P1/project-details/fp-pm-dash)',
+      '[WayFinder Dashboard](/projects/P1/project-details/fp-pm-dash)',
     ].join('\n');
 
     render(<MessageReportRenderer body={messageBody} />);

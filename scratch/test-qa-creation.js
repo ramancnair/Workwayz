@@ -1,6 +1,6 @@
 async function testTestCaseCreation() {
   console.log('Testing test case generation prompt...');
-  const res = await fetch('http://localhost:3000/api/flowpilot/chat', {
+  const res = await fetch('http://localhost:3000/api/wayfinder/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -11,7 +11,7 @@ async function testTestCaseCreation() {
         },
       ],
       currentProjectId: 'P2600001',
-      currentProjectName: 'FlowPilot Mobile Banking',
+      currentProjectName: 'WayFinder Mobile Banking',
     }),
   });
 

@@ -608,7 +608,7 @@ export async function executeCronJob(
       embeddedChartSpec,
       embeddedKpisSpec,
       '---',
-      `*Records analyzed: ${reportData.audit?.recordsAnalyzed ?? 'Live DB'} | View full live charts on the [FlowPilot Dashboard](${dashboardLink}).*`,
+      `*Records analyzed: ${reportData.audit?.recordsAnalyzed ?? 'Live DB'} | View full live charts on the [WayFinder Dashboard](${dashboardLink}).*`,
     ]
       .filter((s) => s !== undefined && s !== '')
       .join('\n');
@@ -619,8 +619,8 @@ export async function executeCronJob(
       const msgRes = await sendInternalMessage(db, {
         sender: {
           id: job.createdBy.userId || 'system',
-          name: `FlowPilot Scheduled [${job.name}]`,
-          email: job.createdBy.email || 'flowpilot@projectflow.local',
+          name: `WayFinder Scheduled [${job.name}]`,
+          email: job.createdBy.email || 'wayfinder@workwayz.local',
         },
         recipients: job.recipients,
         subject: `[Scheduled Report] ${job.name} - ${formattedDate}`,

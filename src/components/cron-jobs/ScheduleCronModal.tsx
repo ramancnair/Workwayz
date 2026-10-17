@@ -246,7 +246,7 @@ export function ScheduleCronModal({
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-2 text-primary font-medium text-xs">
             <Clock className="h-4 w-4" />
-            <span>Automated FlowPilot Query Scheduler</span>
+            <span>Automated WayFinder Query Scheduler</span>
           </div>
           <DialogTitle className="text-xl font-bold">Convert Query to Cron Job</DialogTitle>
           <DialogDescription className="text-xs">

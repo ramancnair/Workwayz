@@ -116,7 +116,7 @@ export function MessageReportRenderer({ body }: MessageReportRendererProps) {
       }
     }
 
-    const isFlowPilotReport =
+    const isWayFinderReport =
       cleanText.includes('Scheduled Automated Report') ||
       cleanText.includes('Executive Takeaways') ||
       cleanText.includes('Original Query');
@@ -125,11 +125,12 @@ export function MessageReportRenderer({ body }: MessageReportRendererProps) {
       cleanText,
       extractedChart,
       extractedKpis,
-      isFlowPilotReport,
+      isWayFinderReport,
+      isFlowPilotReport: isWayFinderReport,
     };
   }, [body]);
 
-  if (!parsed.isFlowPilotReport) {
+  if (!parsed.isWayFinderReport) {
     // Normal plain-text or standard message
     return (
       <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap font-sans break-words selection:bg-primary/20">
@@ -165,7 +166,7 @@ export function MessageReportRenderer({ body }: MessageReportRendererProps) {
   const scopeText = scopeMatch ? scopeMatch[1].trim() : '';
 
   // Extract dashboard link
-  const linkMatch = cleanText.match(/\[FlowPilot Dashboard\]\(([^)]+)\)/i);
+  const linkMatch = cleanText.match(/\[(?:WayFinder|FlowPilot) Dashboard\]\(([^)]+)\)/i);
   const dashboardLink = linkMatch ? linkMatch[1] : null;
 
   // Extract records analyzed
@@ -182,7 +183,7 @@ export function MessageReportRenderer({ body }: MessageReportRendererProps) {
               <Sparkles className="h-4 w-4" />
             </span>
             <span className="text-xs font-bold tracking-wider uppercase text-primary">
-              FlowPilot Automated Query Report
+              WayFinder Automated Query Report
             </span>
           </div>
 
@@ -330,7 +331,7 @@ export function MessageReportRenderer({ body }: MessageReportRendererProps) {
             href={dashboardLink}
             className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline hover:text-primary/80 transition-colors"
           >
-            <span>Open live charts in FlowPilot Dashboard</span>
+            <span>Open live charts in WayFinder Dashboard</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}

@@ -78,7 +78,7 @@ enriched.forEach(t => {
 console.log('Category distribution:', counts);
 
 // Now generate src/ai/tools/tool-catalog.ts
-const tsContent = `// Auto-generated Tool Catalog for FlowPilot RAG Tool Selection
+const tsContent = `// Auto-generated Tool Catalog for WayFinder RAG Tool Selection
 // Total Tools: ${enriched.length}
 
 export interface ToolMetadata {

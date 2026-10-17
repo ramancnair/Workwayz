@@ -31,7 +31,7 @@ async function runEvaluation() {
 
   const testCases: TestCase[] = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   console.log('\n======================================================');
-  console.log(`🤖 FlowPilot Agent Benchmark Evaluation (${isLive ? 'LIVE LLM' : 'RETRIEVAL RECALL'})`);
+  console.log(`🤖 WayFinder Agent Benchmark Evaluation (${isLive ? 'LIVE LLM' : 'RETRIEVAL RECALL'})`);
   console.log(`📊 Evaluating ${testCases.length} Golden-Set Intents`);
   console.log('======================================================\n');
 
@@ -45,11 +45,11 @@ async function runEvaluation() {
 
     if (isLive) {
       try {
-        const { flowpilotAgent } = await import('../src/ai/flows/flowpilot-agent');
-        const output = await flowpilotAgent({
+        const { wayfinderAgent } = await import('../src/ai/flows/wayfinder-agent');
+        const output = await wayfinderAgent({
           messages: [{ role: 'user', content: tc.prompt }],
           currentProjectId: 'test-proj-001',
-          currentProjectName: 'ProjectFlow Core',
+          currentProjectName: 'Workwayz Core',
         });
         const executedTools = (output.executedActions || []).map((a: any) => a.toolName);
         retrievedTools = executedTools;

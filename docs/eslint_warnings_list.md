@@ -244,7 +244,7 @@ Mutating `.current` properties of `useRef` directly in render body breaks React 
 - **Fix**: Replaced random width with deterministic fallback width `"70%"`.
 - **Status**: **Resolved**
 
-#### 2. [FlowPilotChatWidget.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/flowpilot/FlowPilotChatWidget.tsx) (3 Warnings)
+#### 2. [WayFinderChatWidget.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/wayfinder/WayFinderChatWidget.tsx) (3 Warnings)
 - **Issue**: Calling `Date.now()` inside component render passes to construct default message identifiers.
 - **Fix**: Created top-level `generateMessageId()` function outside the component.
 - **Status**: **Resolved**

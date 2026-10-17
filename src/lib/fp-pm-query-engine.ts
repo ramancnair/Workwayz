@@ -96,7 +96,7 @@ export function executeFpPmQuery(
     recordsAnalyzed: totalRecordsAnalyzed,
     portfolioScope: `Project: ${projectName} (${projectId})`,
     timestamp: now,
-    provider: 'FlowPilot Deterministic PM Engine',
+    provider: 'WayFinder Deterministic PM Engine',
     confidence: '100% (Grounded in Project DB, Zero Hallucination)',
   };
 

@@ -4,7 +4,7 @@ import {
   buildContextualRetrievalQuery,
 } from '@/ai/tools/tool-retriever';
 
-describe('Tier 2: FlowPilot Tool Retrieval & Discovery Benchmark (TC-AGENT-RETR-001)', () => {
+describe('Tier 2: WayFinder Tool Retrieval & Discovery Benchmark (TC-AGENT-RETR-001)', () => {
   describe('Contextual Query Builder', () => {
     it('constructs basic query from user message', () => {
       const query = buildContextualRetrievalQuery({

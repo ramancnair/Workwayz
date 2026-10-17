@@ -1,4 +1,4 @@
-// Auto-generated Tool Catalog for FlowPilot RAG Tool Selection
+// Auto-generated Tool Catalog for WayFinder RAG Tool Selection
 // Total Tools: 201
 
 export interface ToolMetadata {
@@ -1470,7 +1470,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "createUser",
     "varName": "createUserTool",
     "category": "resources",
-    "description": "RESTRICTED GOVERNANCE: Adding or creating users in Portfolio > Users through FlowPilot is strictly disallowed. Direct users to the Portfolio > Users page.",
+    "description": "RESTRICTED GOVERNANCE: Adding or creating users in Portfolio > Users through WayFinder is strictly disallowed. Direct users to the Portfolio > Users page.",
     "params": [
       "email",
       "firstName",
@@ -1495,7 +1495,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
       "rate",
       "user directory"
     ],
-    "searchText": "createUser | Category: resources | Aliases: resource team member engineer allocation utilization workload rate user directory | Description: RESTRICTED GOVERNANCE: Adding or creating users in Portfolio > Users through FlowPilot is strictly disallowed. Direct users to the Portfolio > Users page. | Parameters: email firstName lastName empId phone role accessLevel experience costAmount costCurrency employmentStartDate employmentEndDate"
+    "searchText": "createUser | Category: resources | Aliases: resource team member engineer allocation utilization workload rate user directory | Description: RESTRICTED GOVERNANCE: Adding or creating users in Portfolio > Users through WayFinder is strictly disallowed. Direct users to the Portfolio > Users page. | Parameters: email firstName lastName empId phone role accessLevel experience costAmount costCurrency employmentStartDate employmentEndDate"
   },
   {
     "name": "updateUserRole",
