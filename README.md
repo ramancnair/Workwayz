@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="public/workwayz-icon.png" width="40" height="40" alt="Workwayz Logo" valign="middle" /> Workwayz
+# <img src="https://cdn.jsdelivr.net/npm/workwayz/public/workwayz-icon.png" width="40" height="40" alt="Workwayz Logo" valign="middle" /> Workwayz
 
 ### The Enterprise-Grade AI-Powered Project & Portfolio Management Platform
 
