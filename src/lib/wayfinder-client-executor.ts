@@ -16,6 +16,7 @@ import {
   Timestamp,
 } from '@/lib/db-provider';
 import { generateFullProjectData } from '@/lib/project-autogen';
+import { isBugWorkItem } from '@/types';
 import type {
   Story,
   Epic,
@@ -27,7 +28,6 @@ import type {
   KanbanColumn,
   ProjectSettings,
   Environment,
-  isBugWorkItem,
 } from '@/types';
 
 const sanitizeData = (data: any) => {
@@ -353,7 +353,7 @@ export async function executeClientUpdateWorkItem(params: {
     }
   }
 
-  const existingData = docSnap.data();
+  const existingData = (docSnap.data() || {}) as Record<string, any>;
   const updatePayload: any = { ...updates, updatedAt: new Date().toISOString() };
 
   if (updates.status && updates.status !== existingData.status) {
@@ -610,7 +610,7 @@ export async function executeClientCreateTestPlan(params: {
     success: true,
     id: docRef.id,
     testCycleId,
-    testPlanId,
+    testPlanId: testCycleId,
     name,
     planType,
     projectId,
@@ -1627,9 +1627,13 @@ export async function executeWayFinderActionOnClient(action: any) {
           updatedAt: now,
         });
         try {
-          await generateFullProjectData(db, projectId, params.projectName, {
+          await generateFullProjectData({
+            db,
+            projectId,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+            globalUsers: [],
             pricingModel: params.pricingModel || 'Fixed Bid',
-            portfolioId: params.portfolioId || 'PF001',
           });
         } catch (e) {}
         return { success: true, projectId, name: params.projectName, url: `/projects/${projectId}/project-details/pm-dashboard` };

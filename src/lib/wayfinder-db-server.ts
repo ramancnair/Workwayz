@@ -187,7 +187,7 @@ export async function wayfinderUpdateWorkItem(params: {
     }
   }
 
-  const existingData = docSnap.data();
+  const existingData = (docSnap.data() || {}) as Record<string, any>;
   const updatePayload: any = { ...updates, updatedAt: new Date().toISOString() };
 
   if (updates.status && updates.status !== existingData.status) {
@@ -860,7 +860,7 @@ export async function wayfinderQueryProjectContext(projectId?: string) {
     return { error: `Project with ID ${projectId} not found` };
   }
 
-  const projData = projectSnap.data();
+  const projData = (projectSnap.data() || {}) as Record<string, any>;
 
   const [storiesSnap, epicsSnap, sprintsSnap, testCasesSnap, risksSnap, issuesSnap] = await Promise.all([
     getDocs(collection(projectDocRef, 'stories')),
@@ -1232,9 +1232,13 @@ export async function wayfinderAutogenProject(params: {
 
   // Call project autogen engine to generate subcollections
   try {
-    await generateFullProjectData(db, projectId, params.projectName, {
+    await generateFullProjectData({
+      db,
+      projectId,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      globalUsers: [],
       pricingModel: params.pricingModel || 'Fixed Bid',
-      portfolioId: params.portfolioId || 'PF001',
     });
   } catch (err: any) {
     console.warn('[WayFinder] Autogen subcollection creation warning:', err);
@@ -1249,20 +1253,23 @@ export async function wayfinderAutogenProject(params: {
 }
 
 // 19. Portfolio Dashboard Summary
-export async function wayfinderGetPortfolioDashboardSummary(params: { portfolioId?: string }) {
+export async function wayfinderGetPortfolioDashboardSummary(params?: { portfolioId?: string } | string) {
   if (!db) throw new Error('Database not initialized');
+  const portfolioId = typeof params === 'string' ? params : params?.portfolioId;
   const projectsSnap = await getDocs(collection(db, 'projects'));
   let projects = projectsSnap.docs
     .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
     .map((d: any) => ({ id: d.id, ...d.data() }));
 
-  if (params.portfolioId && params.portfolioId !== 'all') {
-    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  if (portfolioId && portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === portfolioId);
   }
 
   const redProjects: any[] = [];
   const amberProjects: any[] = [];
   const greenProjects: any[] = [];
+  const highPotentialRisks: any[] = [];
+  const criticalIssues: any[] = [];
   let totalRisks = 0;
   let highRisksCount = 0;
   let totalIssues = 0;
@@ -1279,7 +1286,10 @@ export async function wayfinderGetPortfolioDashboardSummary(params: { portfolioI
       const data = r.data();
       totalRisks++;
       const pot = (data.severity || 1) * (data.probability || 1);
-      if (pot > 6) highRisksCount++;
+      if (pot > 6) {
+        highRisksCount++;
+        highPotentialRisks.push({ projectId: proj.id, projectName: proj.name, ...data });
+      }
     });
 
     // Fetch issues
@@ -1288,13 +1298,17 @@ export async function wayfinderGetPortfolioDashboardSummary(params: { portfolioI
       const data = i.data();
       if (data.status !== 'Closed' && data.status !== 'Resolved') {
         totalIssues++;
-        if (data.priority === 'Critical' || data.priority === 'High') criticalIssuesCount++;
+        if (data.priority === 'Critical' || data.priority === 'High') {
+          criticalIssuesCount++;
+          criticalIssues.push({ projectId: proj.id, projectName: proj.name, ...data });
+        }
       }
     });
   }
 
   return {
     totalActiveProjects: projects.length,
+    totalProjects: projects.length,
     healthDistribution: {
       red: redProjects.length,
       amber: amberProjects.length,
@@ -1302,6 +1316,7 @@ export async function wayfinderGetPortfolioDashboardSummary(params: { portfolioI
     },
     redProjects,
     amberProjects,
+    projects,
     risks: {
       total: totalRisks,
       highPotential: highRisksCount,
@@ -1310,6 +1325,8 @@ export async function wayfinderGetPortfolioDashboardSummary(params: { portfolioI
       totalOpen: totalIssues,
       criticalOrHigh: criticalIssuesCount,
     },
+    highPotentialRisks,
+    criticalIssues,
   };
 }
 
@@ -1395,15 +1412,16 @@ export async function wayfinderQueryPortfolioIssues(params: { portfolioId?: stri
 }
 
 // 22. Query Quality Estimations Rollup
-export async function wayfinderQueryQualityEstimations(params: { portfolioId?: string }) {
+export async function wayfinderQueryQualityEstimations(params?: { portfolioId?: string } | string) {
   if (!db) throw new Error('Database not initialized');
+  const portfolioId = typeof params === 'string' ? params : params?.portfolioId;
   const projectsSnap = await getDocs(collection(db, 'projects'));
   let projects = projectsSnap.docs
     .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
     .map((d: any) => ({ id: d.id, ...d.data() }));
 
-  if (params.portfolioId && params.portfolioId !== 'all') {
-    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  if (portfolioId && portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === portfolioId);
   }
 
   const projectEstimations: any[] = [];
@@ -1464,15 +1482,16 @@ export async function wayfinderQueryQualityEstimations(params: { portfolioId?: s
 }
 
 // 23. Query Quality Defects Rollup
-export async function wayfinderQueryQualityDefects(params: { portfolioId?: string }) {
+export async function wayfinderQueryQualityDefects(params?: { portfolioId?: string } | string) {
   if (!db) throw new Error('Database not initialized');
+  const portfolioId = typeof params === 'string' ? params : params?.portfolioId;
   const projectsSnap = await getDocs(collection(db, 'projects'));
   let projects = projectsSnap.docs
     .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
     .map((d: any) => ({ id: d.id, ...d.data() }));
 
-  if (params.portfolioId && params.portfolioId !== 'all') {
-    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  if (portfolioId && portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === portfolioId);
   }
 
   const defectsSummary: any[] = [];
@@ -1514,15 +1533,16 @@ export async function wayfinderQueryQualityDefects(params: { portfolioId?: strin
 }
 
 // 24. Query Billing Overview
-export async function wayfinderQueryBillingOverview(params: { portfolioId?: string }) {
+export async function wayfinderQueryBillingOverview(params?: { portfolioId?: string } | string) {
   if (!db) throw new Error('Database not initialized');
+  const portfolioId = typeof params === 'string' ? params : params?.portfolioId;
   const projectsSnap = await getDocs(collection(db, 'projects'));
   let projects = projectsSnap.docs
     .filter((d: any) => !d.data().isDeleted && !d.data().isArchived)
     .map((d: any) => ({ id: d.id, ...d.data() }));
 
-  if (params.portfolioId && params.portfolioId !== 'all') {
-    projects = projects.filter((p: any) => p.portfolioId === params.portfolioId);
+  if (portfolioId && portfolioId !== 'all') {
+    projects = projects.filter((p: any) => p.portfolioId === portfolioId);
   }
 
   let totalRevenue = 0;
@@ -1575,14 +1595,17 @@ export async function wayfinderQueryBillingOverview(params: { portfolioId?: stri
 
   const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
+  const portfolioFinancials = {
+    totalRevenue,
+    totalResourceCost,
+    totalFixedCosts,
+    totalProfit,
+    overallMarginPercentage: Math.round(overallMargin * 10) / 10,
+  };
+
   return {
-    portfolioFinancials: {
-      totalRevenue,
-      totalResourceCost,
-      totalFixedCosts,
-      totalProfit,
-      overallMarginPercentage: Math.round(overallMargin * 10) / 10,
-    },
+    portfolioFinancials,
+    portfolioTotals: portfolioFinancials,
     projects: projectSummaries,
   };
 }
@@ -2280,12 +2303,13 @@ export async function wayfinderExportPortfolioDashboardReport(params: { portfoli
 // 43. Export Quality Estimations Report
 export async function wayfinderExportQualityEstimationsReport(params: { portfolioId?: string }) {
   if (!db) throw new Error('Database not initialized');
-  const estimations = await wayfinderQueryQualityEstimations(params.portfolioId);
+  const estimations: any = await wayfinderQueryQualityEstimations(params.portfolioId);
+  const projectsList = Array.isArray(estimations) ? estimations : (estimations.projects || []);
   return {
     generatedAt: new Date().toISOString(),
-    totalProjectsTracked: estimations.totalProjects,
-    conformanceSummary: estimations.portfolioSummary,
-    estimationsData: estimations.projects,
+    totalProjectsTracked: estimations.totalProjects || projectsList.length,
+    conformanceSummary: estimations.portfolioSummary || {},
+    estimationsData: estimations.projects || projectsList,
     exportFormat: 'csv-ready',
   };
 }
@@ -2373,7 +2397,7 @@ export async function wayfinderQueryDefectTrendByMonth(params: { portfolioId?: s
 // 46. Query Defect Root Cause Summary
 export async function wayfinderQueryDefectRootCauseSummary(params: { portfolioId?: string }) {
   if (!db) throw new Error('Database not initialized');
-  const defectsSummary = await wayfinderQueryQualityDefects(params.portfolioId);
+  const defectsSummary: any = await wayfinderQueryQualityDefects(params.portfolioId);
   const projectsSnap = await getDocs(collection(db, 'projects'));
 
   const rootCauses = {
@@ -2411,13 +2435,15 @@ export async function wayfinderQueryDefectRootCauseSummary(params: { portfolioId
     });
   }
 
+  const pSummary = defectsSummary?.portfolioSummary || {};
+  const isArr = Array.isArray(defectsSummary);
   return {
-    totalDefects: defectsSummary.portfolioSummary.totalDefects,
+    totalDefects: pSummary.totalDefects ?? (isArr ? defectsSummary.reduce((acc: number, d: any) => acc + (d.totalBugs || 0), 0) : 0),
     phaseContainment: {
-      sit: defectsSummary.portfolioSummary.totalSit,
-      uat: defectsSummary.portfolioSummary.totalUat,
-      productionLeakage: defectsSummary.portfolioSummary.totalProd,
-      leakageRatePercentage: defectsSummary.portfolioSummary.averageLeakageRate,
+      sit: pSummary.totalSit ?? (isArr ? defectsSummary.reduce((acc: number, d: any) => acc + (d.sitCount || 0), 0) : 0),
+      uat: pSummary.totalUat ?? (isArr ? defectsSummary.reduce((acc: number, d: any) => acc + (d.uatCount || 0), 0) : 0),
+      productionLeakage: pSummary.totalProd ?? (isArr ? defectsSummary.reduce((acc: number, d: any) => acc + (d.prodCount || 0), 0) : 0),
+      leakageRatePercentage: pSummary.averageLeakageRate ?? 0,
     },
     rootCauses,
   };
@@ -4497,7 +4523,7 @@ export async function wayfinderBulkImportTestCases(params: {
   projectId: string;
   testCases: Array<{ title: string; description: string; expectedResult: string; type?: string; storyId?: string }>;
 }) {
-  return await wayfinderBulkCreateTestCases(params);
+  return await wayfinderBulkCreateTestCases(params as any);
 }
 
 export async function wayfinderUpdateTestPlan(params: {
