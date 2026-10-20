@@ -53,6 +53,63 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 const accessLevels: AccessLevel[] = ['Super Admin', 'Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'];
 
+export function AccessLevelBadge({ accessLevel }: { accessLevel?: string | null }) {
+  const level = accessLevel?.trim();
+
+  switch (level) {
+    case 'Super Admin':
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800 font-semibold gap-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+          Super Admin
+        </Badge>
+      );
+    case 'Administrator':
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 font-medium">
+          Administrator
+        </Badge>
+      );
+    case 'Senior Management':
+      return (
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 font-medium">
+          Senior Management
+        </Badge>
+      );
+    case 'Project Manager':
+      return (
+        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 font-medium">
+          Project Manager
+        </Badge>
+      );
+    case 'Lead':
+      return (
+        <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800 font-medium">
+          Lead
+        </Badge>
+      );
+    case 'PMO':
+      return (
+        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800 font-medium">
+          PMO
+        </Badge>
+      );
+    case 'Team Member':
+      return (
+        <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800 font-medium">
+          Team Member
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-300 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700 font-medium">
+          {accessLevel || 'N/A'}
+        </Badge>
+      );
+  }
+}
+
+
 const userFormSchema = z.object({
   empId: z.string().min(1, 'Emp ID is required'),
   firstName: z.string().min(1, 'First name is required'),
@@ -687,18 +744,7 @@ export default function UsersPage() {
                     <TableCell className="max-w-[150px] truncate" title={`${user.firstName} ${user.lastName}`}>{user.firstName} {user.lastName}</TableCell>
                     <TableCell className="max-w-[220px] truncate" title={user.email}>{user.email}</TableCell>
                     <TableCell>
-                      {user.accessLevel === 'Super Admin' ? (
-                        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800 font-semibold gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                          Super Admin
-                        </Badge>
-                      ) : user.accessLevel === 'Administrator' ? (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 font-medium">
-                          Administrator
-                        </Badge>
-                      ) : (
-                        <span>{user.accessLevel || 'N/A'}</span>
-                      )}
+                      <AccessLevelBadge accessLevel={user.accessLevel} />
                     </TableCell>
                     <TableCell>
                       {user.isEnabled === false ? (
