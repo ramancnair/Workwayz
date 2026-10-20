@@ -148,7 +148,7 @@ export function WayFinderActionCard({ action, onNavigate }: WayFinderActionCardP
       case 'applyLeave':
         return <Calendar className="w-4 h-4 text-sky-500" />;
       default:
-        return <Sparkles className="w-4 h-4 text-primary" />;
+        return <Sparkles className="w-4 h-4 text-emerald-500" />;
     }
   };
 
@@ -301,7 +301,7 @@ export function WayFinderActionCard({ action, onNavigate }: WayFinderActionCardP
         'mt-2.5 p-3 rounded-lg border shadow-sm text-xs space-y-2.5 transition-all',
         isUndone
           ? 'border-border/60 bg-muted/40 opacity-75'
-          : 'border-primary/20 bg-card/90 hover:border-primary/40'
+          : 'border-emerald-500/25 bg-card/90 hover:border-emerald-500/40 shadow-xs'
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -317,7 +317,7 @@ export function WayFinderActionCard({ action, onNavigate }: WayFinderActionCardP
           )}
         </div>
         {displayId && (
-          <span className={cn('font-mono text-[11px] px-2 py-0.5 rounded-md font-bold', isUndone ? 'bg-muted text-muted-foreground line-through' : 'bg-primary/10 text-primary')}>
+          <span className={cn('font-mono text-[11px] px-2 py-0.5 rounded-md font-bold', isUndone ? 'bg-muted text-muted-foreground line-through' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20')}>
             {displayId}
           </span>
         )}
@@ -373,7 +373,7 @@ export function WayFinderActionCard({ action, onNavigate }: WayFinderActionCardP
               asChild
               size="sm"
               variant="ghost"
-              className="h-6 px-2 text-[11px] font-medium text-primary hover:text-primary/90 hover:bg-primary/10"
+              className="h-6 px-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10"
               onClick={onNavigate}
             >
               <Link href={action.url} className="flex items-center gap-1">

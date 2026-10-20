@@ -627,7 +627,7 @@ export function WayFinderChatWidget() {
           if (line.startsWith('- ') || line.startsWith('* ')) {
             return (
               <div key={idx} className="flex items-start gap-1.5 ml-1">
-                <span className="text-primary font-bold">•</span>
+                <span className="text-emerald-500 font-bold">•</span>
                 <span>{line.slice(2)}</span>
               </div>
             );
@@ -638,7 +638,7 @@ export function WayFinderChatWidget() {
           if (numMatch) {
             return (
               <div key={idx} className="flex items-start gap-1.5 ml-1">
-                <span className="text-primary font-bold font-mono text-xs">{numMatch[1]}.</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs">{numMatch[1]}.</span>
                 <span>{numMatch[2]}</span>
               </div>
             );
@@ -667,19 +667,19 @@ export function WayFinderChatWidget() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setIsOpen(true)}
-                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl hover:shadow-primary/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-primary/20"
+                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] text-white shadow-xl shadow-emerald-950/40 hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-emerald-500/25 border border-emerald-400/30 cursor-pointer"
                   aria-label="Open WayFinder AI Copilot"
                 >
-                  <Bot className="w-7 h-7 transition-transform group-hover:rotate-6" />
+                  <Bot className="w-7 h-7 transition-transform group-hover:rotate-6 text-white" />
                   <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-background"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-background"></span>
                   </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="left" className="font-medium bg-popover text-popover-foreground border-border shadow-md">
                 <p className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                   Chat with WayFinder AI
                 </p>
               </TooltipContent>
@@ -701,14 +701,14 @@ export function WayFinderChatWidget() {
           {/* Header */}
           <div className="px-4 py-3 bg-card text-card-foreground border-b border-border flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-primary-foreground shadow-md shrink-0">
-                <Bot className="w-5 h-5" />
+              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] text-white shadow-md shadow-emerald-950/30 shrink-0">
+                <Bot className="w-5 h-5 text-white" />
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-card" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className="font-bold text-sm leading-tight text-foreground">WayFinder</h3>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/30 text-primary bg-primary/10 font-semibold">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold">
                     AI
                   </Badge>
 
@@ -720,7 +720,7 @@ export function WayFinderChatWidget() {
                         setIsDropdownOpen(false);
                         refreshAiDetails();
                       }}
-                      className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 hover:border-primary/40 hover:bg-primary/15 transition-all max-w-[170px] sm:max-w-[220px] truncate shadow-sm cursor-pointer"
+                      className="flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/15 transition-all max-w-[170px] sm:max-w-[220px] truncate shadow-sm cursor-pointer"
                       title="Click to switch AI Model"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -732,7 +732,7 @@ export function WayFinderChatWidget() {
                       <div className="absolute top-7 left-0 z-50 w-72 p-2 bg-popover border border-border rounded-lg shadow-2xl text-xs space-y-2 text-popover-foreground animate-in fade-in-50 zoom-in-95">
                         <div className="flex items-center justify-between px-1 pb-1 border-b border-border">
                           <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                            <Cpu className="w-3.5 h-3.5 text-primary" />
+                            <Cpu className="w-3.5 h-3.5 text-emerald-500" />
                             Select AI Inference Model
                           </span>
                           <span className="text-[9px] font-mono text-muted-foreground uppercase px-1.5 py-0.2 bg-muted rounded">
@@ -765,12 +765,12 @@ export function WayFinderChatWidget() {
                                     className={cn(
                                       'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors flex items-center justify-between gap-1.5',
                                       isSelected
-                                        ? 'bg-primary/20 text-primary font-bold border border-primary/30'
+                                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30'
                                         : 'hover:bg-accent hover:text-accent-foreground text-foreground/90'
                                     )}
                                   >
                                     <span className="truncate">{m}</span>
-                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                   </button>
                                 );
                               })}
@@ -790,7 +790,7 @@ export function WayFinderChatWidget() {
                         <div className="space-y-1">
                           <div className="flex items-center justify-between px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             <span>Google Gemini (Live API)</span>
-                            <span className="text-[9px] text-primary font-bold">Cloud</span>
+                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">Cloud</span>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-0.5 pr-0.5">
                             {availableModels.geminiModels.map((m) => {
@@ -802,12 +802,12 @@ export function WayFinderChatWidget() {
                                   className={cn(
                                     'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors flex items-center justify-between gap-1.5',
                                     isSelected
-                                      ? 'bg-primary/20 text-primary font-bold border border-primary/30'
+                                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30'
                                       : 'hover:bg-accent hover:text-accent-foreground text-foreground/90'
                                   )}
                                 >
                                   <span className="truncate">{m}</span>
-                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                 </button>
                               );
                             })}
@@ -824,7 +824,7 @@ export function WayFinderChatWidget() {
                     className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors truncate max-w-[200px]"
                     title="Switch target project scope"
                   >
-                    <FolderKanban className="w-3 h-3 text-primary shrink-0" />
+                    <FolderKanban className="w-3 h-3 text-emerald-500 shrink-0" />
                     <span className="truncate">{selectedProjectName ? selectedProjectName : 'Global Scope'}</span>
                     <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
                   </button>
@@ -843,11 +843,11 @@ export function WayFinderChatWidget() {
                         }}
                         className={cn(
                           'w-full text-left px-2 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between transition-colors',
-                          !selectedProjectId && 'bg-primary/15 text-primary font-semibold'
+                          !selectedProjectId && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold'
                         )}
                       >
                         <span>🌐 Global (All Projects)</span>
-                        {!selectedProjectId && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {!selectedProjectId && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                       </button>
                       <div className="h-px bg-border my-1" />
                       <div className="max-h-36 overflow-y-auto space-y-0.5">
@@ -861,11 +861,11 @@ export function WayFinderChatWidget() {
                             }}
                             className={cn(
                               'w-full text-left px-2 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between truncate transition-colors',
-                              selectedProjectId === p.id && 'bg-primary/15 text-primary font-semibold'
+                              selectedProjectId === p.id && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold'
                             )}
                           >
                             <span className="truncate">{p.name}</span>
-                            {selectedProjectId === p.id && <CheckCircle2 className="w-3.5 h-3.5 shrink-0 ml-1" />}
+                            {selectedProjectId === p.id && <CheckCircle2 className="w-3.5 h-3.5 shrink-0 ml-1 text-emerald-500" />}
                           </button>
                         ))}
                       </div>
@@ -917,7 +917,7 @@ export function WayFinderChatWidget() {
                   setIsAccessPopoverOpen(!isAccessPopoverOpen);
                   setIsRatePopoverOpen(false);
                 }}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/80 hover:border-primary/50 text-muted-foreground hover:text-foreground font-medium transition-all shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/80 hover:border-emerald-500/50 text-muted-foreground hover:text-foreground font-medium transition-all shadow-xs cursor-pointer"
                 title="Click to view permissions for your active access level"
               >
                 <Shield className="w-3 h-3 text-emerald-500 shrink-0" />
@@ -934,7 +934,7 @@ export function WayFinderChatWidget() {
                       <Shield className="w-3.5 h-3.5 text-emerald-500" />
                       Active Access Level
                     </span>
-                    <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
                       {effectiveAccessLevel}
                     </Badge>
                   </div>
@@ -970,7 +970,7 @@ export function WayFinderChatWidget() {
                     ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
                     : rateStats.status === 'warning'
                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                    : 'bg-background border-border/80 hover:border-primary/50 text-muted-foreground hover:text-foreground'
+                    : 'bg-background border-border/80 hover:border-emerald-500/50 text-muted-foreground hover:text-foreground'
                 )}
                 title="Click to view real-time TPM / RPM quota utilization"
               >
@@ -998,7 +998,7 @@ export function WayFinderChatWidget() {
                 <div className="absolute top-7 right-0 z-50 w-72 p-3 bg-popover border border-border rounded-lg shadow-2xl text-xs space-y-2.5 text-popover-foreground animate-in fade-in-50 zoom-in-95">
                   <div className="flex items-center justify-between pb-1.5 border-b border-border">
                     <span className="font-bold flex items-center gap-1.5 text-foreground text-xs">
-                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <Activity className="w-3.5 h-3.5 text-emerald-500" />
                       Live Quota Utilization (60s)
                     </span>
                     <span
@@ -1054,7 +1054,7 @@ export function WayFinderChatWidget() {
                             ? 'bg-red-500'
                             : rateStats.percentRpm >= 60
                             ? 'bg-amber-500'
-                            : 'bg-primary'
+                            : 'bg-emerald-500'
                         )}
                         style={{ width: `${Math.min(100, Math.max(2, rateStats.percentRpm))}%` }}
                       />
@@ -1069,7 +1069,7 @@ export function WayFinderChatWidget() {
                           <Zap className="w-3 h-3 text-amber-500" />
                           Last Query Execution:
                         </span>
-                        <span className="font-mono text-primary font-bold">
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                           {rateStats.lastTotalTokens.toLocaleString()} tokens
                         </span>
                       </div>
@@ -1085,7 +1085,7 @@ export function WayFinderChatWidget() {
                           <div className="font-semibold text-foreground">Tools Invoked:</div>
                           <div className="flex flex-wrap gap-1">
                             {rateStats.lastToolsUsed.map((t) => (
-                              <span key={t} className="px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded font-mono text-[9px]">
+                              <span key={t} className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded font-mono text-[9px]">
                                 {t}
                               </span>
                             ))}
@@ -1112,15 +1112,15 @@ export function WayFinderChatWidget() {
           <div className="flex-1 p-3.5 overflow-y-auto space-y-3.5 text-xs bg-background/50">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-3 my-auto">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 ring-1 ring-emerald-500/20">
+                  <Sparkles className="w-6 h-6 text-emerald-500 animate-pulse" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-bold text-base text-foreground">
                     Hello{currentUser?.firstName ? `, ${currentUser.firstName}` : ''}!
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-[320px]">
-                    I am <span className="font-semibold text-primary">WayFinder</span>, your autonomous project copilot. Tell me what you need and I will implement it in Workwayz.
+                    I am <span className="font-semibold text-emerald-600 dark:text-emerald-400">WayFinder</span>, your autonomous project copilot. Tell me what you need and I will implement it in Workwayz.
                   </p>
                 </div>
 
@@ -1134,10 +1134,10 @@ export function WayFinderChatWidget() {
                       <button
                         key={i}
                         onClick={() => handleSendMessage(prompt)}
-                        className="text-xs px-3 py-2 rounded-xl bg-card border border-border/70 hover:border-primary/40 hover:bg-primary/5 text-foreground transition-all duration-150 flex items-center justify-between group shadow-sm"
+                        className="text-xs px-3 py-2 rounded-xl bg-card border border-border/70 hover:border-emerald-500/40 hover:bg-emerald-500/5 text-foreground transition-all duration-150 flex items-center justify-between group shadow-sm"
                       >
                         <span className="truncate pr-2">{prompt}</span>
-                        <span className="text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                        <span className="text-emerald-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                       </button>
                     ))}
                   </div>
@@ -1156,7 +1156,7 @@ export function WayFinderChatWidget() {
                     className={cn(
                       'max-w-[85%] rounded-lg px-3.5 py-2.5 shadow-sm text-sm',
                       msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-none'
+                        ? 'bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] text-white shadow-sm shadow-emerald-950/20 rounded-br-none'
                         : 'bg-muted/70 text-foreground border border-border/50 rounded-bl-none'
                     )}
                   >
@@ -1176,7 +1176,7 @@ export function WayFinderChatWidget() {
                           <span>{msg.tokenUsage.totalTokens.toLocaleString()} tokens</span>
                         </span>
                         <span className="text-muted-foreground/50">·</span>
-                        <span className="px-1 py-0.2 rounded bg-primary/10 text-primary font-bold">
+                        <span className="px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
                           {(msg.tokenUsage.modelCalls ?? 1) > 1
                             ? `${msg.tokenUsage.modelCalls} calls (${msg.tokenUsage.toolCalls ?? ((msg.tokenUsage.modelCalls ?? 1) - 1)} tools)`
                             : (msg.tokenUsage.toolCalls && msg.tokenUsage.toolCalls > 0)
@@ -1203,7 +1203,7 @@ export function WayFinderChatWidget() {
               <div className="flex items-start gap-2">
                 <div className="bg-muted/70 border border-border/50 rounded-lg rounded-bl-none px-3.5 py-2 shadow-sm flex items-center justify-between gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
                     <span>WayFinder is executing subagent actions & tool calls...</span>
                   </div>
                   <Button
@@ -1225,7 +1225,7 @@ export function WayFinderChatWidget() {
 
           {/* Footer Input Area */}
           <div className="p-3 bg-card/60 border-t border-border shrink-0">
-            <div className="flex items-end gap-2 bg-background border border-input rounded-lg p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+            <div className="flex items-end gap-2 bg-background border border-input rounded-lg p-1.5 focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500 transition-all">
               <Textarea
                 ref={textareaRef}
                 value={input}
@@ -1249,7 +1249,7 @@ export function WayFinderChatWidget() {
                   size="icon"
                   onClick={() => handleSendMessage()}
                   disabled={!input.trim()}
-                  className="w-8 h-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shrink-0 shadow-sm disabled:opacity-40"
+                  className="w-8 h-8 rounded-md bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] hover:from-[#1e40af] hover:via-[#0369a1] hover:to-[#047857] text-white shrink-0 shadow-sm shadow-emerald-950/20 disabled:opacity-40 disabled:hover:from-[#1d4ed8] disabled:hover:via-[#0284c7] disabled:hover:to-[#059669] cursor-pointer"
                   title="Send message"
                 >
                   <Send className="w-4 h-4" />
