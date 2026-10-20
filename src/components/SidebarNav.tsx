@@ -110,6 +110,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       // Always clear local session first
       localStorage.removeItem('projectflow_user');
       localStorage.removeItem('projectflow_last_activity');
+      sessionStorage.removeItem('workwayz_real_route');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'supabase') {
@@ -130,6 +131,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       // Even on error, ensure local session is cleared and redirect
       localStorage.removeItem('projectflow_user');
       localStorage.removeItem('projectflow_last_activity');
+      sessionStorage.removeItem('workwayz_real_route');
       document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       window.location.href = '/';
     }

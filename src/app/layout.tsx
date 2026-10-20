@@ -9,6 +9,7 @@ import { SetupInterceptor } from "@/components/SetupInterceptor";
 import { SupabaseBootstrap } from "@/components/SupabaseBootstrap";
 import { GlobalErrorReporter } from "@/components/GlobalErrorReporter";
 import { WayFinderWidgetClient } from "@/components/wayfinder/WayFinderWidgetClient";
+import { UrlMaskingProvider } from "@/components/UrlMaskingProvider";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default async function RootLayout({
           <GlobalErrorReporter />
           <SupabaseBootstrap />
           <SetupInterceptor />
+          <UrlMaskingProvider />
           {children}
           <WayFinderWidgetClient />
           <Toaster />

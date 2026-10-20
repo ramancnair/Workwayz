@@ -44,7 +44,9 @@ export function WorkwayzLoginCard() {
     try {
       const { isValid } = validateSession(true);
       if (isValid) {
-        router.replace('/my-projects');
+        const savedRoute = typeof window !== 'undefined' ? sessionStorage.getItem('workwayz_real_route') : null;
+        const targetRoute = savedRoute && savedRoute !== '/' && savedRoute !== '/login' ? savedRoute : '/my-projects';
+        router.replace(targetRoute);
       }
     } catch (_) {}
   }, [router]);

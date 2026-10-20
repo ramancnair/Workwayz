@@ -115,6 +115,7 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(ACTIVITY_STORAGE_KEY);
+    sessionStorage.removeItem('workwayz_real_route');
     document.cookie = 'projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   } catch {}
 }
