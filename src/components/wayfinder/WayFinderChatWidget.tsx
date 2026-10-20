@@ -314,7 +314,10 @@ export function WayFinderChatWidget() {
           }
         })
         .catch((err: any) => {
-          console.warn('Could not load projects for WayFinder switcher', err);
+          // Gracefully suppress permission warning in local demo/unauthenticated environments
+          if (err?.code !== 'permission-denied' && !err?.message?.includes('insufficient permissions')) {
+            console.warn('Could not load projects for WayFinder switcher', err);
+          }
         });
     }
   }, [selectedProjectId]);
