@@ -19,6 +19,7 @@ function getLocalIpOrigins(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   output: 'standalone',
   poweredByHeader: false,
   productionBrowserSourceMaps: false,

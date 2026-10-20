@@ -85,7 +85,7 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
           String(err?.message || '').toLowerCase().includes('insufficient');
         const isLoggingOut =
           typeof window !== 'undefined' &&
-          ((window as any).__isLoggingOut || !fbAuth?.currentUser);
+          Boolean((window as any).__isLoggingOut);
 
         if (isPermissionDenied && isLoggingOut) {
           return;
@@ -118,7 +118,7 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
           String(err?.message || '').toLowerCase().includes('insufficient');
         const isLoggingOut =
           typeof window !== 'undefined' &&
-          ((window as any).__isLoggingOut || !fbAuth?.currentUser);
+          Boolean((window as any).__isLoggingOut);
 
         if (isPermissionDenied && isLoggingOut) {
           return;
@@ -153,7 +153,7 @@ const safeFbOnSnapshot = (ref: any, ...args: any[]) => {
       String(err?.message || '').toLowerCase().includes('insufficient');
     const isLoggingOut =
       typeof window !== 'undefined' &&
-      ((window as any).__isLoggingOut || !fbAuth?.currentUser);
+      Boolean((window as any).__isLoggingOut);
 
     if (isPermissionDenied && isLoggingOut) {
       return;

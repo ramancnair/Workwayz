@@ -6,8 +6,9 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp } from '@/lib/db-provider';
+import { collection, onSnapshot, setDoc, doc, query, where, getDocs, writeBatch, updateDoc, Timestamp, isSupabaseActive } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
+import { initFirebaseClient } from '@/lib/firebase';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -42,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -342,43 +343,81 @@ export default function ProjectsDashboard() {
   });
 
   useEffect(() => {
-    if (!db) return;
-    const portfolioUnsubscribe = onSnapshot(query(collection(db, 'portfolios'), where('isDeleted', '!=', true)), (snapshot: any) => {
-      const portfoliosData = snapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Portfolio, 'id'>),
-      }));
-      setPortfolios(portfoliosData);
-    }, (err: any) => {
-      console.warn('[ProjectHome] Portfolios listener error:', err);
-    });
+    let isMounted = true;
+    let portfolioUnsubscribe = () => {};
+    let projectUnsubscribe = () => {};
+    let usersUnsubscribe = () => {};
 
-    const projectUnsubscribe = onSnapshot(query(collection(db, 'projects'), where('isDeleted', '!=', true)), (snapshot: any) => {
-      const projectsData = snapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Project, 'id'>),
-      }));
-      setProjects(projectsData);
-      setIsLoading(false);
-    }, (err: any) => {
-      console.warn('[ProjectHome] Projects listener error:', err);
-      setIsLoading(false);
-    });
+    // Safety timeout: ensure loading state never hangs indefinitely
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 3500);
 
-    const usersUnsubscribe = onSnapshot(query(collection(db, 'employees'), where('isDeleted', '!=', true)), (snapshot: any) => {
-      const usersData = snapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<User, 'id'>),
-      }));
-      setUsers(usersData);
-    }, (err: any) => {
-      console.warn('[ProjectHome] Users listener error:', err);
-    });
+    const setupListeners = async () => {
+      if (!isSupabaseActive()) {
+        try {
+          await initFirebaseClient();
+        } catch (_) {}
+      }
+
+      if (!isMounted) return;
+
+      const portfolioCol = collection(db, 'portfolios');
+      if (portfolioCol) {
+        portfolioUnsubscribe = onSnapshot(query(portfolioCol, where('isDeleted', '!=', true)), (snapshot: any) => {
+          if (!isMounted) return;
+          const portfoliosData = snapshot.docs.map((doc: any) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Portfolio, 'id'>),
+          }));
+          setPortfolios(portfoliosData);
+        }, (err: any) => {
+          console.warn('[ProjectHome] Portfolios listener error:', err);
+        });
+      }
+
+      const projectCol = collection(db, 'projects');
+      if (projectCol) {
+        projectUnsubscribe = onSnapshot(query(projectCol, where('isDeleted', '!=', true)), (snapshot: any) => {
+          if (!isMounted) return;
+          clearTimeout(safetyTimer);
+          const projectsData = snapshot.docs.map((doc: any) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Project, 'id'>),
+          }));
+          setProjects(projectsData);
+          setIsLoading(false);
+        }, (err: any) => {
+          console.warn('[ProjectHome] Projects listener error:', err);
+          if (isMounted) setIsLoading(false);
+        });
+      } else {
+        if (isMounted) setIsLoading(false);
+      }
+
+      const usersCol = collection(db, 'employees');
+      if (usersCol) {
+        usersUnsubscribe = onSnapshot(query(usersCol, where('isDeleted', '!=', true)), (snapshot: any) => {
+          if (!isMounted) return;
+          const usersData = snapshot.docs.map((doc: any) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<User, 'id'>),
+          }));
+          setUsers(usersData);
+        }, (err: any) => {
+          console.warn('[ProjectHome] Users listener error:', err);
+        });
+      }
+    };
+
+    setupListeners();
 
     return () => {
-      portfolioUnsubscribe();
-      projectUnsubscribe();
-      usersUnsubscribe();
+      isMounted = false;
+      clearTimeout(safetyTimer);
+      if (typeof portfolioUnsubscribe === 'function') portfolioUnsubscribe();
+      if (typeof projectUnsubscribe === 'function') projectUnsubscribe();
+      if (typeof usersUnsubscribe === 'function') usersUnsubscribe();
     };
   }, []);
 
@@ -644,8 +683,37 @@ export default function ProjectsDashboard() {
 
   const getProjectsByPortfolio = useCallback((isArchiveTab: boolean) => {
     const userMap = new Map(users.map(u => [u.id, u]));
+    const portfolioIds = new Set(portfolios.map(p => p.id));
 
-    return portfolios.map(portfolio => {
+    const sortProjects = (list: Project[]) => {
+      if (!sorting) return list;
+      return [...list].sort((a, b) => {
+        let valA: any, valB: any;
+        if (sorting.id === 'projectManagerId') {
+          const pmA = userMap.get(a.projectManagerId || '');
+          const pmB = userMap.get(b.projectManagerId || '');
+          valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz';
+          valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
+        } else if (sorting.id === 'pricingModel') {
+          valA = a.pricingModel || 'T&M';
+          valB = b.pricingModel || 'T&M';
+        } else {
+          valA = (a as any)[sorting.id] || '';
+          valB = (b as any)[sorting.id] || '';
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          const comparison = valA.localeCompare(valB, undefined, { numeric: true });
+          return sorting.desc ? -comparison : comparison;
+        }
+
+        if (valA < valB) return sorting.desc ? 1 : -1;
+        if (valA > valB) return sorting.desc ? -1 : 1;
+        return 0;
+      });
+    };
+
+    const result = portfolios.map(portfolio => {
       let filtered = projects.filter(p => {
         const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
         return matchesArchiveState && p.portfolioId === portfolio.id && (
@@ -654,36 +722,29 @@ export default function ProjectsDashboard() {
           (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
         );
       });
-
-      if (sorting) {
-        filtered.sort((a, b) => {
-          let valA: any, valB: any;
-          if (sorting.id === 'projectManagerId') {
-            const pmA = userMap.get(a.projectManagerId || '');
-            const pmB = userMap.get(b.projectManagerId || '');
-            valA = pmA ? `${pmA.firstName} ${pmA.lastName}` : 'zzz'; // put unassigned last
-            valB = pmB ? `${pmB.firstName} ${pmB.lastName}` : 'zzz';
-          } else if (sorting.id === 'pricingModel') {
-            valA = a.pricingModel || 'T&M';
-            valB = b.pricingModel || 'T&M';
-          } else {
-            valA = (a as any)[sorting.id] || '';
-            valB = (b as any)[sorting.id] || '';
-          }
-
-          if (typeof valA === 'string' && typeof valB === 'string') {
-            const comparison = valA.localeCompare(valB, undefined, { numeric: true });
-            return sorting.desc ? -comparison : comparison;
-          }
-
-          // Fallback for non-string types
-          if (valA < valB) return sorting.desc ? 1 : -1;
-          if (valA > valB) return sorting.desc ? -1 : 1;
-          return 0;
-        });
-      }
-      return { ...portfolio, projects: filtered };
+      return { ...portfolio, projects: sortProjects(filtered) };
     });
+
+    // Check for any unassigned or general projects
+    const unassigned = projects.filter(p => {
+      const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
+      return matchesArchiveState && (!p.portfolioId || !portfolioIds.has(p.portfolioId)) && (
+        p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+        p.id.toLowerCase().includes(filterText.toLowerCase()) ||
+        (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
+      );
+    });
+
+    if (unassigned.length > 0) {
+      result.push({
+        id: 'unassigned-portfolio',
+        name: 'General Projects',
+        description: 'Projects not assigned to a specific portfolio',
+        projects: sortProjects(unassigned),
+      } as any);
+    }
+
+    return result;
   }, [users, portfolios, projects, filterText, sorting]);
 
   const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [getProjectsByPortfolio]);
@@ -796,7 +857,28 @@ export default function ProjectsDashboard() {
                 />
               </CardContent>
               {isLoading ? (
-                <p className="p-4 text-center">Loading...</p>
+                <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span>Loading projects...</span>
+                </div>
+              ) : activeProjectsByPortfolio.length === 0 ? (
+                <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
+                  <Folder className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <h3 className="text-base font-semibold mb-1">No portfolios or projects found</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                    Get started by creating your first portfolio or project, or use the Test Data Studio in Portfolio Settings to populate sample data.
+                  </p>
+                  <div className="flex justify-center gap-3">
+                    <Button onClick={() => setIsPortfolioDialogOpen(true)}>
+                      <Folder className="mr-2 h-4 w-4" />
+                      New Portfolio
+                    </Button>
+                    <Button variant="outline" onClick={() => handleOpenDialog(null)}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      New Project
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <Accordion type="multiple" value={activeExpanded} onValueChange={setActiveExpanded} className="w-full">
                   {activeProjectsByPortfolio.map(portfolio => (
@@ -995,7 +1077,18 @@ export default function ProjectsDashboard() {
                 />
               </CardContent>
               {isLoading ? (
-                <p className="p-4 text-center">Loading...</p>
+                <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span>Loading archived projects...</span>
+                </div>
+              ) : archivedProjectsByPortfolio.filter(p => p.projects.length > 0).length === 0 ? (
+                <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
+                  <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <h3 className="text-base font-semibold mb-1">No archived projects</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Projects that you archive will appear here.
+                  </p>
+                </div>
               ) : (
                 <Accordion type="multiple" value={archiveExpanded} onValueChange={setArchiveExpanded} className="w-full">
                   {archivedProjectsByPortfolio.map(portfolio => {

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { CheckCircle2 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { db } from '@/lib/db-provider';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,21 @@ export function WorkwayzLoginCard() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState('');
+  const [setupNotice, setSetupNotice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get('email');
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+      if (params.get('setup') === 'complete') {
+        setSetupNotice(true);
+      }
+    }
+  }, []);
 
   // If already logged in with a valid, non-expired, non-timed-out session, redirect to application
   useEffect(() => {
@@ -240,6 +256,13 @@ export function WorkwayzLoginCard() {
           </p>
         </div>
 
+        {setupNotice && (
+          <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>Setup completed successfully! Please sign in with your administrator credentials.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-medium text-slate-200">
@@ -249,6 +272,8 @@ export function WorkwayzLoginCard() {
               id="email"
               type="email"
               placeholder="m@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 h-11 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />

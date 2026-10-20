@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Database, Key, Bot, ArrowRight, ArrowLeft, CheckCircle2, User, X, Save, Eye, EyeOff, UserPlus, KeyRound, AlertTriangle, AlertCircle, ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clearSession } from '@/lib/session';
 
 export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
@@ -418,54 +419,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           }
           throw new Error(setupData.error || 'Failed to setup admin user');
         }
-
-        if (setupData.user) {
-          const userSession = {
-            name: setupData.user.name || (adminMode === 'existing' && verifiedAdminProfile?.name) || `${adminFirstName} ${adminLastName}`.trim(),
-            firstName: setupData.user.firstName || (adminMode === 'existing' && verifiedAdminProfile?.firstName) || adminFirstName,
-            lastName: setupData.user.lastName || (adminMode === 'existing' && verifiedAdminProfile?.lastName) || adminLastName,
-            email: adminEmail,
-            accessLevel: 'Super Admin',
-            empId: setupData.user.empId || (adminMode === 'existing' && verifiedAdminProfile?.empId) || 'E001',
-            uid: setupData.user.uid || '',
-            authProvider: authProvider,
-            issuedAt: Date.now(),
-            rememberMe: true,
-            needsPasswordReset: false,
-          };
-
-          // Store local storage session and cookie for immediate authorization
-          localStorage.setItem('projectflow_user', JSON.stringify(userSession));
-          localStorage.setItem('projectflow_last_activity', Date.now().toString());
-          document.cookie = 'projectflow_session_active=true; path=/';
-
-          // Client SDK authentication to populate client auth session
-          if (authProvider === 'firebase') {
-            try {
-              const { auth } = await import('@/lib/firebase');
-              if (auth) {
-                const { signInWithEmailAndPassword } = await import('firebase/auth');
-                await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-              }
-            } catch (clientAuthErr) {
-              console.warn('[SetupWizard] Client Firebase sign-in warning:', clientAuthErr);
-            }
-          } else if (authProvider === 'supabase') {
-            try {
-              const { supabase } = await import('@/lib/supabase');
-              if (supabase) {
-                await supabase.auth.signInWithPassword({
-                  email: adminEmail,
-                  password: adminPassword,
-                });
-              }
-            } catch (clientAuthErr) {
-              console.warn('[SetupWizard] Client Supabase sign-in warning:', clientAuthErr);
-            }
-          }
-
-          window.dispatchEvent(new Event('user-profile-updated'));
-        }
       }
 
       // Persist active dbProvider in localStorage for instant client initialization
@@ -481,17 +434,23 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         localStorage.removeItem('projectflow_firebase_config');
       }
 
-      toast({
-        title: "Setup Complete!",
-        description: onClose ? "Your configuration profiles have been saved." : "Your environment is ready. Logging in...",
-      });
-
-      // Redirect cleanly to /my-projects or reload if inside settings modal
       if (onClose) {
+        toast({
+          title: "Setup Complete!",
+          description: "Your configuration profiles have been saved.",
+        });
         onClose();
         window.location.reload();
       } else {
-        window.location.href = '/my-projects';
+        // Require manual sign in: ensure any active session is cleared
+        clearSession();
+
+        toast({
+          title: "Setup Complete!",
+          description: "Your environment has been configured. Please sign in with your admin credentials.",
+        });
+
+        window.location.href = `/login?setup=complete&email=${encodeURIComponent(adminEmail || '')}`;
       }
     } catch (err: any) {
       toast({
@@ -1036,7 +995,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                 </div>
                 <h3 className="text-2xl font-bold">You&apos;re almost there!</h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Click &apos;Complete Setup&apos; below to save your configurations and boot up the Workwayz application.
+                  {onClose
+                    ? "Click 'Save Changes' below to update your environment configurations."
+                    : "Click 'Complete Setup' below to save your configurations and proceed to sign in."}
                 </p>
                 <div className="w-full bg-muted/30 p-4 rounded-lg mt-6 text-left border">
                   <h4 className="font-semibold text-sm mb-2 text-primary">Summary:</h4>
