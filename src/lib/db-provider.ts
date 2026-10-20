@@ -312,7 +312,7 @@ export const collectionGroup = ((...args: any[]) => {
 }) as typeof FB.collectionGroup;
 
 export const runTransaction = ((firestore: any, ...rest: any[]) => {
-  if (isSupabaseActive()) return (SB as any).runTransaction ? (SB as any).runTransaction(firestore, ...rest) : Promise.resolve();
+  if (isSupabaseActive()) return (SB.runTransaction as any)(firestore, ...rest);
   const unwrapped = unwrapDb(firestore);
   if (!unwrapped) return Promise.reject(new Error("Cannot runTransaction on uninitialized firestore"));
   return (FB.runTransaction as any)(unwrapped, ...rest);

@@ -856,3 +856,21 @@ export const orderBy = (fieldPath: string, directionStr: string = 'asc') => {
 export const collectionGroup = (dbInstance: any, collectionId: string) => {
     return { type: 'collectionGroup', collectionId };
 };
+
+export const runTransaction = async (
+    _dbInstance: any,
+    updateFunction: (transaction: {
+        get: (docRef: any) => Promise<any>;
+        set: (docRef: any, data: any, options?: any) => Promise<any>;
+        update: (docRef: any, data: any) => Promise<any>;
+        delete: (docRef: any) => Promise<any>;
+    }) => Promise<any>
+) => {
+    const transaction = {
+        get: (docRef: any) => getDoc(docRef),
+        set: (docRef: any, data: any, options?: any) => setDoc(docRef, data, options),
+        update: (docRef: any, data: any) => updateDoc(docRef, data),
+        delete: (docRef: any) => deleteDoc(docRef),
+    };
+    return await updateFunction(transaction);
+};
