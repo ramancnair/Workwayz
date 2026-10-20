@@ -147,6 +147,7 @@ function StoryCard({
   columns, 
   onStatusChange, 
   onEdit, 
+  onDelete,
   className, 
   isMoveToDoneDisabled, 
   subItems, 

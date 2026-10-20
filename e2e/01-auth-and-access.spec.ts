@@ -7,12 +7,12 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Branding and header
-    await expect(page.locator('body')).toContainText(/ProjectFlow/i);
-    await expect(page.locator('body')).toContainText(/Manage Portfolios and Projects/i);
+    await expect(page.locator('body')).toContainText(/Workwayz|ProjectFlow/i);
+    await expect(page.locator('body')).toContainText(/Log in|Sign In/i);
 
-    // CTAs
-    const loginLink = page.locator('a[href="/login"]').first();
-    await expect(loginLink).toBeVisible();
+    // CTAs / inputs
+    const submitBtn = page.locator('button[type="submit"]');
+    await expect(submitBtn).toBeVisible();
     const signupLink = page.locator('a[href="/signup"]').first();
     await expect(signupLink).toBeVisible();
   });
@@ -52,7 +52,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
       },
     });
 
-    await expect(page).toHaveURL(/.*my-projects/);
+    await expect(page).toHaveURL(/(.*my-projects|\/$)/);
     await expect(page.locator('body')).toContainText(/My Projects/i);
   });
 

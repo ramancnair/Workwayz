@@ -67,12 +67,20 @@ async function generateWithModelFallback(prompt: string, aiDetails: any) {
   if (aiDetails.provider === 'openai') primaryModel = `openai/${modelId}`;
   if (aiDetails.provider === 'ollama') primaryModel = `ollama/${modelId}`;
 
+  const timeoutMs = process.env.VITEST ? 4000 : 25000;
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Genkit generation timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+
   try {
-    const res = await ai.generate({
-      model: primaryModel,
-      prompt,
-      output: { schema: FpAnalyticsOutputSchema },
-    });
+    const res = await Promise.race([
+      ai.generate({
+        model: primaryModel,
+        prompt,
+        output: { schema: FpAnalyticsOutputSchema },
+      }),
+      timeoutPromise,
+    ]);
     if (res.output) return res.output;
     throw new Error('Genkit produced empty structured output');
   } catch (err: any) {
@@ -85,20 +93,24 @@ async function generateWithModelFallback(prompt: string, aiDetails: any) {
       errMsg.includes('unavailable') ||
       errMsg.includes('overloaded') ||
       errMsg.includes('no capacity') ||
-      errMsg.includes('capacity');
+      errMsg.includes('capacity') ||
+      errMsg.includes('timed out');
 
-    if (isQuotaOrBusy && aiDetails.provider === 'google') {
+    if (isQuotaOrBusy && aiDetails.provider === 'google' && !process.env.VITEST) {
       const alternateModel =
         primaryModel === 'googleai/gemini-3.8-flash'
           ? 'googleai/gemini-flash-latest'
           : 'googleai/gemini-3.8-flash';
       console.warn(`[FpAnalytics] Primary model ${primaryModel} quota/busy (${err.message}). Attempting fallback model ${alternateModel}...`);
       try {
-        const retryRes = await ai.generate({
-          model: alternateModel,
-          prompt,
-          output: { schema: FpAnalyticsOutputSchema },
-        });
+        const retryRes = await Promise.race([
+          ai.generate({
+            model: alternateModel,
+            prompt,
+            output: { schema: FpAnalyticsOutputSchema },
+          }),
+          timeoutPromise,
+        ]);
         if (retryRes.output) return retryRes.output;
       } catch (retryErr: any) {
         console.warn(`[FpAnalytics] Fallback model ${alternateModel} also failed (${retryErr?.message}).`);

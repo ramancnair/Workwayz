@@ -3,11 +3,11 @@ import { setupAuthenticatedWorkspace } from './helpers/testSetup';
 
 test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
   test('TC-WIZ-001: Setup Wizard loads and displays welcome message and step headers', async ({ page }) => {
-    // Navigate to /setup-wizard
-    await page.goto('/setup-wizard', { waitUntil: 'domcontentloaded' });
+    // Navigate to /setup-wizard?force=true to test wizard configuration regardless of existing DB profile
+    await page.goto('/setup-wizard?force=true', { waitUntil: 'domcontentloaded' });
 
     // Wait for the setup wizard card to render after profile loading completes
-    const heading = page.locator('h1:has-text("Welcome to ProjectFlow Setup")');
+    const heading = page.locator('h1:has-text("Welcome to Workwayz Setup"), h1:has-text("Welcome to ProjectFlow Setup")');
     await expect(heading).toBeVisible({ timeout: 15000 });
 
     // Verify stepper indicator titles
@@ -19,7 +19,7 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
   });
 
   test('TC-WIZ-002: Database engine selection supports PostgreSQL, Firebase, and Supabase', async ({ page }) => {
-    await page.goto('/setup-wizard', { waitUntil: 'domcontentloaded' });
+    await page.goto('/setup-wizard?force=true', { waitUntil: 'domcontentloaded' });
 
     // Wait for card title to appear
     await expect(page.locator('text=Database Setup')).toBeVisible({ timeout: 15000 });
@@ -34,7 +34,7 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
   });
 
   test('TC-WIZ-003: Step navigation traverses between wizard stages via Next and Back', async ({ page }) => {
-    await page.goto('/setup-wizard', { waitUntil: 'domcontentloaded' });
+    await page.goto('/setup-wizard?force=true', { waitUntil: 'domcontentloaded' });
 
     // Wait for Step 1
     await expect(page.locator('text=Database Setup')).toBeVisible({ timeout: 15000 });
@@ -58,10 +58,10 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
 
   test('TC-WIZ-004: Wizard exit or close button returns cleanly to workspace', async ({ page }) => {
     // Seed authenticated session so it acts as non-first-run
-    await setupAuthenticatedWorkspace(page, { targetUrl: '/setup-wizard' });
+    await setupAuthenticatedWorkspace(page, { targetUrl: '/setup-wizard?force=true' });
 
     // Wait for setup wizard card
-    await expect(page.locator('h1:has-text("Welcome to ProjectFlow Setup")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1:has-text("Welcome to Workwayz Setup"), h1:has-text("Welcome to ProjectFlow Setup")')).toBeVisible({ timeout: 15000 });
 
     // Look for close button (X icon or button)
     const closeBtn = page.locator('button:has(svg.lucide-x), button:has-text("Close"), button[aria-label="Close"]').first();
@@ -77,7 +77,7 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
   });
 
   test('TC-WIZ-005: Admin user step requests First Name and Last Name and designates Super Admin role', async ({ page }) => {
-    await page.goto('/setup-wizard', { waitUntil: 'domcontentloaded' });
+    await page.goto('/setup-wizard?force=true', { waitUntil: 'domcontentloaded' });
 
     // Navigate to Step 3 (Admin User)
     await expect(page.locator('text=Database Setup')).toBeVisible({ timeout: 15000 });
