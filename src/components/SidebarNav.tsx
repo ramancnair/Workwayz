@@ -398,6 +398,13 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     return hasAccess(pageName || item.label);
   });
 
+  const isItemActive = (href: string) => {
+    if (!href || href === '#') return false;
+    const cleanHref = href.replace(/\/$/, '');
+    const cleanPath = pathname.replace(/\/$/, '');
+    return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+  };
+
   return (
     <>
       <SidebarHeader className="p-2 transition-all duration-300">
@@ -443,11 +450,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={
-                  item.href.endsWith('/holidays')
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href)
-                }
+                isActive={isItemActive(item.href)}
                 tooltip={item.label}
               >
                 <Link href={item.href}>

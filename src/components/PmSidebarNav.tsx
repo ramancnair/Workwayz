@@ -378,6 +378,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     .filter(item => item.group === activeGroup)
     .filter(item => item.label === 'My Projects' || item.label === 'Account Settings' || item.label === 'Messages' || hasAccess(item.label));
 
+  const isItemActive = (href: string) => {
+    if (!href || href === '#') return false;
+    const cleanHref = href.replace(/\/$/, '');
+    const cleanPath = pathname.replace(/\/$/, '');
+    return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+  };
+
   return (
     <>
       <SidebarHeader className="p-2 transition-all duration-300">
@@ -411,7 +418,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
             <SidebarMenuItem key={item.id || item.href}>
               {item.onClick ? (
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href) && item.href !== '#'}
+                  isActive={isItemActive(item.href)}
                   tooltip={item.label}
                   onClick={item.onClick}
                 >
@@ -421,7 +428,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
               ) : (
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={isItemActive(item.href)}
                   tooltip={item.id === 'messages' && unreadCount > 0 ? `${item.label} (${unreadCount})` : item.label}
                 >
                   <Link href={item.href} className="flex items-center justify-between w-full">
