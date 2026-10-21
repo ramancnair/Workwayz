@@ -294,7 +294,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'archive',
       href: '/portfolio-settings/archive',
-      label: 'Inactive',
+      label: 'Inactive Projects',
       icon: Archive,
       group: 'portfolio'
     },

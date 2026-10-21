@@ -222,8 +222,7 @@ const pageSections: PageSection[] = [
           'Database',
           'Authentication',
           'AI Config',
-          'Setup Wizard',
-          'Inactive',
+          'Inactive Projects',
           'Test Data Studio',
           'Cron Jobs',
         ],
@@ -587,7 +586,7 @@ export default function AccessSettingsPage() {
                                         This will restore all page access and CRUD permissions to their original factory defaults across all access levels.
                                     </span>
                                     <span className="block font-medium text-foreground pt-1">
-                                        • Admin Level pages (Access Settings, Database, Authentication, AI Config, Setup Wizard, Inactive, and Portfolio Trash) will be accessible exclusively by Administrator.
+                                        • Admin Level pages (Access Settings, Database, Authentication, AI Config, Inactive Projects, and Portfolio Trash) will be accessible exclusively by Administrator.
                                     </span>
                                 </AlertDialogDescription>
                             </AlertDialogHeader>

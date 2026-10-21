@@ -119,7 +119,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Database')) return '/portfolio-settings/database';
         if (hasAccess('Authentication')) return '/portfolio-settings/authentication';
         if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
-        if (hasAccess('Inactive') || hasAccess('Archive')) return '/portfolio-settings/archive';
+        if (hasAccess('Inactive') || hasAccess('Archive') || hasAccess('Inactive Projects')) return '/portfolio-settings/archive';
         if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
         if (hasAccess('Cron Jobs')) return '/portfolio-settings/cron-jobs';
         return '/portfolio-settings';

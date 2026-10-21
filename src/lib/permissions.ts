@@ -33,7 +33,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings/database')) return 'Database';
   if (pathname.startsWith('/portfolio-settings/authentication')) return 'Authentication';
   if (pathname.startsWith('/portfolio-settings/ai-config')) return 'AI Config';
-  if (pathname.startsWith('/portfolio-settings/archive') || pathname.startsWith('/portfolio-settings/inactive')) return 'Inactive';
+  if (pathname.startsWith('/portfolio-settings/archive') || pathname.startsWith('/portfolio-settings/inactive')) return 'Inactive Projects';
   if (pathname.startsWith('/portfolio-settings/test-data-studio')) return 'Test Data Studio';
   if (pathname.startsWith('/portfolio-settings/cron-jobs')) return 'Cron Jobs';
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
@@ -499,6 +499,7 @@ export function getPermittedFallbackRoute(
         { name: 'Database', path: '/portfolio-settings/database' },
         { name: 'Authentication', path: '/portfolio-settings/authentication' },
         { name: 'AI Config', path: '/portfolio-settings/ai-config' },
+        { name: 'Inactive Projects', path: '/portfolio-settings/archive' },
         { name: 'Inactive', path: '/portfolio-settings/archive' },
         { name: 'Archive', path: '/portfolio-settings/archive' },
         { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
