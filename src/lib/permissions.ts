@@ -2,12 +2,12 @@ import { AccessLevel } from '@/types';
 
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, string[]> = {
   'Senior Management': [
-    'Project Home', 'Portfolio Dashboard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Project Home', 'Portfolio Dashboard', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
-    'Project Home', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'Project Home', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Billing', 'Billing Rate',
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
     'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker',
@@ -19,7 +19,7 @@ export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' 
   ],
   'PMO': [
     'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Billing', 'Billing Rate',
-    'Project Status', 'PM Dashboard', 'FP PM Dash', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ]
 };
 
@@ -33,7 +33,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings/database')) return 'Database';
   if (pathname.startsWith('/portfolio-settings/authentication')) return 'Authentication';
   if (pathname.startsWith('/portfolio-settings/ai-config')) return 'AI Config';
-  if (pathname.startsWith('/portfolio-settings/archive')) return 'Archive';
+  if (pathname.startsWith('/portfolio-settings/archive') || pathname.startsWith('/portfolio-settings/inactive')) return 'Inactive';
   if (pathname.startsWith('/portfolio-settings/test-data-studio')) return 'Test Data Studio';
   if (pathname.startsWith('/portfolio-settings/cron-jobs')) return 'Cron Jobs';
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
@@ -41,7 +41,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   // Portfolio Level Pages
   if (pathname.startsWith('/project-home')) return 'Project Home';
   if (pathname.startsWith('/portfolio-dashboard')) return 'Portfolio Dashboard';
-  if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard') || pathname.startsWith('/fp-porfolio-dash')) return 'FP Portfolio Dash';
+  if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard') || pathname.startsWith('/fp-porfolio-dash')) return 'Portfolio PromptBoard';
   if (pathname.startsWith('/quality/estimations')) return 'Estimations';
   if (pathname.startsWith('/quality/defects')) return 'Defects';
   if (pathname.startsWith('/quality')) return 'Estimations';
@@ -69,7 +69,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.includes('/testing/defect-tracker')) return 'Defect Tracker';
   if (pathname.includes('/project-details/project-status')) return 'Project Status';
   if (pathname.includes('/project-details/pm-dashboard')) return 'PM Dashboard';
-  if (pathname.includes('/project-details/fp-pm-dash')) return 'FP PM Dash';
+  if (pathname.includes('/project-details/fp-pm-dash')) return 'Project PromptBoard';
   if (pathname.includes('/project-details/specifications')) return 'Specifications';
   if (pathname.includes('/initial-estimation/specifications')) return 'Specifications (Initial Estimation)';
   if (pathname.includes('/initial-estimation/project-status')) return 'Project Status (Initial Estimation)';
@@ -115,10 +115,12 @@ export function hasPagePermission(
     ? ['Portfolio Trash', 'Trash']
     : (pageName === 'Test Cases' || pageName === 'Test Backlog' || pageName === 'Test Backlogs')
     ? ['Test Cases', 'Test Backlog', 'Test Backlogs']
-    : (pageName === 'FP Portfolio Dash' || pageName === 'FP Dashboard')
-    ? ['FP Portfolio Dash', 'FP Dashboard']
-    : (pageName === 'FP PM Dash' || pageName === 'PM Dashboard')
-    ? ['FP PM Dash', 'PM Dashboard']
+    : (pageName === 'Portfolio PromptBoard' || pageName === 'FP Portfolio Dash' || pageName === 'FP Dashboard')
+    ? ['Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard']
+    : (pageName === 'Project PromptBoard' || pageName === 'FP PM Dash' || pageName === 'PM Dashboard')
+    ? ['Project PromptBoard', 'FP PM Dash', 'PM Dashboard']
+    : (pageName === 'Inactive' || pageName === 'Archive' || pageName === 'Inactive Projects')
+    ? ['Inactive', 'Archive', 'Inactive Projects']
     : [pageName];
 
   if (customPageAccess) {
@@ -142,6 +144,7 @@ export const allProjectPageNames = [
   'Project Status (Initial Estimation)',
   'Project Status',
   'PM Dashboard',
+  'Project PromptBoard',
   'FP PM Dash',
   'Specifications',
   'Project Resources',
@@ -222,6 +225,7 @@ export function getProjectLandingPage(
         { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
         { name: 'Defects', path: `${basePath}/testing/defects` },
         { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
         { name: 'Worklog', path: `${basePath}/resources/worklog` },
@@ -255,6 +259,7 @@ export function getProjectLandingPage(
         { name: 'Defect Tracker', path: `${basePath}/development/defect-tracker` },
         { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+        { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
         { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
         { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
@@ -354,6 +359,7 @@ export function getPermittedFallbackRoute(
         candidates: [
           { name: 'Project Status', path: `${basePath}/project-details/project-status` },
           { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+          { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
           { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
           { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         ],
@@ -493,6 +499,7 @@ export function getPermittedFallbackRoute(
         { name: 'Database', path: '/portfolio-settings/database' },
         { name: 'Authentication', path: '/portfolio-settings/authentication' },
         { name: 'AI Config', path: '/portfolio-settings/ai-config' },
+        { name: 'Inactive', path: '/portfolio-settings/archive' },
         { name: 'Archive', path: '/portfolio-settings/archive' },
         { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
         { name: 'Cron Jobs', path: '/portfolio-settings/cron-jobs' },
@@ -503,6 +510,7 @@ export function getPermittedFallbackRoute(
       candidates: [
         { name: 'Project Home', path: '/project-home' },
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
+        { name: 'Portfolio PromptBoard', path: '/fp-portfolio-dash' },
         { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
       ],
     },
@@ -510,6 +518,7 @@ export function getPermittedFallbackRoute(
       prefix: '/portfolio-dashboard',
       candidates: [
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
+        { name: 'Portfolio PromptBoard', path: '/fp-portfolio-dash' },
         { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
         { name: 'Project Home', path: '/project-home' },
       ],
@@ -517,6 +526,7 @@ export function getPermittedFallbackRoute(
     {
       prefix: '/fp-portfolio-dash',
       candidates: [
+        { name: 'Portfolio PromptBoard', path: '/fp-portfolio-dash' },
         { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
         { name: 'Project Home', path: '/project-home' },
@@ -525,6 +535,7 @@ export function getPermittedFallbackRoute(
     {
       prefix: '/fp-dashboard',
       candidates: [
+        { name: 'Portfolio PromptBoard', path: '/fp-portfolio-dash' },
         { name: 'FP Portfolio Dash', path: '/fp-portfolio-dash' },
         { name: 'Portfolio Dashboard', path: '/portfolio-dashboard' },
         { name: 'Project Home', path: '/project-home' },

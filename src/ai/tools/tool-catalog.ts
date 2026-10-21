@@ -705,7 +705,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "archiveProject",
     "varName": "archiveProjectTool",
     "category": "portfolio_project",
-    "description": "Archives an active project, moving it to the Archived Projects tab on Project Home.",
+    "description": "Marks an active project as inactive, moving it to the Inactive Projects tab on Project Home.",
     "params": [
       "projectId"
     ],
@@ -714,15 +714,16 @@ export const TOOL_CATALOG: ToolMetadata[] = [
       "project",
       "container",
       "archive",
+      "inactive",
       "duplicate"
     ],
-    "searchText": "archiveProject | Category: portfolio_project | Aliases: portfolio project container archive duplicate | Description: Archives an active project, moving it to the Archived Projects tab on Project Home. | Parameters: projectId"
+    "searchText": "archiveProject | Category: portfolio_project | Aliases: portfolio project container archive inactive duplicate | Description: Marks an active project as inactive, moving it to the Inactive Projects tab on Project Home. | Parameters: projectId"
   },
   {
     "name": "unarchiveProject",
     "varName": "unarchiveProjectTool",
     "category": "portfolio_project",
-    "description": "Restores an archived project back to Active status on Project Home.",
+    "description": "Reactivates an inactive project back to Active status on Project Home.",
     "params": [
       "projectId"
     ],

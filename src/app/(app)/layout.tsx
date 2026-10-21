@@ -95,7 +95,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       case 'projects':
         if (hasAccess('Project Home')) return '/project-home';
         if (hasAccess('Portfolio Dashboard')) return '/portfolio-dashboard';
-        if (hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
+        if (hasAccess('Portfolio PromptBoard') || hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
         return '/project-home';
       case 'quality':
         if (hasAccess('Estimations')) return '/quality/estimations';
@@ -119,7 +119,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Database')) return '/portfolio-settings/database';
         if (hasAccess('Authentication')) return '/portfolio-settings/authentication';
         if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
-        if (hasAccess('Archive')) return '/portfolio-settings/archive';
+        if (hasAccess('Inactive') || hasAccess('Archive')) return '/portfolio-settings/archive';
         if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
         if (hasAccess('Cron Jobs')) return '/portfolio-settings/cron-jobs';
         return '/portfolio-settings';

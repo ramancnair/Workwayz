@@ -224,7 +224,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/project-details/fp-pm-dash`,
-      label: "FP PM Dash",
+      label: "Project PromptBoard",
       icon: Sparkles,
     },
     {

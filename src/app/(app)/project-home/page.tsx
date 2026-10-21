@@ -36,14 +36,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search, Loader2 } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -56,6 +57,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ThemedAutocomplete } from '@/components/ui/themed-autocomplete';
 
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
@@ -89,6 +91,7 @@ const projectSchema = z.object({
   status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  isArchived: z.boolean().optional(),
 });
 
 function HealthIndicator({ status, label }: { status?: RagStatus; label: string }) {
@@ -113,8 +116,6 @@ function ProjectDialogContent({
   portfolios: Portfolio[];
   users: User[];
 }) {
-  const [pmInputText, setPmInputText] = useState('');
-
   const pmOptions = useMemo(() => users
     .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '' && isAssignableToProject(user))
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
@@ -122,21 +123,6 @@ function ProjectDialogContent({
       value: user.id,
       label: `${user.firstName} ${user.lastName} (${user.empId.trim()})`
     })), [users]);
-
-  useEffect(() => {
-    if (editingProject && editingProject.projectManagerId) {
-      const pm = users.find(u => u.id === editingProject.projectManagerId);
-      if (pm && pm.empId) {
-        setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId.trim()})`);
-      } else if (pm) {
-        setPmInputText(`${pm.firstName} ${pm.lastName}`);
-      } else {
-        setPmInputText('');
-      }
-    } else {
-      setPmInputText('');
-    }
-  }, [editingProject, users]);
 
   return (
     <DialogContent className="sm:max-w-2xl">
@@ -206,46 +192,15 @@ function ProjectDialogContent({
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        list="pm-options"
-                        placeholder="Select a Project Manager..."
-                        className="pl-9"
-                        value={pmInputText}
-                        onChange={(e) => {
-                          const inputText = e.target.value;
-                          setPmInputText(inputText);
-
-                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
-                          field.onChange(matchingOption ? matchingOption.value : undefined);
-                        }}
-                        onBlur={() => {
-                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === pmInputText.toLowerCase());
-                          if (matchingOption) {
-                            setPmInputText(matchingOption.label);
-                            field.onChange(matchingOption.value);
-                          } else if (!pmInputText.trim() || pmInputText.toLowerCase() === 'unassigned') {
-                            setPmInputText('');
-                            field.onChange(undefined);
-                          } else {
-                            const currentSelected = pmOptions.find(opt => opt.value === field.value);
-                            if (currentSelected) {
-                              setPmInputText(currentSelected.label);
-                            } else {
-                              setPmInputText('');
-                              field.onChange(undefined);
-                            }
-                          }
-                        }}
-                      />
-                    </div>
+                    <ThemedAutocomplete
+                      id="project-manager-autocomplete"
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={pmOptions}
+                      placeholder="Select a Project Manager..."
+                      emptyText="No matching project managers found."
+                    />
                   </FormControl>
-                  <datalist id="pm-options">
-                    {pmOptions.map(option => (
-                      <option key={option.value} value={option.label} />
-                    ))}
-                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}
@@ -304,6 +259,28 @@ function ProjectDialogContent({
               )}
             />
           </div>
+          {editingProject && form.watch('status') !== 'Initial Estimation' && form.watch('status') !== 'Active' && (
+            <FormField
+              control={form.control}
+              name="isArchived"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/30">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">Inactive Project</FormLabel>
+                    <FormDescription className="text-xs">
+                      Mark this project as inactive to move it to the Inactive Projects tab.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={!!field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
           <DialogFooter>
             <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
           </DialogFooter>
@@ -334,7 +311,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
+    defaultValues: { name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', isArchived: false },
   });
 
   const portfolioForm = useForm<z.infer<typeof portfolioSchema>>({
@@ -432,9 +409,10 @@ export default function ProjectsDashboard() {
           status: editingProject.status || 'Initial Estimation',
           startDate: editingProject.startDate ? format(parseISO(editingProject.startDate), 'yyyy-MM-dd') : '',
           endDate: editingProject.endDate ? format(parseISO(editingProject.endDate), 'yyyy-MM-dd') : '',
+          isArchived: !!editingProject.isArchived,
         });
       } else {
-        form.reset({ name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
+        form.reset({ name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '', isArchived: false });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -497,19 +475,44 @@ export default function ProjectsDashboard() {
     }
   };
 
+  const getPortfolioProjectCount = useCallback((portfolioId: string) => {
+    return projects.filter(p => p.portfolioId === portfolioId && !p.isDeleted).length;
+  }, [projects]);
+
   const handleDeletePortfolio = async () => {
     if (!deletingPortfolio || !db) return;
     try {
+      // Allow only empty portfolios to be deleted
+      const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id && !p.isDeleted);
+      if (portfolioProjects.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Delete Portfolio',
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${portfolioProjects.length} project(s).`,
+        });
+        setDeletingPortfolio(null);
+        return;
+      }
+
+      // Live database verification against race conditions
+      const projectsSnapshot = await getDocs(
+        query(collection(db, 'projects'), where('portfolioId', '==', deletingPortfolio.id))
+      );
+      const liveProjects = projectsSnapshot.docs.filter((d: any) => !d.data()?.isDeleted);
+      if (liveProjects.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Delete Portfolio',
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${liveProjects.length} project(s).`,
+        });
+        setDeletingPortfolio(null);
+        return;
+      }
+
       const portfolioRef = doc(db, 'portfolios', deletingPortfolio.id);
       await updateDoc(portfolioRef, { isDeleted: true, deletedAt: Timestamp.now() });
 
-      const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id);
-      for (const project of portfolioProjects) {
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
-      }
-
-      toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and its ${portfolioProjects.length} project(s) moved to Trash.` });
+      toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" moved to Trash.` });
     } catch (error) {
       console.error('Error deleting portfolio:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete portfolio.' });
@@ -564,6 +567,19 @@ export default function ProjectsDashboard() {
           updateData.timeStatus = null;
           updateData.statusComments = '';
         }
+
+        // Projects with status other than Initial Estimation or Active can be inactive
+        if (values.status !== 'Initial Estimation' && values.status !== 'Active') {
+          if (values.isArchived !== undefined) {
+            updateData.isArchived = values.isArchived;
+            updateData.archivedAt = values.isArchived ? (editingProject.archivedAt || new Date().toISOString()) : null;
+          }
+        } else {
+          // If status is Initial Estimation or Active, it cannot be inactive
+          updateData.isArchived = false;
+          updateData.archivedAt = null;
+        }
+
         await updateDoc(projectRef, updateData);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
@@ -638,13 +654,22 @@ export default function ProjectsDashboard() {
 
   const handleArchiveProject = async () => {
     if (!archivingProject || !db) return;
+    if (archivingProject.status === 'Initial Estimation' || archivingProject.status === 'Active') {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Mark Inactive',
+        description: 'Projects with status Initial Estimation or Active cannot be moved to inactive.',
+      });
+      setArchivingProject(null);
+      return;
+    }
     try {
       const projectRef = doc(db, 'projects', archivingProject.id);
       await updateDoc(projectRef, { isArchived: true, archivedAt: new Date().toISOString() });
-      toast({ title: 'Success', description: `Project "${archivingProject.name}" archived.` });
+      toast({ title: 'Success', description: `Project "${archivingProject.name}" marked as inactive.` });
     } catch (error) {
-      console.error('Error archiving project:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not archive project.' });
+      console.error('Error marking project inactive:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not mark project as inactive.' });
     } finally {
       setArchivingProject(null);
     }
@@ -655,10 +680,10 @@ export default function ProjectsDashboard() {
     try {
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, { isArchived: false, archivedAt: null });
-      toast({ title: 'Success', description: `Project "${project.name}" restored successfully.` });
+      toast({ title: 'Success', description: `Project "${project.name}" reactivated successfully.` });
     } catch (error) {
-      console.error('Error restoring project:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not restore project.' });
+      console.error('Error reactivating project:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not reactivate project.' });
     }
   };
 
@@ -843,7 +868,7 @@ export default function ProjectsDashboard() {
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="active">Active Projects</TabsTrigger>
-            <TabsTrigger value="archive">Archived Projects</TabsTrigger>
+            <TabsTrigger value="archive">Inactive Projects</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active">
@@ -889,14 +914,45 @@ export default function ProjectsDashboard() {
                           <Folder className="h-5 w-5" />
                           <span className="font-semibold">{portfolio.name}</span>
                           <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
-                          <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => handleEditPortfolio(portfolio)}>
-                              <Edit className="h-3.5 w-3.5" />
+                          {portfolio.id !== 'unassigned-portfolio' && (
+                            <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+                                    onClick={() => handleEditPortfolio(portfolio)}
+                                    aria-label={`Edit ${portfolio.name}`}
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit portfolio</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors",
+                                      getPortfolioProjectCount(portfolio.id) > 0
+                                        ? "text-muted-foreground/40 hover:text-muted-foreground/60 cursor-not-allowed"
+                                        : "hover:bg-accent hover:text-destructive cursor-pointer"
+                                    )}
+                                    onClick={() => setDeletingPortfolio(portfolio)}
+                                    aria-label={`Delete ${portfolio.name}`}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {getPortfolioProjectCount(portfolio.id) > 0
+                                    ? `Cannot delete: contains ${getPortfolioProjectCount(portfolio.id)} project(s). Only empty portfolios can be deleted.`
+                                    : 'Delete empty portfolio'}
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
-                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => setDeletingPortfolio(portfolio)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="p-0">
@@ -1030,14 +1086,14 @@ export default function ProjectsDashboard() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex items-center justify-end gap-1">
-                                        {project.status === 'Completed' && (
+                                        {project.status !== 'Initial Estimation' && project.status !== 'Active' && (
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
                                                 <Archive className="h-4 w-4" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Archive Project</TooltipContent>
+                                            <TooltipContent>Mark Inactive</TooltipContent>
                                           </Tooltip>
                                         )}
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
@@ -1070,7 +1126,7 @@ export default function ProjectsDashboard() {
             <Card>
               <CardContent className="p-4">
                 <Input
-                  placeholder="Filter archived projects..."
+                  placeholder="Filter inactive projects..."
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
                   className="max-w-sm"
@@ -1079,20 +1135,20 @@ export default function ProjectsDashboard() {
               {isLoading ? (
                 <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span>Loading archived projects...</span>
+                  <span>Loading inactive projects...</span>
                 </div>
               ) : archivedProjectsByPortfolio.filter(p => p.projects.length > 0).length === 0 ? (
                 <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
                   <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <h3 className="text-base font-semibold mb-1">No archived projects</h3>
+                  <h3 className="text-base font-semibold mb-1">No inactive projects</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Projects that you archive will appear here.
+                    Projects that are marked inactive will appear here.
                   </p>
                 </div>
               ) : (
                 <Accordion type="multiple" value={archiveExpanded} onValueChange={setArchiveExpanded} className="w-full">
                   {archivedProjectsByPortfolio.map(portfolio => {
-                    if (portfolio.projects.length === 0) return null; // Only show portfolios with archived projects
+                    if (portfolio.projects.length === 0) return null; // Only show portfolios with inactive projects
                     return (
                       <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
                         <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
@@ -1100,7 +1156,7 @@ export default function ProjectsDashboard() {
                             <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                             <Folder className="h-5 w-5 text-muted-foreground" />
                             <span className="font-semibold text-muted-foreground">{portfolio.name}</span>
-                            <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'archived project' : 'archived projects'}</Badge>
+                            <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'inactive project' : 'inactive projects'}</Badge>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-0">
@@ -1111,7 +1167,7 @@ export default function ProjectsDashboard() {
                                 <SortableHeader columnId="name">Project Name</SortableHeader>
                                 <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
                                 <SortableHeader columnId="status">Status</SortableHeader>
-                                <SortableHeader columnId="archivedAt">Archived On</SortableHeader>
+                                <SortableHeader columnId="archivedAt">Inactive Since</SortableHeader>
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1142,7 +1198,7 @@ export default function ProjectsDashboard() {
                                               <RotateCcw className="h-4 w-4" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent>Restore Project</TooltipContent>
+                                          <TooltipContent>Reactivate Project</TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
@@ -1191,9 +1247,9 @@ export default function ProjectsDashboard() {
       <AlertDialog open={!!archivingProject} onOpenChange={(isOpen) => !isOpen && setArchivingProject(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Project</AlertDialogTitle>
+            <AlertDialogTitle>Mark Project as Inactive</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to move &quot;{archivingProject?.name}&quot; to the archive? You can restore it later if needed.
+              Are you sure you want to mark &quot;{archivingProject?.name}&quot; as inactive? You can reactivate it at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1201,28 +1257,56 @@ export default function ProjectsDashboard() {
             <AlertDialogAction
               onClick={handleArchiveProject}
             >
-              Archive
+              Mark Inactive
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <AlertDialog open={!!deletingPortfolio} onOpenChange={(isOpen) => !isOpen && setDeletingPortfolio(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will move the portfolio &quot;{deletingPortfolio?.name}&quot; and all its projects to the Trash. They will be permanently deleted after 30 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePortfolio}
-              className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Move to Trash
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {deletingPortfolio && getPortfolioProjectCount(deletingPortfolio.id) > 0 ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  Cannot Delete Portfolio
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2 pt-1 text-sm text-muted-foreground">
+                  <span>
+                    The portfolio <strong className="text-foreground">&quot;{deletingPortfolio.name}&quot;</strong> cannot be deleted because it contains{' '}
+                    <strong className="text-foreground">
+                      {getPortfolioProjectCount(deletingPortfolio.id)}{' '}
+                      {getPortfolioProjectCount(deletingPortfolio.id) === 1 ? 'project' : 'projects'}
+                    </strong>.
+                  </span>
+                  <span className="block text-xs text-muted-foreground/90">
+                    Only empty portfolios can be deleted. Please reassign or delete all projects belonging to this portfolio before deleting it.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeletingPortfolio(null)}>Close</AlertDialogCancel>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to move the empty portfolio &quot;{deletingPortfolio?.name}&quot; to the Trash? It will be permanently deleted after 30 days.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeletePortfolio}
+                  className={cn(buttonVariants({ variant: 'destructive' }))}
+                >
+                  Move to Trash
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </TooltipProvider>

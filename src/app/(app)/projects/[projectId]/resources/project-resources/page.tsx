@@ -68,6 +68,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { ThemedAutocomplete } from '@/components/ui/themed-autocomplete';
 
 const baseResourceSchema = z.object({
   employeeId: z.string().min(1, 'Please select a user.'),
@@ -106,7 +107,6 @@ function ResourceDialog({
 }) {
   const { addUserToProject, updateProjectUser } = useProject();
   const { toast } = useToast();
-  const [userInputText, setUserInputText] = useState('');
 
   const dynamicResourceSchema = useMemo(() => {
     const projStart = project?.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : null;
@@ -206,7 +206,6 @@ function ResourceDialog({
           capabilities: [],
           isBcpSupport: false,
         });
-        setUserInputText('');
       }
     }
   }, [isOpen, editingUser, form, project, allUsers]);
@@ -293,49 +292,16 @@ function ResourceDialog({
                 <FormItem>
                   <FormLabel>User</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        list="user-options"
-                        placeholder="Search for a user..."
-                        className="pl-9"
-                        value={userInputText}
-                        readOnly={!!editingUser}
-                        onChange={(e) => {
-                          if (editingUser) return;
-                          const inputText = e.target.value;
-                          setUserInputText(inputText);
-
-                          const matchingOption = availableUserOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
-                          field.onChange(matchingOption ? matchingOption.value : '');
-                        }}
-                        onBlur={(e) => {
-                          if (editingUser) return;
-                          const matchingOption = availableUserOptions.find(opt => opt.label.toLowerCase() === e.target.value.toLowerCase());
-                          if (matchingOption) {
-                            setUserInputText(matchingOption.label);
-                            field.onChange(matchingOption.value);
-                          } else if (!e.target.value.trim()) {
-                            setUserInputText('');
-                            field.onChange('');
-                          } else {
-                            const currentSelected = availableUserOptions.find(opt => opt.value === field.value);
-                            if (currentSelected) {
-                              setUserInputText(currentSelected.label);
-                            } else {
-                              setUserInputText('');
-                              field.onChange('');
-                            }
-                          }
-                        }}
-                      />
-                    </div>
+                    <ThemedAutocomplete
+                      id="resource-user-autocomplete"
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={availableUserOptions}
+                      placeholder="Search for a user..."
+                      emptyText="No matching users found."
+                      disabled={!!editingUser}
+                    />
                   </FormControl>
-                  <datalist id="user-options">
-                    {availableUserOptions.map(emp => (
-                      <option key={emp.value} value={emp.label} />
-                    ))}
-                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}

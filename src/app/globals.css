@@ -20,6 +20,7 @@ input:-webkit-autofill:active {
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
 
@@ -90,6 +91,7 @@ input:-webkit-autofill:active {
   }
 
   .dark {
+    color-scheme: dark;
     --background: 222 55% 7%;
     --foreground: 210 40% 98%;
 
@@ -159,6 +161,17 @@ input:-webkit-autofill:active {
 
   input[type=number] {
     -moz-appearance: textfield;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Support dark datalist dropdowns across browsers */
+  .dark datalist,
+  .dark option {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
   }
 
   /* Hide datalist dropdown picker indicator arrows */

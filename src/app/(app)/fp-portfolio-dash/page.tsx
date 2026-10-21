@@ -296,7 +296,7 @@ export default function FpDashboardPage() {
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;
     const text = [
-      `FP DASHBOARD: ${response.title}`,
+      `PORTFOLIO PROMPTBOARD: ${response.title}`,
       `Query: "${response.query}"`,
       `Verified Source: ${response.audit?.recordsAnalyzed} records analyzed (${response.audit?.portfolioScope})`,
       '',
@@ -436,7 +436,7 @@ export default function FpDashboardPage() {
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-                  FP Portfolio Dash
+                  Portfolio PromptBoard
                   <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30">
                     Executive Intelligence
                   </span>
@@ -550,7 +550,7 @@ export default function FpDashboardPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Ask FP Portfolio Dash (e.g. 'Show project health status', 'Compare Fixed Bid vs T&M', 'What are our top risks?')..."
+                placeholder="Ask Portfolio PromptBoard (e.g. 'Show project health status', 'Compare Fixed Bid vs T&M', 'What are our top risks?')..."
                 className="h-14 pl-12 pr-12 rounded-xl text-base bg-card/70 border-border/80 shadow-md focus-visible:ring-2 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/70"
               />
               {searchQuery && (

@@ -94,7 +94,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
       case 'project':
         if (hasAccess('Project Status')) return `${basePath}/project-details/project-status`;
         if (hasAccess('PM Dashboard')) return `${basePath}/project-details/pm-dashboard`;
-        if (hasAccess('FP PM Dash')) return `${basePath}/project-details/fp-pm-dash`;
+        if (hasAccess('Project PromptBoard') || hasAccess('FP PM Dash')) return `${basePath}/project-details/fp-pm-dash`;
         if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
         return `${basePath}/project-details/project-status`;
 
@@ -208,7 +208,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                 )}
                 {!showInitialTabsOnly && (
                   <>
-                    {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('FP PM Dash') || hasAccess('Specifications')) && (
+                    {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Project PromptBoard') || hasAccess('FP PM Dash') || hasAccess('Specifications')) && (
                       <TabsTrigger value="project" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('project')}>Project Details</Link>
                       </TabsTrigger>

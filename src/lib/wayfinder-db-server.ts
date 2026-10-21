@@ -1096,12 +1096,13 @@ export async function wayfinderUpdatePortfolio(params: { portfolioId: string; na
 // 16. Delete Portfolio
 export async function wayfinderDeletePortfolio(params: { portfolioId: string }) {
   if (!db || !params.portfolioId) throw new Error('Database or Portfolio ID missing');
-  // Check if active projects exist under this portfolio
+  // Check if any non-deleted projects exist under this portfolio
   const projectsSnap = await getDocs(
-    query(collection(db, 'projects'), where('portfolioId', '==', params.portfolioId), where('isDeleted', '==', false))
+    query(collection(db, 'projects'), where('portfolioId', '==', params.portfolioId))
   );
-  if (!projectsSnap.empty) {
-    throw new Error(`Cannot delete portfolio: ${projectsSnap.size} active project(s) still belong to this portfolio.`);
+  const nonDeletedProjects = projectsSnap.docs.filter((d: any) => !d.data()?.isDeleted);
+  if (nonDeletedProjects.length > 0) {
+    throw new Error(`Cannot delete portfolio: ${nonDeletedProjects.length} project(s) still belong to this portfolio. Only empty portfolios can be deleted.`);
   }
   const portfolioRef = doc(db, 'portfolios', params.portfolioId);
   const now = new Date().toISOString();
