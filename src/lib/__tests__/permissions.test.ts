@@ -18,8 +18,8 @@ describe('ProjectFlow Permissions Matrix', () => {
     it('should resolve portfolio-level routes correctly', () => {
       expect(getPageNameForRoute('/project-home')).toBe('Project Home');
       expect(getPageNameForRoute('/portfolio-dashboard')).toBe('Portfolio Dashboard');
-      expect(getPageNameForRoute('/fp-portfolio-dash')).toBe('FP Portfolio Dash');
-      expect(getPageNameForRoute('/fp-dashboard')).toBe('FP Portfolio Dash');
+      expect(getPageNameForRoute('/fp-portfolio-dash')).toBe('Portfolio PromptBoard');
+      expect(getPageNameForRoute('/fp-dashboard')).toBe('Portfolio PromptBoard');
       expect(getPageNameForRoute('/quality/estimations')).toBe('Estimations');
       expect(getPageNameForRoute('/quality/defects')).toBe('Defects');
       expect(getPageNameForRoute('/users')).toBe('User List');
@@ -37,7 +37,7 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(getPageNameForRoute(`/projects/${pid}/testing/dashboard`)).toBe('Test Dashboard');
       expect(getPageNameForRoute(`/projects/${pid}/testing/test-cases`)).toBe('Test Cases');
       expect(getPageNameForRoute(`/projects/${pid}/project-details/pm-dashboard`)).toBe('PM Dashboard');
-      expect(getPageNameForRoute(`/projects/${pid}/project-details/fp-pm-dash`)).toBe('FP PM Dash');
+      expect(getPageNameForRoute(`/projects/${pid}/project-details/fp-pm-dash`)).toBe('Project PromptBoard');
       expect(getPageNameForRoute(`/projects/${pid}/raid-dashboard`)).toBe('RAID Dashboard');
       expect(getPageNameForRoute(`/projects/${pid}/risks`)).toBe('Risks');
       expect(getPageNameForRoute(`/projects/${pid}/resources/project-resources`)).toBe('Project Resources');
@@ -110,19 +110,23 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(hasPagePermission('PMO', 'Grooming')).toBe(false);
     });
 
-    it('FP PM Dash should match PM Dashboard visibility across all roles', () => {
+    it('Project PromptBoard / FP PM Dash should match PM Dashboard visibility across all roles', () => {
       // Allowed roles
+      expect(hasPagePermission('Administrator', 'Project PromptBoard')).toBe(true);
+      expect(hasPagePermission('Senior Management', 'Project PromptBoard')).toBe(true);
+      expect(hasPagePermission('Project Manager', 'Project PromptBoard')).toBe(true);
+      expect(hasPagePermission('PMO', 'Project PromptBoard')).toBe(true);
       expect(hasPagePermission('Administrator', 'FP PM Dash')).toBe(true);
       expect(hasPagePermission('Senior Management', 'FP PM Dash')).toBe(true);
-      expect(hasPagePermission('Project Manager', 'FP PM Dash')).toBe(true);
-      expect(hasPagePermission('PMO', 'FP PM Dash')).toBe(true);
 
       // Denied roles
+      expect(hasPagePermission('Lead', 'Project PromptBoard')).toBe(false);
+      expect(hasPagePermission('Team Member', 'Project PromptBoard')).toBe(false);
       expect(hasPagePermission('Lead', 'FP PM Dash')).toBe(false);
-      expect(hasPagePermission('Team Member', 'FP PM Dash')).toBe(false);
 
-      // Custom override on PM Dashboard should cascade to FP PM Dash
+      // Custom override on PM Dashboard should cascade to Project PromptBoard
       const customOverrides = { 'PM Dashboard': true };
+      expect(hasPagePermission('Team Member', 'Project PromptBoard', customOverrides)).toBe(true);
       expect(hasPagePermission('Team Member', 'FP PM Dash', customOverrides)).toBe(true);
     });
 

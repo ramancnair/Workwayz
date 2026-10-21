@@ -142,7 +142,7 @@ export function executeFpPmQuery(
       intent: 'unsupported_or_off_topic',
       executiveSummary: [
         `No matching project records found in ${projectName} for this query.`,
-        'The FP PM Dash is strictly grounded in your active project tasks, sprints, epics, team, RAID items, and worklog records to guarantee zero hallucinations.',
+        'The Project PromptBoard is strictly grounded in your active project tasks, sprints, epics, team, RAID items, and worklog records to guarantee zero hallucinations.',
         'Try inquiring about sprint progress, backlog status, open bugs, critical risks, team workload, or payment milestones.',
       ],
       kpis: [
@@ -1231,7 +1231,7 @@ export function executeFpPmQuery(
     intent: 'unsupported_or_off_topic',
     executiveSummary: [
       `Could not determine a specific project intent for: "${queryText}".`,
-      'The FP PM Dash deterministic engine could not match your query to a supported project category (like sprints, bugs, RAID, team workload, or financials).',
+      'The Project PromptBoard deterministic engine could not match your query to a supported project category (like sprints, bugs, RAID, team workload, or financials).',
       'Please try rephrasing your question using one of the supported query topics below.',
     ],
     kpis: [

@@ -95,7 +95,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       case 'projects':
         if (hasAccess('Project Home')) return '/project-home';
         if (hasAccess('Portfolio Dashboard')) return '/portfolio-dashboard';
-        if (hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
+        if (hasAccess('Portfolio PromptBoard') || hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
         return '/project-home';
       case 'quality':
         if (hasAccess('Estimations')) return '/quality/estimations';

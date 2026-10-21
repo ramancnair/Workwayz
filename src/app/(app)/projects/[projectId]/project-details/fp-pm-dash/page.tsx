@@ -322,7 +322,7 @@ export default function FpPmDashboardPage() {
           setSortDir(fallbackData.table.defaultSortDir || 'asc');
         }
       } catch (clientErr: any) {
-        console.error('FP PM Dash fallback query error:', clientErr);
+        console.error('Project PromptBoard fallback query error:', clientErr);
         setErrorMsg(clientErr.message || 'Failed to retrieve data from project database.');
       }
     } finally {
@@ -335,7 +335,7 @@ export default function FpPmDashboardPage() {
   const handleCopySummary = () => {
     if (!response || !response.executiveSummary) return;
     const text = [
-      `FP PM DASH: ${response.title}`,
+      `PROJECT PROMPTBOARD: ${response.title}`,
       `Query: "${response.query}"`,
       `Verified Source: ${response.audit?.recordsAnalyzed} records analyzed (${response.audit?.portfolioScope})`,
       '',
@@ -494,7 +494,7 @@ export default function FpPmDashboardPage() {
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-                  FP PM Dash
+                  Project PromptBoard
                   <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30">
                     Project Intelligence
                   </span>
@@ -602,7 +602,7 @@ export default function FpPmDashboardPage() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleRunQuery(searchQuery);
                   }}
-                  placeholder="Ask FP PM Dash (e.g. 'Show sprint velocity', 'List open critical bugs', 'Team workload and capacity breakdown')..."
+                  placeholder="Ask Project PromptBoard (e.g. 'Show sprint velocity', 'List open critical bugs', 'Team workload and capacity breakdown')..."
                   className="pl-9 bg-background/80 border-border/80 focus-visible:ring-primary h-10 text-sm"
                 />
                 {searchQuery && (

@@ -5,6 +5,7 @@ import { db } from '@/lib/db-provider';
 import { collection, getDocs, query, where, getDoc, doc } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Input } from '@/components/ui/input';
+import { ThemedAutocomplete } from '@/components/ui/themed-autocomplete';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { type User, type Project, type Story } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -333,64 +334,29 @@ export default function UtilizationPage() {
             <PageHeader title="Resource Utilization" description="Visualize resource allocation across all projects." />
             <Card>
                 <CardContent className="p-4">
-                    <div className="max-w-sm">
+                    <div className="max-w-sm space-y-1.5">
                         <label htmlFor="user-search" className="text-sm font-medium">Select a User</label>
-                        <div className="relative flex items-center mt-1">
-                            <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            <Input
-                                id="user-search"
-                                list="user-options"
-                                placeholder="Search by name or employee ID..."
-                                value={userInput}
-                                onFocus={() => {
+                        <ThemedAutocomplete
+                            id="user-search"
+                            value={selectedUser?.id}
+                            onChange={(val) => {
+                                if (!val) {
+                                    setSelectedUser(null);
                                     setUserInput('');
-                                }}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setUserInput(val);
-                                    if (!val) {
-                                        setSelectedUser(null);
-                                    } else {
-                                        const matchingOption = userOptions.find(opt => opt.label.toLowerCase() === val.toLowerCase() || opt.value === val);
-                                        if (matchingOption) {
-                                            handleUserSelect(matchingOption.label);
-                                        }
+                                } else {
+                                    const user = allUsers.find(u => u.id === val);
+                                    setSelectedUser(user || null);
+                                    if (user && user.empId) {
+                                        setUserInput(`${user.firstName} ${user.lastName} (${user.empId.trim()})`);
+                                    } else if (user) {
+                                        setUserInput(`${user.firstName} ${user.lastName}`);
                                     }
-                                }}
-                                onBlur={(e) => {
-                                    const val = e.target.value;
-                                    setTimeout(() => {
-                                        const matchingOption = userOptions.find(opt => opt.label.toLowerCase() === val.toLowerCase());
-                                        if (!matchingOption) {
-                                            if (selectedUser) {
-                                                const currentOpt = userOptions.find(opt => opt.value === selectedUser.id);
-                                                setUserInput(currentOpt ? currentOpt.label : '');
-                                            } else {
-                                                setUserInput('');
-                                            }
-                                        } else {
-                                            handleUserSelect(matchingOption.label);
-                                        }
-                                    }, 200);
-                                }}
-                                className="pl-9 pr-8"
-                            />
-                            {selectedUser && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedUser(null);
-                                        setUserInput('');
-                                    }}
-                                    className="absolute right-2.5 text-muted-foreground hover:text-foreground p-1 rounded-sm focus:outline-none"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
-                        </div>
-                        <datalist id="user-options">
-                            {userOptions.map(opt => <option key={opt.value} value={opt.label} />)}
-                        </datalist>
+                                }
+                            }}
+                            options={userOptions}
+                            placeholder="Search by name or employee ID..."
+                            emptyText="No matching users found."
+                        />
                     </div>
                 </CardContent>
             </Card>

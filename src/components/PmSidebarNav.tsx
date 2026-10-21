@@ -199,7 +199,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'fp-portfolio-dash',
       href: `/fp-portfolio-dash`,
-      label: "FP Portfolio Dash",
+      label: "Portfolio PromptBoard",
       icon: Sparkles,
       group: 'projects'
     },

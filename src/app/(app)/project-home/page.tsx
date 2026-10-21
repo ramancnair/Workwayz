@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search, Loader2 } from 'lucide-react';
+import { PlusCircle, ArrowUpDown, Trash2, Folder, Briefcase, Edit, ChevronRight, ChevronDown, Archive, RotateCcw, Bot, Search, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
@@ -56,6 +56,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ThemedAutocomplete } from '@/components/ui/themed-autocomplete';
 
 const pricingModels: PricingModel[] = ['Fixed Bid', 'T&M'];
 const projectStatuses: ProjectStatus[] = ['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'];
@@ -113,8 +114,6 @@ function ProjectDialogContent({
   portfolios: Portfolio[];
   users: User[];
 }) {
-  const [pmInputText, setPmInputText] = useState('');
-
   const pmOptions = useMemo(() => users
     .filter(user => !user.isDeleted && user.isEnabled !== false && !!user.empId && user.empId.trim() !== '' && isAssignableToProject(user))
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
@@ -122,21 +121,6 @@ function ProjectDialogContent({
       value: user.id,
       label: `${user.firstName} ${user.lastName} (${user.empId.trim()})`
     })), [users]);
-
-  useEffect(() => {
-    if (editingProject && editingProject.projectManagerId) {
-      const pm = users.find(u => u.id === editingProject.projectManagerId);
-      if (pm && pm.empId) {
-        setPmInputText(`${pm.firstName} ${pm.lastName} (${pm.empId.trim()})`);
-      } else if (pm) {
-        setPmInputText(`${pm.firstName} ${pm.lastName}`);
-      } else {
-        setPmInputText('');
-      }
-    } else {
-      setPmInputText('');
-    }
-  }, [editingProject, users]);
 
   return (
     <DialogContent className="sm:max-w-2xl">
@@ -206,46 +190,15 @@ function ProjectDialogContent({
                 <FormItem>
                   <FormLabel>Project Manager</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        list="pm-options"
-                        placeholder="Select a Project Manager..."
-                        className="pl-9"
-                        value={pmInputText}
-                        onChange={(e) => {
-                          const inputText = e.target.value;
-                          setPmInputText(inputText);
-
-                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === inputText.toLowerCase() || opt.value === inputText);
-                          field.onChange(matchingOption ? matchingOption.value : undefined);
-                        }}
-                        onBlur={() => {
-                          const matchingOption = pmOptions.find(opt => opt.label.toLowerCase() === pmInputText.toLowerCase());
-                          if (matchingOption) {
-                            setPmInputText(matchingOption.label);
-                            field.onChange(matchingOption.value);
-                          } else if (!pmInputText.trim() || pmInputText.toLowerCase() === 'unassigned') {
-                            setPmInputText('');
-                            field.onChange(undefined);
-                          } else {
-                            const currentSelected = pmOptions.find(opt => opt.value === field.value);
-                            if (currentSelected) {
-                              setPmInputText(currentSelected.label);
-                            } else {
-                              setPmInputText('');
-                              field.onChange(undefined);
-                            }
-                          }
-                        }}
-                      />
-                    </div>
+                    <ThemedAutocomplete
+                      id="project-manager-autocomplete"
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={pmOptions}
+                      placeholder="Select a Project Manager..."
+                      emptyText="No matching project managers found."
+                    />
                   </FormControl>
-                  <datalist id="pm-options">
-                    {pmOptions.map(option => (
-                      <option key={option.value} value={option.label} />
-                    ))}
-                  </datalist>
                   <FormMessage />
                 </FormItem>
               )}
@@ -497,19 +450,44 @@ export default function ProjectsDashboard() {
     }
   };
 
+  const getPortfolioProjectCount = useCallback((portfolioId: string) => {
+    return projects.filter(p => p.portfolioId === portfolioId && !p.isDeleted).length;
+  }, [projects]);
+
   const handleDeletePortfolio = async () => {
     if (!deletingPortfolio || !db) return;
     try {
+      // Allow only empty portfolios to be deleted
+      const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id && !p.isDeleted);
+      if (portfolioProjects.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Delete Portfolio',
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${portfolioProjects.length} project(s).`,
+        });
+        setDeletingPortfolio(null);
+        return;
+      }
+
+      // Live database verification against race conditions
+      const projectsSnapshot = await getDocs(
+        query(collection(db, 'projects'), where('portfolioId', '==', deletingPortfolio.id))
+      );
+      const liveProjects = projectsSnapshot.docs.filter((d: any) => !d.data()?.isDeleted);
+      if (liveProjects.length > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Delete Portfolio',
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${liveProjects.length} project(s).`,
+        });
+        setDeletingPortfolio(null);
+        return;
+      }
+
       const portfolioRef = doc(db, 'portfolios', deletingPortfolio.id);
       await updateDoc(portfolioRef, { isDeleted: true, deletedAt: Timestamp.now() });
 
-      const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id);
-      for (const project of portfolioProjects) {
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, { isDeleted: true, deletedAt: Timestamp.now() });
-      }
-
-      toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" and its ${portfolioProjects.length} project(s) moved to Trash.` });
+      toast({ title: 'Success', description: `Portfolio "${deletingPortfolio.name}" moved to Trash.` });
     } catch (error) {
       console.error('Error deleting portfolio:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not delete portfolio.' });
@@ -889,14 +867,45 @@ export default function ProjectsDashboard() {
                           <Folder className="h-5 w-5" />
                           <span className="font-semibold">{portfolio.name}</span>
                           <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
-                          <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => handleEditPortfolio(portfolio)}>
-                              <Edit className="h-3.5 w-3.5" />
+                          {portfolio.id !== 'unassigned-portfolio' && (
+                            <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors"
+                                    onClick={() => handleEditPortfolio(portfolio)}
+                                    aria-label={`Edit ${portfolio.name}`}
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit portfolio</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors",
+                                      getPortfolioProjectCount(portfolio.id) > 0
+                                        ? "text-muted-foreground/40 hover:text-muted-foreground/60 cursor-not-allowed"
+                                        : "hover:bg-accent hover:text-destructive cursor-pointer"
+                                    )}
+                                    onClick={() => setDeletingPortfolio(portfolio)}
+                                    aria-label={`Delete ${portfolio.name}`}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {getPortfolioProjectCount(portfolio.id) > 0
+                                    ? `Cannot delete: contains ${getPortfolioProjectCount(portfolio.id)} project(s). Only empty portfolios can be deleted.`
+                                    : 'Delete empty portfolio'}
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
-                            <div role="button" tabIndex={0} className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer" onClick={() => setDeletingPortfolio(portfolio)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="p-0">
@@ -1208,21 +1217,49 @@ export default function ProjectsDashboard() {
       </AlertDialog>
       <AlertDialog open={!!deletingPortfolio} onOpenChange={(isOpen) => !isOpen && setDeletingPortfolio(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will move the portfolio &quot;{deletingPortfolio?.name}&quot; and all its projects to the Trash. They will be permanently deleted after 30 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePortfolio}
-              className={cn(buttonVariants({ variant: 'destructive' }))}
-            >
-              Move to Trash
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {deletingPortfolio && getPortfolioProjectCount(deletingPortfolio.id) > 0 ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  Cannot Delete Portfolio
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2 pt-1 text-sm text-muted-foreground">
+                  <span>
+                    The portfolio <strong className="text-foreground">&quot;{deletingPortfolio.name}&quot;</strong> cannot be deleted because it contains{' '}
+                    <strong className="text-foreground">
+                      {getPortfolioProjectCount(deletingPortfolio.id)}{' '}
+                      {getPortfolioProjectCount(deletingPortfolio.id) === 1 ? 'project' : 'projects'}
+                    </strong>.
+                  </span>
+                  <span className="block text-xs text-muted-foreground/90">
+                    Only empty portfolios can be deleted. Please reassign or delete all projects belonging to this portfolio before deleting it.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeletingPortfolio(null)}>Close</AlertDialogCancel>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to move the empty portfolio &quot;{deletingPortfolio?.name}&quot; to the Trash? It will be permanently deleted after 30 days.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeletePortfolio}
+                  className={cn(buttonVariants({ variant: 'destructive' }))}
+                >
+                  Move to Trash
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </TooltipProvider>
