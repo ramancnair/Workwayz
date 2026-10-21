@@ -841,7 +841,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
                     {!presetAutoRun['minimal'] && (
                       <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
-                        Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        Simulation disabled. Projects will be generated in fresh planning state with all work items in &quot;To Do&quot;.
                       </div>
                     )}
 
@@ -989,7 +989,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
                     {!presetAutoRun['standard'] && (
                       <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
-                        Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        Simulation disabled. Projects will be generated in fresh planning state with all work items in &quot;To Do&quot;.
                       </div>
                     )}
 
@@ -1132,7 +1132,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
                     {!presetAutoRun['stress'] && (
                       <div className="p-2 rounded bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
-                        Simulation disabled. Projects will be generated in fresh planning state with all work items in "To Do".
+                        Simulation disabled. Projects will be generated in fresh planning state with all work items in &quot;To Do&quot;.
                       </div>
                     )}
 
@@ -1367,7 +1367,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Simulation disabled. All {totalCustomProjects} projects will be generated in fresh planning state with all work items in "To Do".
+                  Simulation disabled. All {totalCustomProjects} projects will be generated in fresh planning state with all work items in &quot;To Do&quot;.
                 </p>
               )}
             </div>
