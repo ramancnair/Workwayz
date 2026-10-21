@@ -33,7 +33,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings/database')) return 'Database';
   if (pathname.startsWith('/portfolio-settings/authentication')) return 'Authentication';
   if (pathname.startsWith('/portfolio-settings/ai-config')) return 'AI Config';
-  if (pathname.startsWith('/portfolio-settings/archive')) return 'Archive';
+  if (pathname.startsWith('/portfolio-settings/archive') || pathname.startsWith('/portfolio-settings/inactive')) return 'Inactive';
   if (pathname.startsWith('/portfolio-settings/test-data-studio')) return 'Test Data Studio';
   if (pathname.startsWith('/portfolio-settings/cron-jobs')) return 'Cron Jobs';
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
@@ -119,6 +119,8 @@ export function hasPagePermission(
     ? ['Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard']
     : (pageName === 'Project PromptBoard' || pageName === 'FP PM Dash' || pageName === 'PM Dashboard')
     ? ['Project PromptBoard', 'FP PM Dash', 'PM Dashboard']
+    : (pageName === 'Inactive' || pageName === 'Archive' || pageName === 'Inactive Projects')
+    ? ['Inactive', 'Archive', 'Inactive Projects']
     : [pageName];
 
   if (customPageAccess) {
@@ -497,6 +499,7 @@ export function getPermittedFallbackRoute(
         { name: 'Database', path: '/portfolio-settings/database' },
         { name: 'Authentication', path: '/portfolio-settings/authentication' },
         { name: 'AI Config', path: '/portfolio-settings/ai-config' },
+        { name: 'Inactive', path: '/portfolio-settings/archive' },
         { name: 'Archive', path: '/portfolio-settings/archive' },
         { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
         { name: 'Cron Jobs', path: '/portfolio-settings/cron-jobs' },

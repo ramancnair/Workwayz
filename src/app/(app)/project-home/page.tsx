@@ -36,7 +36,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -90,6 +91,7 @@ const projectSchema = z.object({
   status: z.enum(['Initial Estimation', 'Not Started', 'Active', 'On Hold', 'Completed', 'Cancelled'] as const).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  isArchived: z.boolean().optional(),
 });
 
 function HealthIndicator({ status, label }: { status?: RagStatus; label: string }) {
@@ -257,6 +259,28 @@ function ProjectDialogContent({
               )}
             />
           </div>
+          {editingProject && form.watch('status') !== 'Initial Estimation' && form.watch('status') !== 'Active' && (
+            <FormField
+              control={form.control}
+              name="isArchived"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/30">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">Inactive Project</FormLabel>
+                    <FormDescription className="text-xs">
+                      Mark this project as inactive to move it to the Inactive Projects tab.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={!!field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
           <DialogFooter>
             <Button type="submit">{editingProject ? 'Save Changes' : 'Create Project'}</Button>
           </DialogFooter>
@@ -287,7 +311,7 @@ export default function ProjectsDashboard() {
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation' },
+    defaultValues: { name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', isArchived: false },
   });
 
   const portfolioForm = useForm<z.infer<typeof portfolioSchema>>({
@@ -385,9 +409,10 @@ export default function ProjectsDashboard() {
           status: editingProject.status || 'Initial Estimation',
           startDate: editingProject.startDate ? format(parseISO(editingProject.startDate), 'yyyy-MM-dd') : '',
           endDate: editingProject.endDate ? format(parseISO(editingProject.endDate), 'yyyy-MM-dd') : '',
+          isArchived: !!editingProject.isArchived,
         });
       } else {
-        form.reset({ name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '' });
+        form.reset({ name: '', portfolioId: '', pricingModel: 'T&M', projectManagerId: '', status: 'Initial Estimation', startDate: '', endDate: '', isArchived: false });
       }
     }
   }, [isDialogOpen, editingProject, form]);
@@ -542,6 +567,19 @@ export default function ProjectsDashboard() {
           updateData.timeStatus = null;
           updateData.statusComments = '';
         }
+
+        // Projects with status other than Initial Estimation or Active can be inactive
+        if (values.status !== 'Initial Estimation' && values.status !== 'Active') {
+          if (values.isArchived !== undefined) {
+            updateData.isArchived = values.isArchived;
+            updateData.archivedAt = values.isArchived ? (editingProject.archivedAt || new Date().toISOString()) : null;
+          }
+        } else {
+          // If status is Initial Estimation or Active, it cannot be inactive
+          updateData.isArchived = false;
+          updateData.archivedAt = null;
+        }
+
         await updateDoc(projectRef, updateData);
         toast({ title: 'Success', description: 'Project updated successfully.' });
       } else {
@@ -616,13 +654,22 @@ export default function ProjectsDashboard() {
 
   const handleArchiveProject = async () => {
     if (!archivingProject || !db) return;
+    if (archivingProject.status === 'Initial Estimation' || archivingProject.status === 'Active') {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot Mark Inactive',
+        description: 'Projects with status Initial Estimation or Active cannot be moved to inactive.',
+      });
+      setArchivingProject(null);
+      return;
+    }
     try {
       const projectRef = doc(db, 'projects', archivingProject.id);
       await updateDoc(projectRef, { isArchived: true, archivedAt: new Date().toISOString() });
-      toast({ title: 'Success', description: `Project "${archivingProject.name}" archived.` });
+      toast({ title: 'Success', description: `Project "${archivingProject.name}" marked as inactive.` });
     } catch (error) {
-      console.error('Error archiving project:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not archive project.' });
+      console.error('Error marking project inactive:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not mark project as inactive.' });
     } finally {
       setArchivingProject(null);
     }
@@ -633,10 +680,10 @@ export default function ProjectsDashboard() {
     try {
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, { isArchived: false, archivedAt: null });
-      toast({ title: 'Success', description: `Project "${project.name}" restored successfully.` });
+      toast({ title: 'Success', description: `Project "${project.name}" reactivated successfully.` });
     } catch (error) {
-      console.error('Error restoring project:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not restore project.' });
+      console.error('Error reactivating project:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not reactivate project.' });
     }
   };
 
@@ -821,7 +868,7 @@ export default function ProjectsDashboard() {
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="active">Active Projects</TabsTrigger>
-            <TabsTrigger value="archive">Archived Projects</TabsTrigger>
+            <TabsTrigger value="archive">Inactive Projects</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active">
@@ -1039,14 +1086,14 @@ export default function ProjectsDashboard() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div className="flex items-center justify-end gap-1">
-                                        {project.status === 'Completed' && (
+                                        {project.status !== 'Initial Estimation' && project.status !== 'Active' && (
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <Button variant="ghost" size="icon" onClick={() => setArchivingProject(project)}>
                                                 <Archive className="h-4 w-4" />
                                               </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Archive Project</TooltipContent>
+                                            <TooltipContent>Mark Inactive</TooltipContent>
                                           </Tooltip>
                                         )}
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
@@ -1079,7 +1126,7 @@ export default function ProjectsDashboard() {
             <Card>
               <CardContent className="p-4">
                 <Input
-                  placeholder="Filter archived projects..."
+                  placeholder="Filter inactive projects..."
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
                   className="max-w-sm"
@@ -1088,20 +1135,20 @@ export default function ProjectsDashboard() {
               {isLoading ? (
                 <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span>Loading archived projects...</span>
+                  <span>Loading inactive projects...</span>
                 </div>
               ) : archivedProjectsByPortfolio.filter(p => p.projects.length > 0).length === 0 ? (
                 <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
                   <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <h3 className="text-base font-semibold mb-1">No archived projects</h3>
+                  <h3 className="text-base font-semibold mb-1">No inactive projects</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Projects that you archive will appear here.
+                    Projects that are marked inactive will appear here.
                   </p>
                 </div>
               ) : (
                 <Accordion type="multiple" value={archiveExpanded} onValueChange={setArchiveExpanded} className="w-full">
                   {archivedProjectsByPortfolio.map(portfolio => {
-                    if (portfolio.projects.length === 0) return null; // Only show portfolios with archived projects
+                    if (portfolio.projects.length === 0) return null; // Only show portfolios with inactive projects
                     return (
                       <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
                         <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
@@ -1109,7 +1156,7 @@ export default function ProjectsDashboard() {
                             <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                             <Folder className="h-5 w-5 text-muted-foreground" />
                             <span className="font-semibold text-muted-foreground">{portfolio.name}</span>
-                            <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'archived project' : 'archived projects'}</Badge>
+                            <Badge variant="outline">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'inactive project' : 'inactive projects'}</Badge>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-0">
@@ -1120,7 +1167,7 @@ export default function ProjectsDashboard() {
                                 <SortableHeader columnId="name">Project Name</SortableHeader>
                                 <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
                                 <SortableHeader columnId="status">Status</SortableHeader>
-                                <SortableHeader columnId="archivedAt">Archived On</SortableHeader>
+                                <SortableHeader columnId="archivedAt">Inactive Since</SortableHeader>
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -1151,7 +1198,7 @@ export default function ProjectsDashboard() {
                                               <RotateCcw className="h-4 w-4" />
                                             </Button>
                                           </TooltipTrigger>
-                                          <TooltipContent>Restore Project</TooltipContent>
+                                          <TooltipContent>Reactivate Project</TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
                                           <TooltipTrigger asChild>
@@ -1200,9 +1247,9 @@ export default function ProjectsDashboard() {
       <AlertDialog open={!!archivingProject} onOpenChange={(isOpen) => !isOpen && setArchivingProject(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Project</AlertDialogTitle>
+            <AlertDialogTitle>Mark Project as Inactive</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to move &quot;{archivingProject?.name}&quot; to the archive? You can restore it later if needed.
+              Are you sure you want to mark &quot;{archivingProject?.name}&quot; as inactive? You can reactivate it at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1210,7 +1257,7 @@ export default function ProjectsDashboard() {
             <AlertDialogAction
               onClick={handleArchiveProject}
             >
-              Archive
+              Mark Inactive
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

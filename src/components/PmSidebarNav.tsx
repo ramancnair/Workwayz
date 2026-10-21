@@ -308,7 +308,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'archive',
       href: '/portfolio-settings/archive',
-      label: 'Archive',
+      label: 'Inactive',
       icon: Archive,
       group: 'portfolio'
     },

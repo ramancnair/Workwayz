@@ -1461,7 +1461,7 @@ export const listProjectsTool = ai.defineTool(
 export const archiveProjectTool = ai.defineTool(
   {
     name: 'archiveProject',
-    description: 'Archives an active project, moving it to the Archived Projects tab on Project Home.',
+    description: 'Marks an active project as inactive, moving it to the Inactive Projects tab on Project Home.',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID to archive.'),
     }),

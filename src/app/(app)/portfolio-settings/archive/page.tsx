@@ -116,10 +116,10 @@ export default function ArchiveSettingsPage() {
     setIsSaving(true);
     try {
       await setDoc(doc(db, 'settings', 'archiveSettings'), values, { merge: true });
-      toast({ title: 'Success', description: 'Archive settings updated successfully.' });
+      toast({ title: 'Success', description: 'Inactive settings updated successfully.' });
     } catch (error) {
-      console.error('Error saving archive settings:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not update archive settings.' });
+      console.error('Error saving inactive settings:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update inactive settings.' });
     } finally {
       setIsSaving(false);
     }
@@ -146,7 +146,23 @@ export default function ArchiveSettingsPage() {
 
       if (values.autoArchiveCompletedProjects) {
         const thresholdDate = calculateDateThreshold(values.autoArchiveAfterMonths);
-        const eligible = projects.filter((p: any) => !p.isArchived && p.status === 'Completed' && p.endDate && new Date(p.endDate) < thresholdDate);
+        const eligible = projects.filter((p: any) => {
+          if (p.isArchived) return false;
+          // Projects with status Initial Estimation or Active cannot be moved to Inactive
+          if (p.status === 'Initial Estimation' || p.status === 'Active') return false;
+
+          // If timeframe is "0", immediately move Closed / On Hold / Cancelled
+          if (values.autoArchiveAfterMonths === '0') {
+            return p.status === 'Completed' || p.status === 'On Hold' || p.status === 'Cancelled';
+          }
+
+          // Otherwise: moved to closed/on hold/cancelled or if not active for specified period
+          const isClosedOnHoldCancelled = p.status === 'Completed' || p.status === 'On Hold' || p.status === 'Cancelled';
+          const refDate = p.updatedAt ? new Date(p.updatedAt) : (p.endDate ? new Date(p.endDate) : (p.startDate ? new Date(p.startDate) : null));
+          const isPastInactivity = refDate ? refDate < thresholdDate : false;
+
+          return isClosedOnHoldCancelled || isPastInactivity;
+        });
         toArchive.push(...eligible);
       }
 
@@ -160,14 +176,14 @@ export default function ArchiveSettingsPage() {
       setEligibleForDelete(toDelete);
       
       if (toArchive.length === 0 && toDelete.length === 0) {
-        toast({ title: 'No Projects Found', description: 'There are no projects eligible for archiving or deletion based on current settings.' });
+        toast({ title: 'No Projects Found', description: 'There are no projects eligible for deactivation or deletion based on current settings.' });
       } else {
         setShowConfirmDialog(true);
       }
 
     } catch (error) {
-      console.error("Failed to preview archiving objects", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to calculate archiving queue.' });
+      console.error("Failed to preview inactivity maintenance", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to calculate deactivation queue.' });
     } finally {
       setIsArchiving(false);
     }
@@ -193,11 +209,11 @@ export default function ArchiveSettingsPage() {
       });
 
       await Promise.all([...archivePromises, ...deletePromises]);
-      toast({ title: 'Success', description: 'Maintenance process completed successfully.' });
+      toast({ title: 'Success', description: 'Inactivity maintenance process completed successfully.' });
       setShowConfirmDialog(false);
     } catch (err) {
-      console.error("Error executing auto-archive", err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to complete the archiving process.' });
+      console.error("Error executing deactivation", err);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to complete the deactivation process.' });
     } finally {
       setIsArchiving(false);
     }
@@ -219,14 +235,14 @@ export default function ArchiveSettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <PageHeader 
-        title="Project Archiving" 
-        description="Configure rules for automatically archiving completed projects and expiring old archived data." 
+        title="Inactive Projects Settings" 
+        description="Configure rules for automatically moving inactive projects and expiring old inactive data." 
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Archive Settings</CardTitle>
-          <CardDescription>Determine when projects are moved to archive or permanently deleted from it.</CardDescription>
+          <CardTitle>Inactive Settings</CardTitle>
+          <CardDescription>Determine when projects are moved to inactive status or permanently deleted from it.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -239,9 +255,9 @@ export default function ArchiveSettingsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between shadow-sm">
                       <div className="space-y-0.5">
-                        <FormLabel>Auto-Archive Completed Projects</FormLabel>
+                        <FormLabel>Auto-Move Inactive Projects</FormLabel>
                         <FormDescription>
-                          Determine if completed projects should be automatically hidden from the active list.
+                          Automatically move projects with any status other than Initial Estimation or Active to Inactive if inactive for the specified period or if marked as Closed, On Hold, or Cancelled.
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -259,22 +275,23 @@ export default function ArchiveSettingsPage() {
                   name="autoArchiveAfterMonths"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Archive Timeframe</FormLabel>
+                      <FormLabel>Inactivity Timeframe</FormLabel>
                       <Select disabled={!form.watch('autoArchiveCompletedProjects')} onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select months" />
+                            <SelectValue placeholder="Select timeframe" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">1 Month after Completion</SelectItem>
-                          <SelectItem value="3">3 Months after Completion</SelectItem>
-                          <SelectItem value="6">6 Months after Completion</SelectItem>
-                          <SelectItem value="12">12 Months after Completion</SelectItem>
+                          <SelectItem value="0">Immediately on Closed / On Hold / Cancelled</SelectItem>
+                          <SelectItem value="1">1 Month of Inactivity</SelectItem>
+                          <SelectItem value="3">3 Months of Inactivity</SelectItem>
+                          <SelectItem value="6">6 Months of Inactivity</SelectItem>
+                          <SelectItem value="12">12 Months of Inactivity</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Based on the project&apos;s End Date.
+                        Based on the project&apos;s last activity, update date, or completion date.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -289,9 +306,9 @@ export default function ArchiveSettingsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between shadow-sm">
                       <div className="space-y-0.5">
-                        <FormLabel>Auto-Delete Archived Projects</FormLabel>
+                        <FormLabel>Auto-Delete Inactive Projects</FormLabel>
                         <FormDescription>
-                          Sweep old archived projects to the Trash to save space and reduce clutter.
+                          Sweep old inactive projects to the Trash to save space and reduce clutter.
                         </FormDescription>
                       </div>
                       <FormControl>
@@ -327,7 +344,7 @@ export default function ArchiveSettingsPage() {
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Based on when the project was archived.
+                          Based on when the project became inactive.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -363,7 +380,7 @@ export default function ArchiveSettingsPage() {
                 </Button>
                 <div className="flex-1" />
                 <Button type="button" variant="outline" onClick={handlePreviewArchiving} disabled={isArchiving || isSaving}>
-                  <ArchiveRestore className="mr-2 h-4 w-4" /> Run Manual Archiving
+                  <ArchiveRestore className="mr-2 h-4 w-4" /> Run Manual Deactivation
                 </Button>
               </div>
             </form>
@@ -378,8 +395,8 @@ export default function ArchiveSettingsPage() {
             <AlertDialogDescription className="space-y-2">
               <p>Based on your current settings, the following actions will be performed:</p>
               <ul className="list-disc pl-5">
-                <li><strong>{eligibleForArchive.length}</strong> active projects will be moved to Archive.</li>
-                <li><strong>{eligibleForDelete.length}</strong> archived projects will be sent to the Trash.</li>
+                <li><strong>{eligibleForArchive.length}</strong> active projects will be moved to Inactive.</li>
+                <li><strong>{eligibleForDelete.length}</strong> inactive projects will be sent to the Trash.</li>
               </ul>
               <p className="pt-2">Depending on the amount of data, this may take a moment. Ensure no one is actively editing these projects.</p>
             </AlertDialogDescription>
