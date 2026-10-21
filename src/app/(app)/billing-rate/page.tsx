@@ -552,18 +552,22 @@ export default function BillingRatePage() {
 
   const getAccessLevelBadge = (level: AccessLevel) => {
     switch (level) {
+      case 'Super Admin':
+        return <Badge className="bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-800/50 text-[10px] whitespace-nowrap">Super Admin</Badge>;
       case 'Administrator':
-        return <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-200 text-[10px]">Admin</Badge>;
+        return <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 text-[10px] whitespace-nowrap">Admin</Badge>;
       case 'Senior Management':
-        return <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-200 text-[10px]">Sr. Mgmt</Badge>;
+        return <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50 text-[10px] whitespace-nowrap">Sr. Mgmt</Badge>;
       case 'Project Manager':
-        return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-200 text-[10px]">PM</Badge>;
+        return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 text-[10px] whitespace-nowrap">PM</Badge>;
       case 'Lead':
-        return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 text-[10px]">Lead</Badge>;
+        return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 text-[10px] whitespace-nowrap">Lead</Badge>;
       case 'PMO':
-        return <Badge className="bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-200 text-[10px]">PMO</Badge>;
+        return <Badge className="bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800/50 text-[10px] whitespace-nowrap">PMO</Badge>;
+      case 'Team Member':
+        return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 text-[10px] whitespace-nowrap">Team Member</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px] text-muted-foreground">Team Member</Badge>;
+        return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 text-[10px] whitespace-nowrap">{level || 'Team Member'}</Badge>;
     }
   };
 
