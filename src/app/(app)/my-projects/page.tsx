@@ -17,7 +17,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { getProjectLandingPage } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { Briefcase, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
-import { defaultDemoProject } from '@/lib/mock-data';
+
 
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -98,7 +98,7 @@ export default function MyProjectsPage() {
   // Listen to all projects
   useEffect(() => {
     if (!db) {
-      setAllProjects([defaultDemoProject]);
+      setAllProjects([]);
       return;
     }
     const q = query(collection(db, 'projects'), where('isDeleted', '!=', true));
@@ -106,10 +106,10 @@ export default function MyProjectsPage() {
       const projectsData = snapshot.docs
         .map((doc: any) => ({ ...doc.data(), id: doc.id } as Project))
         .filter((p: any) => !p.isArchived);
-      setAllProjects(projectsData.length > 0 ? projectsData : [defaultDemoProject]);
+      setAllProjects(projectsData);
     }, (err: any) => {
       console.warn('[MyProjects] Projects listener error:', err);
-      setAllProjects([defaultDemoProject]);
+      setAllProjects([]);
     });
     return () => unsub();
   }, []);

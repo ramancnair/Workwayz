@@ -52,42 +52,12 @@ const sanitizeForFirestore = (data: any) => {
 
 
 import { ProjectContext, type ProjectContextType } from './ProjectContext';
-import {
-  defaultDemoProject,
-  stories as mockStories,
-  epics as mockEpics,
-  sprints as mockSprints,
-  employees as mockEmployees,
-  testCases as mockTestCases,
-  risks as mockRisks,
-  assumptions as mockAssumptions,
-  issues as mockIssues,
-  dependencies as mockDependencies,
-  releases as mockReleases,
-} from '@/lib/mock-data';
 
 const defaultKanbanColumns: Omit<KanbanColumn, 'id'>[] = [
   { name: 'To Do', order: 0, isDefault: true, isDoneColumn: false },
   { name: 'In Progress', order: 1, isDefault: true, isDoneColumn: false },
   { name: 'Done', order: 2, isDefault: true, isDoneColumn: true },
 ];
-
-const getMockCollection = (name: string): any[] | null => {
-  switch (name) {
-    case 'stories': return mockStories;
-    case 'epics': return mockEpics;
-    case 'sprints': return mockSprints;
-    case 'employees': return mockEmployees;
-    case 'testCases': return mockTestCases;
-    case 'risks': return mockRisks;
-    case 'assumptions': return mockAssumptions;
-    case 'issues': return mockIssues;
-    case 'dependencies': return mockDependencies;
-    case 'releases': return mockReleases;
-    case 'kanbanColumns': return defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` }));
-    default: return null;
-  }
-};
 
 const defaultProjectSettings: Omit<ProjectSettings, 'id'> = {
   sprintDurationInWeeks: 2,
@@ -439,25 +409,23 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
         if (snapshot.docs) { // QuerySnapshot
           const data = snapshot.docs.map(formatData);
-          setState(data.length > 0 ? data : (getMockCollection(name) || []));
+          setState(data);
         } else if (snapshot.exists()) { // DocumentSnapshot
           setState(formatData(snapshot));
         } else {
           if (name === 'settings') {
             setDoc(doc(rootProjectDocRef, 'settings', 'main'), defaultProjectSettings).catch((e: any) => console.error("Failed to set default project settings", e));
           } else if (name === 'project') {
-            setState({ ...defaultDemoProject, id: projectId });
-          } else {
-            setState(isDoc ? null : (getMockCollection(name) || []));
+            setError(`Project with ID "${projectId}" not found.`);
           }
+          setState(isDoc ? null : []);
         }
       }, (err: any) => {
         console.warn(`[FirebaseProjectProvider] Data access warning for ${name}:`, err.message);
         if (name === 'project') {
-          setState({ ...defaultDemoProject, id: projectId });
-        } else {
-          setState(isDoc ? null : (getMockCollection(name) || []));
+          setError(`Failed to listen to project ${projectId}: ${err.message}`);
         }
+        setState(isDoc ? null : []);
       });
     });
 

@@ -71,6 +71,7 @@ import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import type { Project, User, AccessLevel, ImpactedSystem, Horizontal } from '@/types';
 
 const SYSTEM_ACCESS_LEVELS: AccessLevel[] = [
+  'Super Admin',
   'Administrator',
   'Senior Management',
   'Project Manager',
@@ -172,10 +173,13 @@ export default function BillingRatePage() {
 
           setProjectsList(rawProjects.map((p) => ({ id: p.id, name: p.name })));
 
-          // Fetch global users map for accurate access level resolution
-          const usersSnapshot = await getDocs(collection(db, 'users'));
+          // Fetch global users and employees map for accurate access level resolution
+          const [usersSnapshot, employeesSnapshot] = await Promise.all([
+            getDocs(collection(db, 'users')).catch(() => ({ docs: [] })),
+            getDocs(collection(db, 'employees')).catch(() => ({ docs: [] })),
+          ]);
           const userAccessMap: Record<string, AccessLevel> = {};
-          usersSnapshot.docs.forEach((uDoc: any) => {
+          [...usersSnapshot.docs, ...employeesSnapshot.docs].forEach((uDoc: any) => {
             const uData = uDoc.data() as User;
             const access = (uData.accessLevel || 'Team Member') as AccessLevel;
             if (uData.empId) userAccessMap[uData.empId.toLowerCase()] = access;
@@ -553,11 +557,16 @@ export default function BillingRatePage() {
   const getAccessLevelBadge = (level: AccessLevel) => {
     switch (level) {
       case 'Super Admin':
-        return <Badge className="bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-800/50 text-[10px] whitespace-nowrap">Super Admin</Badge>;
+        return (
+          <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700/60 font-semibold text-[10px] whitespace-nowrap gap-1 inline-flex items-center">
+            <ShieldCheck className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+            Super Admin
+          </Badge>
+        );
       case 'Administrator':
         return <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 text-[10px] whitespace-nowrap">Admin</Badge>;
       case 'Senior Management':
-        return <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50 text-[10px] whitespace-nowrap">Sr. Mgmt</Badge>;
+        return <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/50 text-[10px] whitespace-nowrap">Senior Management</Badge>;
       case 'Project Manager':
         return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 text-[10px] whitespace-nowrap">PM</Badge>;
       case 'Lead':
@@ -572,7 +581,7 @@ export default function BillingRatePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader
         title="Billing Rates"
         description="Master directory of resource daily billing rates, internal costs, profit margins, access levels & role benchmarks across all projects."
@@ -1053,10 +1062,7 @@ export default function BillingRatePage() {
                       {accessLevelBenchmarks.map((bm) => (
                         <TableRow key={bm.name} className="hover:bg-muted/40">
                           <TableCell className="font-semibold text-xs">
-                            <div className="flex items-center gap-2">
-                              {getAccessLevelBadge(bm.name as AccessLevel)}
-                              <span className="text-foreground">{bm.name}</span>
-                            </div>
+                            {getAccessLevelBadge(bm.name as AccessLevel)}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className="text-xs font-mono">
