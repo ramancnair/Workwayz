@@ -684,4 +684,5 @@ export type ArchiveSettings = {
   autoDeleteArchivedProjects: boolean;
   autoDeleteAfterMonths: string;
   customDeleteMonths?: number;
+  customDeleteYears?: number;
 };

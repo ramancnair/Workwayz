@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { collection, onSnapshot, setDoc, doc, getDocs, updateDoc, Timestamp, query, where } from '@/lib/db-provider';
+import { onSnapshot, setDoc, doc } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -25,40 +25,38 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArchiveRestore } from 'lucide-react';
-import type { Project, ArchiveSettings } from '@/types';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { Loader2 } from 'lucide-react';
+import type { ArchiveSettings } from '@/types';
 
 const archiveSettingsSchema = z.object({
   autoArchiveCompletedProjects: z.boolean(),
   autoArchiveAfterMonths: z.string(),
   autoDeleteArchivedProjects: z.boolean(),
   autoDeleteAfterMonths: z.string(),
+  customDeleteYears: z.number().int().min(1).max(20).optional(),
   customDeleteMonths: z.number().int().min(1).optional(),
 });
 
 type SettingsFormValues = z.infer<typeof archiveSettingsSchema>;
 
+const getYearsFromMonths = (months?: number, years?: number): number => {
+  if (years && years >= 1 && years <= 20) return years;
+  if (!months) return 4;
+  if (months % 12 === 0) {
+    return Math.min(20, Math.max(1, months / 12));
+  }
+  if (months >= 1 && months <= 20) {
+    return months;
+  }
+  return Math.min(20, Math.max(1, Math.round(months / 12)));
+};
+
 export default function ArchiveSettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
-  const [eligibleForArchive, setEligibleForArchive] = useState<Project[]>([]);
-  const [eligibleForDelete, setEligibleForDelete] = useState<Project[]>([]);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const { toast } = useToast();
 
@@ -68,8 +66,9 @@ export default function ArchiveSettingsPage() {
       autoArchiveCompletedProjects: false,
       autoArchiveAfterMonths: "1",
       autoDeleteArchivedProjects: false,
-      autoDeleteAfterMonths: "3",
-      customDeleteMonths: 4,
+      autoDeleteAfterMonths: "12",
+      customDeleteYears: 4,
+      customDeleteMonths: 48,
     },
   });
 
@@ -94,12 +93,16 @@ export default function ArchiveSettingsPage() {
     const unsub = onSnapshot(doc(db, 'settings', 'archiveSettings'), (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as ArchiveSettings;
+        const initialYears = getYearsFromMonths(data.customDeleteMonths, data.customDeleteYears);
         form.reset({
           autoArchiveCompletedProjects: data.autoArchiveCompletedProjects ?? false,
           autoArchiveAfterMonths: data.autoArchiveAfterMonths ?? '1',
           autoDeleteArchivedProjects: data.autoDeleteArchivedProjects ?? false,
-          autoDeleteAfterMonths: data.autoDeleteAfterMonths ?? '3',
-          customDeleteMonths: data.customDeleteMonths ?? 4,
+          autoDeleteAfterMonths: (data.autoDeleteAfterMonths === '3' || data.autoDeleteAfterMonths === '6')
+            ? '12'
+            : (data.autoDeleteAfterMonths ?? '12'),
+          customDeleteYears: initialYears,
+          customDeleteMonths: initialYears * 12,
         });
       }
       setIsLoading(false);
@@ -115,107 +118,19 @@ export default function ArchiveSettingsPage() {
     if (!db) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'archiveSettings'), values, { merge: true });
+      const years = values.customDeleteYears ?? 4;
+      const dataToSave = {
+        ...values,
+        customDeleteYears: years,
+        customDeleteMonths: years * 12,
+      };
+      await setDoc(doc(db, 'settings', 'archiveSettings'), dataToSave, { merge: true });
       toast({ title: 'Success', description: 'Inactive settings updated successfully.' });
     } catch (error) {
       console.error('Error saving inactive settings:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update inactive settings.' });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const calculateDateThreshold = (monthsStr: string, customMonths?: number) => {
-    const months = monthsStr === 'Custom' ? (customMonths || 0) : parseInt(monthsStr, 10);
-    const date = new Date();
-    date.setMonth(date.getMonth() - months);
-    return date;
-  };
-
-  const handlePreviewArchiving = async () => {
-    if (!db) return;
-    try {
-      setIsArchiving(true);
-      const values = form.getValues();
-      
-      const projectsSnap = await getDocs(query(collection(db, 'projects'), where('isDeleted', '!=', true)));
-      const projects = projectsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Project));
-
-      const toArchive: Project[] = [];
-      const toDelete: Project[] = [];
-
-      if (values.autoArchiveCompletedProjects) {
-        const thresholdDate = calculateDateThreshold(values.autoArchiveAfterMonths);
-        const eligible = projects.filter((p: any) => {
-          if (p.isArchived) return false;
-          // Projects with status Initial Estimation or Active cannot be moved to Inactive
-          if (p.status === 'Initial Estimation' || p.status === 'Active') return false;
-
-          // If timeframe is "0", immediately move Closed / On Hold / Cancelled
-          if (values.autoArchiveAfterMonths === '0') {
-            return p.status === 'Completed' || p.status === 'On Hold' || p.status === 'Cancelled';
-          }
-
-          // Otherwise: moved to closed/on hold/cancelled or if not active for specified period
-          const isClosedOnHoldCancelled = p.status === 'Completed' || p.status === 'On Hold' || p.status === 'Cancelled';
-          const refDate = p.updatedAt ? new Date(p.updatedAt) : (p.endDate ? new Date(p.endDate) : (p.startDate ? new Date(p.startDate) : null));
-          const isPastInactivity = refDate ? refDate < thresholdDate : false;
-
-          return isClosedOnHoldCancelled || isPastInactivity;
-        });
-        toArchive.push(...eligible);
-      }
-
-      if (values.autoDeleteArchivedProjects) {
-        const thresholdDate = calculateDateThreshold(values.autoDeleteAfterMonths, values.customDeleteMonths);
-        const eligible = projects.filter((p: any) => p.isArchived && p.archivedAt && new Date(p.archivedAt) < thresholdDate);
-        toDelete.push(...eligible);
-      }
-
-      setEligibleForArchive(toArchive);
-      setEligibleForDelete(toDelete);
-      
-      if (toArchive.length === 0 && toDelete.length === 0) {
-        toast({ title: 'No Projects Found', description: 'There are no projects eligible for deactivation or deletion based on current settings.' });
-      } else {
-        setShowConfirmDialog(true);
-      }
-
-    } catch (error) {
-      console.error("Failed to preview inactivity maintenance", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to calculate deactivation queue.' });
-    } finally {
-      setIsArchiving(false);
-    }
-  };
-
-  const executeArchiving = async () => {
-    if (!db) return;
-    try {
-      setIsArchiving(true);
-      
-      const archivePromises = eligibleForArchive.map(p => {
-        return updateDoc(doc(db!, 'projects', p.id), { 
-          isArchived: true, 
-          archivedAt: new Date().toISOString() 
-        });
-      });
-      
-      const deletePromises = eligibleForDelete.map(p => {
-        return updateDoc(doc(db!, 'projects', p.id), { 
-          isDeleted: true, 
-          deletedAt: Timestamp.now() 
-        });
-      });
-
-      await Promise.all([...archivePromises, ...deletePromises]);
-      toast({ title: 'Success', description: 'Inactivity maintenance process completed successfully.' });
-      setShowConfirmDialog(false);
-    } catch (err) {
-      console.error("Error executing deactivation", err);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to complete the deactivation process.' });
-    } finally {
-      setIsArchiving(false);
     }
   };
 
@@ -276,7 +191,7 @@ export default function ArchiveSettingsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Inactivity Timeframe</FormLabel>
-                      <Select disabled={!form.watch('autoArchiveCompletedProjects')} onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select disabled={!form.watch('autoArchiveCompletedProjects')} onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select timeframe" />
@@ -328,15 +243,13 @@ export default function ArchiveSettingsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Delete Timeframe</FormLabel>
-                        <Select disabled={!form.watch('autoDeleteArchivedProjects')} onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select disabled={!form.watch('autoDeleteArchivedProjects')} onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select timeframe" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="3">3 Months</SelectItem>
-                            <SelectItem value="6">6 Months</SelectItem>
                             <SelectItem value="12">1 Year</SelectItem>
                             <SelectItem value="24">2 Years</SelectItem>
                             <SelectItem value="36">3 Years</SelectItem>
@@ -354,18 +267,32 @@ export default function ArchiveSettingsPage() {
                   {watchAutoDelete === 'Custom' && (
                     <FormField
                       control={form.control}
-                      name="customDeleteMonths"
+                      name="customDeleteYears"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Custom Months</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              disabled={!form.watch('autoDeleteArchivedProjects')}
-                              {...field}
-                              onChange={e => field.onChange(parseInt(e.target.value, 10))}
-                            />
-                          </FormControl>
+                          <FormLabel>Custom Years</FormLabel>
+                          <Select
+                            disabled={!form.watch('autoDeleteArchivedProjects')}
+                            onValueChange={(val) => {
+                              const numVal = parseInt(val, 10);
+                              field.onChange(numVal);
+                              form.setValue('customDeleteMonths', numVal * 12);
+                            }}
+                            value={field.value ? field.value.toString() : '4'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select years" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Array.from({ length: 20 }, (_, i) => i + 1).map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year} {year === 1 ? 'Year' : 'Years'}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -378,37 +305,11 @@ export default function ArchiveSettingsPage() {
                 <Button type="submit" disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Settings
                 </Button>
-                <div className="flex-1" />
-                <Button type="button" variant="outline" onClick={handlePreviewArchiving} disabled={isArchiving || isSaving}>
-                  <ArchiveRestore className="mr-2 h-4 w-4" /> Run Manual Deactivation
-                </Button>
               </div>
             </form>
           </Form>
         </CardContent>
       </Card>
-
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Maintenance</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Based on your current settings, the following actions will be performed:</p>
-              <ul className="list-disc pl-5">
-                <li><strong>{eligibleForArchive.length}</strong> active projects will be moved to Inactive.</li>
-                <li><strong>{eligibleForDelete.length}</strong> inactive projects will be sent to the Trash.</li>
-              </ul>
-              <p className="pt-2">Depending on the amount of data, this may take a moment. Ensure no one is actively editing these projects.</p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={executeArchiving} className="bg-primary text-primary-foreground">
-              Execute Maintenance
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
