@@ -377,14 +377,14 @@ export default function MyAccountPage() {
           <div className="flex items-center space-x-6 flex-wrap gap-y-4">
             <Avatar className="h-24 w-24 border shadow-sm shrink-0">
               <AvatarImage src={user.avatar} alt={user.name} className="object-cover" />
-              <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
+              <AvatarFallback className="text-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
                 {getUserInitials(user.firstName, user.lastName, user.name)}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
               <div>
                 <h3 className="text-xl font-semibold leading-tight">{user.name || 'User'}</h3>
-                <p className="text-sm font-medium text-primary mt-0.5">{user.accessLevel || user.role || 'Team Member'}</p>
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{user.accessLevel || user.role || 'Team Member'}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
