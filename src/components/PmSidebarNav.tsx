@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
-import { SetupWizard } from "@/components/SetupWizard";
 import { 
   SidebarContent,
   SidebarHeader,
@@ -46,7 +45,6 @@ import {
   Database,
   Bot,
   Key,
-  Wand2,
   Archive,
   Calculator,
   Bug,
@@ -73,7 +71,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const { toggleSidebar } = useSidebar();
   const { isEnabled: isTestDataStudioEnabled } = useTestDataStudio();
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string; empId?: string; id?: string }>({ name: '', email: '', avatar: '' });
-  const [showWizard, setShowWizard] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {
@@ -295,17 +292,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'portfolio'
     },
     {
-      id: 'setup-wizard',
-      href: '#',
-      label: 'Setup Wizard',
-      icon: Wand2,
-      group: 'portfolio',
-      onClick: (e: any) => {
-        e.preventDefault();
-        setShowWizard(true);
-      }
-    },
-    {
       id: 'archive',
       href: '/portfolio-settings/archive',
       label: 'Inactive',
@@ -483,7 +469,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarFooter>
-      {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
     </>
   );
 }
