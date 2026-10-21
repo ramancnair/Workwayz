@@ -57,6 +57,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   }, [project, isLoading, basePath, pathname]);
 
   const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
+  const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
   const isTestingPath = pathname.startsWith(`${basePath}/testing`);
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
@@ -78,10 +79,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isGovernancePath) return 'governance';
     if (isHolidaysPath) return 'holidays';
     if (isPmoPath) return 'pmo';
-    if (pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`)) return 'settings';
-    if (pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`)) return 'trash';
+    if (isSettingsPath) return 'settings';
+    if (isTrashPath) return 'trash';
     if (pathname.startsWith('/my-account')) return 'my-account';
-    return ''; // No active tab for settings
+    return '';
   };
 
   const getDefaultRouteForTab = (tabKey: string) => {
@@ -186,13 +187,14 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
   const renderContent = () => {
     const showInitialTabsOnly = project?.status === 'Initial Estimation' || project?.status === 'Not Started';
+    const activeTab = getTabValue();
 
     return (
       <>
         <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4 overflow-hidden shrink-0">
           <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
             <TooltipProvider delayDuration={150}>
-              <Tabs value={getTabValue()} onValueChange={onTabChange} className="w-auto">
+              <Tabs value={activeTab} onValueChange={onTabChange} className="w-auto">
                 <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
                 {(hasAccess('Specifications (Initial Estimation)') || hasAccess('Project Status (Initial Estimation)')) && (
                   <TabsTrigger 
@@ -249,34 +251,52 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                       </TabsTrigger>
                     )}
                     {(hasAccess('Board Settings') || hasAccess('Sprint Settings') || hasAccess('Effort Settings')) && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <TabsTrigger value="settings" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
-                            <Link href={getDefaultRouteForTab('settings')} className="flex items-center justify-center" aria-label="Project Settings">
-                              <Settings className="h-4 w-4" />
-                              <span className="sr-only">Project Settings</span>
-                            </Link>
-                          </TabsTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Project Settings</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <TabsTrigger
+                        value="settings"
+                        asChild
+                        className={cn(
+                          "data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5",
+                          activeTab === 'settings' && "bg-background text-foreground font-semibold border border-emerald-500/40 shadow-sm"
+                        )}
+                      >
+                        <Link href={getDefaultRouteForTab('settings')} className="flex items-center justify-center" aria-label="Project Settings">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center justify-center">
+                                <Settings className="h-4 w-4" />
+                                <span className="sr-only">Project Settings</span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Project Settings</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </Link>
+                      </TabsTrigger>
                     )}
                     {hasAccess('Project Trash') && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5">
-                            <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Project Trash">
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Project Trash</span>
-                            </Link>
-                          </TabsTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Project Trash</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <TabsTrigger
+                        value="trash"
+                        asChild
+                        className={cn(
+                          "data-[state=active]:bg-background data-[state=active]:text-foreground px-2.5",
+                          activeTab === 'trash' && "bg-background text-foreground font-semibold border border-emerald-500/40 shadow-sm"
+                        )}
+                      >
+                        <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Project Trash">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center justify-center">
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Project Trash</span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Project Trash</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </Link>
+                      </TabsTrigger>
                     )}
                   </>
                 )}

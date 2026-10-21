@@ -15,6 +15,7 @@ import { collection, query, where, getDocs } from '@/lib/db-provider';
 import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 type AccessLevel = 'Super Admin' | 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -198,34 +199,52 @@ export default function AppLayout({ children }: PropsWithChildren) {
                               </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <TabsTrigger value="portfolios" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5">
-                                    <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
-                                      <Settings className="h-4 w-4" />
-                                      <span className="sr-only">Portfolio Settings</span>
-                                    </Link>
-                                  </TabsTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">
-                                  <p>Portfolio Settings</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <TabsTrigger
+                                value="portfolios"
+                                asChild
+                                className={cn(
+                                  "data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
+                                  activeTab === 'portfolios' && "bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
+                                )}
+                              >
+                                <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="flex items-center justify-center">
+                                        <Settings className="h-4 w-4" />
+                                        <span className="sr-only">Portfolio Settings</span>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      <p>Portfolio Settings</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </Link>
+                              </TabsTrigger>
                             )}
                             {(hasAccess('Portfolio Trash') || hasAccess('Trash')) && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <TabsTrigger value="trash" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5">
-                                    <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Portfolio Trash">
-                                      <Trash2 className="h-4 w-4" />
-                                      <span className="sr-only">Portfolio Trash</span>
-                                    </Link>
-                                  </TabsTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom">
-                                  <p>Portfolio Trash</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <TabsTrigger
+                                value="trash"
+                                asChild
+                                className={cn(
+                                  "data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
+                                  activeTab === 'trash' && "bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
+                                )}
+                              >
+                                <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Portfolio Trash">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="flex items-center justify-center">
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Portfolio Trash</span>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      <p>Portfolio Trash</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </Link>
+                              </TabsTrigger>
                             )}
                           </>
                         )}

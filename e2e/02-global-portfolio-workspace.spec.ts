@@ -64,6 +64,9 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await page.goto('/portfolio-settings/access-settings', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Access Settings|Permissions|Administrator|Roles/i);
 
+    const activeSettingsTab = page.locator('a[role="tab"][data-state="active"]').filter({ has: page.locator('svg') });
+    await expect(activeSettingsTab).toBeVisible({ timeout: 10000 });
+
     await page.goto('/portfolio-settings/database', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Database|Engine|Firestore|Supabase/i);
   });
@@ -71,5 +74,8 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
   test('TC-PORT-009: Portfolio Trash renders soft-deleted item recovery controls', async ({ page }) => {
     await page.goto('/portfolio-trash', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Trash|Deleted|Restore|Empty/i);
+
+    const activeTrashTab = page.locator('a[role="tab"][data-state="active"]').filter({ has: page.locator('svg') });
+    await expect(activeTrashTab).toBeVisible({ timeout: 10000 });
   });
 });
