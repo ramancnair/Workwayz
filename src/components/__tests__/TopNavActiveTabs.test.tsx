@@ -1,9 +1,10 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Settings, Trash2 } from 'lucide-react';
+import { Settings, Trash2, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
@@ -12,7 +13,7 @@ function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
       <Tabs value={activeTab}>
         <TabsList>
           <TabsTrigger value="my-projects" asChild>
-            <a href="/my-projects">My Projects</a>
+            <Link href="/my-projects">My Projects</Link>
           </TabsTrigger>
           <TabsTrigger
             value="portfolios"
@@ -22,7 +23,7 @@ function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
               activeTab === 'portfolios' && "bg-background text-emerald-600 font-semibold"
             )}
           >
-            <a href="/portfolio-settings" aria-label="Portfolio Settings">
+            <Link href="/portfolio-settings" aria-label="Portfolio Settings">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center justify-center">
@@ -32,7 +33,7 @@ function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Portfolio Settings</TooltipContent>
               </Tooltip>
-            </a>
+            </Link>
           </TabsTrigger>
           <TabsTrigger
             value="trash"
@@ -42,7 +43,7 @@ function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
               activeTab === 'trash' && "bg-background text-emerald-600 font-semibold"
             )}
           >
-            <a href="/portfolio-trash" aria-label="Portfolio Trash">
+            <Link href="/portfolio-trash" aria-label="Portfolio Trash">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center justify-center">
@@ -52,7 +53,7 @@ function MockPortfolioTopNav({ activeTab }: { activeTab: string }) {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Portfolio Trash</TooltipContent>
               </Tooltip>
-            </a>
+            </Link>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -66,7 +67,7 @@ function MockProjectTopNav({ activeTab }: { activeTab: string }) {
       <Tabs value={activeTab}>
         <TabsList>
           <TabsTrigger value="project" asChild>
-            <a href="/projects/P1/project-details">Project Details</a>
+            <Link href="/projects/P1/project-details">Project Details</Link>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -76,7 +77,7 @@ function MockProjectTopNav({ activeTab }: { activeTab: string }) {
               activeTab === 'settings' && "bg-background text-foreground font-semibold border border-emerald-500/40 shadow-sm"
             )}
           >
-            <a href="/projects/P1/project-settings/board" aria-label="Project Settings">
+            <Link href="/projects/P1/project-settings/board" aria-label="Project Settings">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center justify-center">
@@ -86,7 +87,7 @@ function MockProjectTopNav({ activeTab }: { activeTab: string }) {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Project Settings</TooltipContent>
               </Tooltip>
-            </a>
+            </Link>
           </TabsTrigger>
           <TabsTrigger
             value="trash"
@@ -96,7 +97,7 @@ function MockProjectTopNav({ activeTab }: { activeTab: string }) {
               activeTab === 'trash' && "bg-background text-foreground font-semibold border border-emerald-500/40 shadow-sm"
             )}
           >
-            <a href="/projects/P1/project-trash" aria-label="Project Trash">
+            <Link href="/projects/P1/project-trash" aria-label="Project Trash">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center justify-center">
@@ -106,11 +107,64 @@ function MockProjectTopNav({ activeTab }: { activeTab: string }) {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Project Trash</TooltipContent>
               </Tooltip>
-            </a>
+            </Link>
           </TabsTrigger>
         </TabsList>
       </Tabs>
     </TooltipProvider>
+  );
+}
+
+function MockProjectSidebar({ pathname, projectId = 'P1' }: { pathname: string; projectId?: string }) {
+  const basePath = `/projects/${projectId}`;
+  const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
+  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+
+  const devMenuItems = [
+    { href: `${basePath}/development/dashboard`, label: "Development Dashboard" },
+    { href: `${basePath}/development/backlog`, label: "Product Backlog" },
+    { href: `${basePath}/development/development-tasks`, label: "Sub-Tasks" },
+    { href: `${basePath}/development/grooming`, label: "Grooming" },
+    { href: `${basePath}/development/kanban`, label: "Kanban Board" },
+  ];
+
+  const trashMenuItems = [
+    { href: `${basePath}/project-trash`, label: "Project Trash" },
+  ];
+
+  const menuItems = isTrashPath ? trashMenuItems : (isDevelopmentPath ? devMenuItems : devMenuItems);
+
+  const isItemActive = (href: string) => {
+    const cleanHref = href.replace(/\/$/, '');
+    const cleanPath = pathname.replace(/\/$/, '');
+    return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+  };
+
+  return (
+    <nav data-testid="project-sidebar">
+      <div data-testid="sidebar-universal">
+        <Link href="/my-projects">
+          <Home className="h-4 w-4" />
+          <span>My Projects</span>
+        </Link>
+      </div>
+      <ul data-testid="sidebar-section-items">
+        {menuItems.map(item => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              data-active={isItemActive(item.href)}
+              className={cn(
+                "flex items-center gap-2",
+                isItemActive(item.href) && "text-emerald-600 bg-sidebar-accent font-medium border-l-2 border-emerald-500"
+              )}
+            >
+              <span>{item.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 
@@ -157,3 +211,38 @@ describe('Top Navigation Active Tab Highlights', () => {
     expect(trashTab.className).toContain('text-foreground');
   });
 });
+
+describe('Project Sidebar Trash Navigation', () => {
+  it('populates only one tab saying Project Trash when on project trash route, keeping My Projects visible', () => {
+    render(<MockProjectSidebar pathname="/projects/P1/project-trash" />);
+
+    // My Projects is visible
+    expect(screen.getByText('My Projects')).toBeInTheDocument();
+
+    // Section items contain ONLY Project Trash
+    expect(screen.getByText('Project Trash')).toBeInTheDocument();
+
+    // Development items are NOT populated
+    expect(screen.queryByText('Development Dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByText('Product Backlog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sub-Tasks')).not.toBeInTheDocument();
+    expect(screen.queryByText('Grooming')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kanban Board')).not.toBeInTheDocument();
+
+    // Project Trash has active styling
+    const trashLink = screen.getByRole('link', { name: 'Project Trash' });
+    expect(trashLink).toHaveAttribute('data-active', 'true');
+    expect(trashLink.className).toContain('text-emerald-600');
+    expect(trashLink.className).toContain('border-emerald-500');
+  });
+
+  it('shows development menu items when on development route', () => {
+    render(<MockProjectSidebar pathname="/projects/P1/development/dashboard" />);
+
+    expect(screen.getByText('My Projects')).toBeInTheDocument();
+    expect(screen.getByText('Development Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Product Backlog')).toBeInTheDocument();
+    expect(screen.queryByText('Project Trash')).not.toBeInTheDocument();
+  });
+});
+

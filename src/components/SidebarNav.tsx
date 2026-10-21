@@ -369,6 +369,14 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     }
   ];
 
+  const trashMenuItems = [
+    {
+      href: `${basePath}/project-trash`,
+      label: "Project Trash",
+      icon: Trash2,
+    },
+  ];
+
   const isTestingPath = pathname.startsWith(`${basePath}/testing`);
   const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
   const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
@@ -376,6 +384,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
   const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
+  const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
   const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
   const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
@@ -383,17 +392,18 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   const { hasAccess } = usePermissions();
 
-  const rawMenuItems = isSettingsPath ? settingsMenuItems
-    : isTestingPath ? testMenuItems
-      : isProjectPath ? projectMenuItems
-        : isInitialEstimationPath ? initialEstimationMenuItems
-          : isReleasesPath ? releasesMenuItems
-            : isResourcesPath ? resourcesMenuItems
-              : isGovernancePath ? governanceMenuItems
-                : isHolidaysPath ? holidaysMenuItems
-                  : isPmoPath ? pmoMenuItems
-                    : isDevelopmentPath ? devMenuItems
-                      : devMenuItems;
+  const rawMenuItems = isTrashPath ? trashMenuItems
+    : isSettingsPath ? settingsMenuItems
+      : isTestingPath ? testMenuItems
+        : isProjectPath ? projectMenuItems
+          : isInitialEstimationPath ? initialEstimationMenuItems
+            : isReleasesPath ? releasesMenuItems
+              : isResourcesPath ? resourcesMenuItems
+                : isGovernancePath ? governanceMenuItems
+                  : isHolidaysPath ? holidaysMenuItems
+                    : isPmoPath ? pmoMenuItems
+                      : isDevelopmentPath ? devMenuItems
+                        : devMenuItems;
 
   const menuItems = rawMenuItems.filter(item => {
     const pageName = getPageNameForRoute(item.href);

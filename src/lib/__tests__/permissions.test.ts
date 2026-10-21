@@ -42,6 +42,8 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(getPageNameForRoute(`/projects/${pid}/risks`)).toBe('Risks');
       expect(getPageNameForRoute(`/projects/${pid}/resources/project-resources`)).toBe('Project Resources');
       expect(getPageNameForRoute(`/projects/${pid}/releases/project-releases`)).toBe('Project Releases');
+      expect(getPageNameForRoute(`/projects/${pid}/project-trash`)).toBe('Project Trash');
+      expect(getPageNameForRoute(`/projects/${pid}/trash`)).toBe('Project Trash');
     });
   });
 

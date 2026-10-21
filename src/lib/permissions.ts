@@ -95,7 +95,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.includes('/project-settings/sprint') || pathname.includes('/settings/sprint')) return 'Sprint Settings';
   if (pathname.includes('/project-settings/effort') || pathname.includes('/settings/effort')) return 'Effort Settings';
   if (pathname.includes('/project-settings') || pathname.includes('/settings')) return 'Board Settings';
-  if (pathname.includes('/project-trash')) return 'Project Trash';
+  if (pathname.includes('/project-trash') || (pathname.includes('/projects/') && (pathname.endsWith('/trash') || pathname.includes('/trash/')))) return 'Project Trash';
 
   return null;
 }
