@@ -99,3 +99,4 @@ export function getAvailableProjectYears(projects: Project[]): number[] {
 
   return Array.from(years).sort((a, b) => b - a);
 }
+

@@ -95,3 +95,4 @@ describe('project-year-filter utility', () => {
     }
   });
 });
+
