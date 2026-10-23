@@ -38,4 +38,17 @@ test.describe('Pillar 5: Quality Assurance & Testing Suite', () => {
       await expect(page.locator('body')).toContainText(/Sprint & Release Containment Breakdown|Tracked Cadences/i);
     }
   });
+  test('TC-QA-004: Quality Hub & Portfolio Dashboard feature Year filter selector', async ({ page }) => {
+    // 1. Estimation Variance Year filter
+    await page.goto('/quality/estimations', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('button:has-text("All Years")')).toBeVisible();
+
+    // 2. Defect Containment Year filter
+    await page.goto('/quality/defects', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('button:has-text("All Years")')).toBeVisible();
+
+    // 3. Portfolio Dashboard Year filter
+    await page.goto('/portfolio-dashboard', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('button:has-text("All Years")')).toBeVisible();
+  });
 });

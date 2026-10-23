@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Calculator, 
   ArrowLeft, 
@@ -22,9 +23,11 @@ import {
   ArrowUpDown,
   Bug,
   HelpCircle,
-  Clock
+  Clock,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
+import { isProjectInYear, getAvailableProjectYears } from '@/lib/project-year-filter';
 import type { Project, ProjectStatus } from '@/types';
 
 type ProjectEstimations = {
@@ -68,6 +71,7 @@ export default function QualityEstimationsPage() {
   const [filterText, setFilterText] = useState('');
   const [sortKey, setSortKey] = useState<keyof ProjectEstimations>('projectName');
   const [sortAsc, setSortAsc] = useState(true);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
 
   useEffect(() => {
     if (!db) return;
@@ -195,8 +199,20 @@ export default function QualityEstimationsPage() {
   }, []);
 
   // Filter & Sort logic
-  const filteredMetrics = useMemo(() => {
+  const projectMap = useMemo(() => new Map(projects.map(p => [p.id, p])), [projects]);
+  const availableYears = useMemo(() => getAvailableProjectYears(projects), [projects]);
+
+  const yearFilteredMetrics = useMemo(() => {
     const list = Object.values(metrics);
+    if (selectedYear === 'all') return list;
+    return list.filter(m => {
+      const proj = projectMap.get(m.projectId);
+      return proj ? isProjectInYear(proj, selectedYear) : true;
+    });
+  }, [metrics, projectMap, selectedYear]);
+
+  const filteredMetrics = useMemo(() => {
+    const list = yearFilteredMetrics;
     const search = filterText.toLowerCase().trim();
 
     const filtered = search === '' 
@@ -224,7 +240,7 @@ export default function QualityEstimationsPage() {
 
       return sortAsc ? comparison : -comparison;
     });
-  }, [metrics, filterText, sortKey, sortAsc]);
+  }, [yearFilteredMetrics, filterText, sortKey, sortAsc]);
 
   const toggleSort = (key: keyof ProjectEstimations) => {
     if (sortKey === key) {
@@ -237,7 +253,7 @@ export default function QualityEstimationsPage() {
 
   // High-level statistics
   const portfolioStats = useMemo(() => {
-    const list = Object.values(metrics);
+    const list = yearFilteredMetrics;
     const totalProjects = list.length;
     
     let totalInitialDays = 0;
@@ -268,7 +284,7 @@ export default function QualityEstimationsPage() {
       averageVariance,
       overallCompletion
     };
-  }, [metrics]);
+  }, [yearFilteredMetrics]);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-gradient-to-br from-background via-background to-primary/5 min-h-screen relative overflow-hidden">
@@ -279,7 +295,22 @@ export default function QualityEstimationsPage() {
       <PageHeader 
         title="Estimation Variance & Drift"
         description="Monitor, compare, and audit initial ballpark estimates, active sprint plans, and actual worklog conformance across all projects." 
-      />
+      >
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[140px] bg-background">
+            <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Years</SelectItem>
+            {availableYears.map((yr) => (
+              <SelectItem key={yr} value={yr.toString()}>
+                {yr}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PageHeader>
 
       {/* Portfolio High-level Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

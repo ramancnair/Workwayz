@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Bug, 
   ArrowLeft, 
@@ -30,9 +31,11 @@ import {
   CheckCircle2,
   ExternalLink,
   Target,
-  Flame
+  Flame,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
+import { isProjectInYear, getAvailableProjectYears } from '@/lib/project-year-filter';
 import type { Project, ProjectStatus, Sprint, Release } from '@/types';
 import { isBugWorkItem } from '@/types';
 
@@ -88,6 +91,7 @@ export default function DefectContainmentPage() {
   const [sortKey, setSortKey] = useState<keyof ProjectDefects>('projectName');
   const [sortAsc, setSortAsc] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+  const [selectedYear, setSelectedYear] = useState<string>('all');
 
   useEffect(() => {
     if (!db) return;
@@ -288,8 +292,20 @@ export default function DefectContainmentPage() {
     }
   };
 
+  const projectMap = useMemo(() => new Map(projects.map(p => [p.id, p])), [projects]);
+  const availableYears = useMemo(() => getAvailableProjectYears(projects), [projects]);
+
+  const yearFilteredMetrics = useMemo(() => {
+    const list = Object.values(metrics);
+    if (selectedYear === 'all') return list;
+    return list.filter(m => {
+      const proj = projectMap.get(m.projectId);
+      return proj ? isProjectInYear(proj, selectedYear) : true;
+    });
+  }, [metrics, projectMap, selectedYear]);
+
   const filteredMetrics = useMemo(() => {
-    return Object.values(metrics)
+    return yearFilteredMetrics
       .filter(item => {
         const search = filterText.toLowerCase();
         return (
@@ -311,11 +327,11 @@ export default function DefectContainmentPage() {
         bVal = bVal || 0;
         return sortAsc ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
       });
-  }, [metrics, filterText, sortKey, sortAsc]);
+  }, [yearFilteredMetrics, filterText, sortKey, sortAsc]);
 
   // Overall Portfolio Totals
   const portfolioStats = useMemo(() => {
-    const all = Object.values(metrics);
+    const all = yearFilteredMetrics;
     const totalBugs = all.reduce((acc, m) => acc + m.totalBugs, 0);
     const sitTotal = all.reduce((acc, m) => acc + m.sitCount, 0);
     const uatTotal = all.reduce((acc, m) => acc + m.uatCount, 0);
@@ -335,7 +351,7 @@ export default function DefectContainmentPage() {
       avgLeakageRate,
       dreRate,
     };
-  }, [metrics]);
+  }, [yearFilteredMetrics]);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -343,7 +359,22 @@ export default function DefectContainmentPage() {
       <PageHeader 
         title="Defect Containment & Leakage Funnel" 
         description="Monitor phase-by-phase testing containment (SIT → UAT → Production), evaluate defect leakages, and track DRE across sprints and releases."
-      />
+      >
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger className="w-[140px] bg-background">
+            <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+            <SelectValue placeholder="Year" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Years</SelectItem>
+            {availableYears.map((yr) => (
+              <SelectItem key={yr} value={yr.toString()}>
+                {yr}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </PageHeader>
 
       {/* Top Level Metric Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

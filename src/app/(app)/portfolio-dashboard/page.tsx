@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { isProjectInYear, getAvailableProjectYears } from '@/lib/project-year-filter';
 import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus, Portfolio, Release, Story, TestCase } from '@/types';
 import { format, differenceInDays, isPast, parseISO } from 'date-fns';
 import {
@@ -94,6 +95,7 @@ export default function PortfolioDashboardPage() {
   const [allTestCases, setAllTestCases] = useState<EnrichedTestCase[]>([]);
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'quality' | 'raid'>('overview');
   const [viewingRisk, setViewingRisk] = useState<EnrichedRisk | null>(null);
@@ -219,12 +221,16 @@ export default function PortfolioDashboardPage() {
     fetchData();
   }, []);
 
-  // Filtered dataset based on selected portfolio
+  // Filtered dataset based on selected portfolio and year
+  const availableYears = useMemo(() => getAvailableProjectYears(allActiveProjects), [allActiveProjects]);
+
   const filteredProjects = useMemo(() => {
-    return selectedPortfolioId === 'all'
-      ? allActiveProjects
-      : allActiveProjects.filter((p) => p.portfolioId === selectedPortfolioId);
-  }, [allActiveProjects, selectedPortfolioId]);
+    return allActiveProjects.filter((p) => {
+      const matchesPortfolio = selectedPortfolioId === 'all' || p.portfolioId === selectedPortfolioId;
+      const matchesYear = isProjectInYear(p, selectedYear);
+      return matchesPortfolio && matchesYear;
+    });
+  }, [allActiveProjects, selectedPortfolioId, selectedYear]);
 
   const validProjectIds = useMemo(() => new Set(filteredProjects.map((p) => p.id)), [filteredProjects]);
 
@@ -344,21 +350,38 @@ export default function PortfolioDashboardPage() {
         title="Portfolio Dashboard"
         description="Executive technology delivery and operational health command center."
       >
-        <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
-          <SelectTrigger className="w-[220px] bg-background">
-            <SelectValue placeholder="Select Portfolio" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Portfolios ({allActiveProjects.length} Projects)</SelectItem>
-            {[...portfolios]
-              .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
-              .map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+            <SelectTrigger className="w-[200px] bg-background">
+              <SelectValue placeholder="Select Portfolio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Portfolios ({allActiveProjects.length} Projects)</SelectItem>
+              {[...portfolios]
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+                .map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[140px] bg-background">
+              <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              {availableYears.map((yr) => (
+                <SelectItem key={yr} value={yr.toString()}>
+                  {yr}
                 </SelectItem>
               ))}
-          </SelectContent>
-        </Select>
+            </SelectContent>
+          </Select>
+        </div>
       </PageHeader>
 
       {isLoading ? (
