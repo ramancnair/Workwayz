@@ -121,8 +121,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Authentication')) return '/portfolio-settings/authentication';
         if (hasAccess('AI Config')) return '/portfolio-settings/ai-config';
         if (hasAccess('Inactive') || hasAccess('Archive') || hasAccess('Inactive Projects')) return '/portfolio-settings/archive';
-        if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
         if (hasAccess('Cron Jobs')) return '/portfolio-settings/cron-jobs';
+        if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
         return '/portfolio-settings';
       case 'trash':
         return '/portfolio-trash';

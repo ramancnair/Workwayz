@@ -299,17 +299,17 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'portfolio'
     },
     {
-      id: 'test-data-studio',
-      href: '/portfolio-settings/test-data-studio',
-      label: 'Test Data Studio',
-      icon: Sparkles,
-      group: 'portfolio'
-    },
-    {
       id: 'cron-jobs',
       href: '/portfolio-settings/cron-jobs',
       label: 'Cron Jobs',
       icon: Clock,
+      group: 'portfolio'
+    },
+    {
+      id: 'test-data-studio',
+      href: '/portfolio-settings/test-data-studio',
+      label: 'Test Data Studio',
+      icon: Sparkles,
       group: 'portfolio'
     },
     {

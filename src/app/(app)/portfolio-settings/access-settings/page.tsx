@@ -223,8 +223,8 @@ const pageSections: PageSection[] = [
           'Authentication',
           'AI Config',
           'Inactive Projects',
-          'Test Data Studio',
           'Cron Jobs',
+          'Test Data Studio',
         ],
       },
       {

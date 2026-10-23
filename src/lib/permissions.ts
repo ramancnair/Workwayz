@@ -502,8 +502,8 @@ export function getPermittedFallbackRoute(
         { name: 'Inactive Projects', path: '/portfolio-settings/archive' },
         { name: 'Inactive', path: '/portfolio-settings/archive' },
         { name: 'Archive', path: '/portfolio-settings/archive' },
-        { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
         { name: 'Cron Jobs', path: '/portfolio-settings/cron-jobs' },
+        { name: 'Test Data Studio', path: '/portfolio-settings/test-data-studio' },
       ],
     },
     {
