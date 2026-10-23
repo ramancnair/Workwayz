@@ -277,8 +277,8 @@ export default function QualityEstimationsPage() {
       <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-violet-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       <PageHeader 
-        title="Quality Estimations" 
-        description="Monitor, compare, and analyze initial ballpark estimates, active sprint plans, and actual worklog conformance across all projects." 
+        title="Estimation Variance & Drift"
+        description="Monitor, compare, and audit initial ballpark estimates, active sprint plans, and actual worklog conformance across all projects." 
       />
 
       {/* Portfolio High-level Stats */}
@@ -347,7 +347,7 @@ export default function QualityEstimationsPage() {
         <CardHeader className="border-b border-border/30 bg-muted/20 pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle>Estimations & Conformance Dashboard</CardTitle>
+              <CardTitle>Estimation Variance & Conformance Matrix</CardTitle>
               <CardDescription className="text-xs">
                 Real-time man-day audit (1 man-day = 8 hours). Dev effort excludes bugs. Horizontals are weighted against active dev scope.
               </CardDescription>

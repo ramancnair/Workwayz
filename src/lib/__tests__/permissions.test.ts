@@ -20,8 +20,8 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(getPageNameForRoute('/portfolio-dashboard')).toBe('Portfolio Dashboard');
       expect(getPageNameForRoute('/fp-portfolio-dash')).toBe('Portfolio PromptBoard');
       expect(getPageNameForRoute('/fp-dashboard')).toBe('Portfolio PromptBoard');
-      expect(getPageNameForRoute('/quality/estimations')).toBe('Estimations');
-      expect(getPageNameForRoute('/quality/defects')).toBe('Defects');
+      expect(getPageNameForRoute('/quality/estimations')).toBe('Estimation Variance');
+      expect(getPageNameForRoute('/quality/defects')).toBe('Defect Containment');
       expect(getPageNameForRoute('/users')).toBe('User List');
       expect(getPageNameForRoute('/utilization')).toBe('Utilization');
       expect(getPageNameForRoute('/holidays/holiday-calendar')).toBe('Holiday Calendar');

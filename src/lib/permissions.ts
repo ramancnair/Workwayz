@@ -42,9 +42,9 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/project-home')) return 'Project Home';
   if (pathname.startsWith('/portfolio-dashboard')) return 'Portfolio Dashboard';
   if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard') || pathname.startsWith('/fp-porfolio-dash')) return 'Portfolio PromptBoard';
-  if (pathname.startsWith('/quality/estimations')) return 'Estimations';
-  if (pathname.startsWith('/quality/defects')) return 'Defects';
-  if (pathname.startsWith('/quality')) return 'Estimations';
+  if (pathname.startsWith('/quality/estimations')) return 'Estimation Variance';
+  if (pathname.startsWith('/quality/defects')) return 'Defect Containment';
+  if (pathname.startsWith('/quality')) return 'Estimation Variance';
   if (pathname.startsWith('/users')) return 'User List';
   if (pathname.startsWith('/utilization')) return 'Utilization';
   if (pathname.startsWith('/holidays/holiday-calendar')) return 'Holiday Calendar';
@@ -121,6 +121,10 @@ export function hasPagePermission(
     ? ['Project PromptBoard', 'FP PM Dash', 'PM Dashboard']
     : (pageName === 'Inactive' || pageName === 'Archive' || pageName === 'Inactive Projects')
     ? ['Inactive', 'Archive', 'Inactive Projects']
+    : (pageName === 'Estimation Variance' || pageName === 'Estimations')
+    ? ['Estimation Variance', 'Estimations']
+    : (pageName === 'Defect Containment' || pageName === 'Defects')
+    ? ['Defect Containment', 'Defects']
     : [pageName];
 
   if (customPageAccess) {
@@ -459,7 +463,9 @@ export function getPermittedFallbackRoute(
     {
       prefix: '/quality',
       candidates: [
+        { name: 'Estimation Variance', path: '/quality/estimations' },
         { name: 'Estimations', path: '/quality/estimations' },
+        { name: 'Defect Containment', path: '/quality/defects' },
         { name: 'Defects', path: '/quality/defects' },
       ],
     },

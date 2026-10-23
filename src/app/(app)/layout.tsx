@@ -99,8 +99,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Portfolio PromptBoard') || hasAccess('FP Portfolio Dash') || hasAccess('FP Dashboard')) return '/fp-portfolio-dash';
         return '/project-home';
       case 'quality':
-        if (hasAccess('Estimations')) return '/quality/estimations';
-        if (hasAccess('Defects')) return '/quality/defects';
+        if (hasAccess('Estimation Variance') || hasAccess('Estimations')) return '/quality/estimations';
+        if (hasAccess('Defect Containment') || hasAccess('Defects')) return '/quality/defects';
         return '/quality/estimations';
       case 'billing':
         if (hasAccess('Billing')) return '/billing';
@@ -178,7 +178,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href={getDefaultRouteForTab('projects')}>Projects</Link>
                               </TabsTrigger>
                             )}
-                            {(hasAccess('Estimations') || hasAccess('Defects')) && (
+                            {(hasAccess('Estimation Variance') || hasAccess('Estimations') || hasAccess('Defect Containment') || hasAccess('Defects')) && (
                               <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('quality')}>Quality</Link>
                               </TabsTrigger>

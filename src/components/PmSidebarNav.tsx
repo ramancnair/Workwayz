@@ -217,14 +217,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'quality-estimations',
       href: '/quality/estimations',
-      label: 'Estimations',
+      label: 'Estimation Variance',
       icon: Calculator,
       group: 'quality',
     },
     {
       id: 'quality-defects',
       href: '/quality/defects',
-      label: 'Defects',
+      label: 'Defect Containment',
       icon: Bug,
       group: 'quality',
     },
