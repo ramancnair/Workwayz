@@ -266,13 +266,6 @@ export default function BillingPage() {
     });
   }, [billingData, viewMode]);
 
-  const periodLabel = useMemo(() => {
-    if (viewMode === 'month') return 'Monthly Average';
-    if (viewMode === 'quarter') return 'Quarterly Average';
-    if (viewMode === 'year') return 'Yearly Average';
-    return 'Project Lifetime';
-  }, [viewMode]);
-
   const periodSuffix = useMemo(() => {
     if (viewMode === 'month') return ' (/ Mo)';
     if (viewMode === 'quarter') return ' (/ Qtr)';
@@ -425,10 +418,7 @@ export default function BillingPage() {
           <div>
             <CardTitle className="flex items-center gap-2 text-lg font-bold">
               <Briefcase className="h-5 w-5 text-blue-500" />
-              Project Breakdown
-              <Badge variant="outline" className="font-normal text-xs py-0.5 px-2 bg-blue-50/50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50 transition-all duration-300">
-                {periodLabel}
-              </Badge>
+              Project Financial Performance
             </CardTitle>
             <CardDescription>Detailed revenue, cost, profit, and actual completed milestones for all active projects.</CardDescription>
           </div>
