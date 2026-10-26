@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db-provider';
 import {
@@ -47,6 +47,8 @@ import {
   Server,
   GitCommit,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -68,6 +70,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
+import { groupResourceRatesByPerson, type PersonResourceGroup } from '@/lib/billing-rate-grouping';
 import type { Project, User, AccessLevel, ImpactedSystem, Horizontal } from '@/types';
 
 const SYSTEM_ACCESS_LEVELS: AccessLevel[] = [
@@ -151,6 +154,16 @@ export default function BillingRatePage() {
   const [sortField, setSortField] = useState<keyof ResourceRateRow>('billedRate');
   const [sortAsc, setSortAsc] = useState(false);
 
+  // Expanded Persons State for Collapsible Grouping
+  const [expandedPersons, setExpandedPersons] = useState<Record<string, boolean>>({});
+
+  const togglePersonExpand = (key: string) => {
+    setExpandedPersons((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   // Edit Rate Modal State
   const [editingResource, setEditingResource] = useState<ResourceRateRow | null>(null);
   const [editBilledRate, setEditBilledRate] = useState<string>('');
@@ -212,8 +225,8 @@ export default function BillingRatePage() {
                   (data.role === 'PM' || data.role === 'Program Director'
                     ? 'Project Manager'
                     : data.role === 'Lead'
-                    ? 'Lead'
-                    : 'Team Member');
+                      ? 'Lead'
+                      : 'Team Member');
 
                 allResourceRates.push({
                   id: docSnap.id,
@@ -365,6 +378,34 @@ export default function BillingRatePage() {
     sortAsc,
   ]);
 
+  // Group filtered resource rates by person (empId or name) with aggregate statistics
+  const groupedResourceRates = useMemo<PersonResourceGroup[]>(() => {
+    return groupResourceRatesByPerson(filteredResourceRates, sortField, sortAsc);
+  }, [filteredResourceRates, sortField, sortAsc]);
+
+  const multiProjectGroups = useMemo(
+    () => groupedResourceRates.filter((g) => g.allocations.length > 1),
+    [groupedResourceRates]
+  );
+
+  const areAllExpanded =
+    multiProjectGroups.length > 0 &&
+    multiProjectGroups.every((g) => expandedPersons[g.key]);
+
+  const handleExpandAll = () => {
+    const all: Record<string, boolean> = {};
+    groupedResourceRates.forEach((g) => {
+      if (g.allocations.length > 1) {
+        all[g.key] = true;
+      }
+    });
+    setExpandedPersons(all);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedPersons({});
+  };
+
   // Helper to calculate benchmark statistics for any group
   const calculateBenchmark = (groupItems: ResourceRateRow[], name: string): BenchmarkItem => {
     const count = groupItems.length;
@@ -448,40 +489,6 @@ export default function BillingRatePage() {
         return true;
       });
   }, [specRates, selectedProjectFilter, selectedModelFilter, searchQuery]);
-
-  // High-level workspace rate statistics
-  const metrics = useMemo(() => {
-    if (resourceRates.length === 0) {
-      return {
-        avgBilledRate: 0,
-        avgCostRate: 0,
-        avgMargin: 0,
-        avgMarginPercent: 0,
-        totalAllocations: 0,
-        totalProjectsWithRates: 0,
-      };
-    }
-
-    const totalBilled = resourceRates.reduce((sum, r) => sum + r.billedRate, 0);
-    const totalCost = resourceRates.reduce((sum, r) => sum + r.costRate, 0);
-    const totalMargin = resourceRates.reduce((sum, r) => sum + r.margin, 0);
-    const count = resourceRates.length;
-
-    const avgBilledRate = totalBilled / count;
-    const avgCostRate = totalCost / count;
-    const avgMargin = totalMargin / count;
-    const avgMarginPercent = avgBilledRate > 0 ? (avgMargin / avgBilledRate) * 100 : 0;
-    const uniqueProjects = new Set(resourceRates.map((r) => r.projectId)).size;
-
-    return {
-      avgBilledRate,
-      avgCostRate,
-      avgMargin,
-      avgMarginPercent,
-      totalAllocations: count,
-      totalProjectsWithRates: uniqueProjects,
-    };
-  }, [resourceRates]);
 
   const handleSort = (field: keyof ResourceRateRow) => {
     if (sortField === field) {
@@ -586,108 +593,6 @@ export default function BillingRatePage() {
         title="Billing Rates"
         description="Master directory of resource daily billing rates, internal costs, profit margins, access levels & role benchmarks across all projects."
       />
-
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Average Billing Rate
-            </CardTitle>
-            <div className="p-2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-28" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground font-mono">
-                  ${metrics.avgBilledRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-xs font-normal text-muted-foreground font-sans ml-1">/ day</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Across all project allocations</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Average Cost Rate
-            </CardTitle>
-            <div className="p-2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <TrendingDown className="w-4 h-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-28" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground font-mono">
-                  ${metrics.avgCostRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-xs font-normal text-muted-foreground font-sans ml-1">/ day</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Internal daily resource cost</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Average Profit Margin
-            </CardTitle>
-            <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-28" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                  ${metrics.avgMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="text-xs font-semibold ml-1.5 font-sans">
-                    ({metrics.avgMarginPercent.toFixed(1)}%)
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Daily net profit spread per resource</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Total Allocations
-            </CardTitle>
-            <div className="p-2 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
-              <Users className="w-4 h-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold text-foreground font-mono">
-                  {metrics.totalAllocations}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Active across {metrics.totalProjectsWithRates} projects
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Main Tabs Container */}
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-4">
@@ -797,8 +702,21 @@ export default function BillingRatePage() {
                     Comprehensive view of assigned project resources, Access Levels, designated project roles, daily billed rates, and profit margins.
                   </CardDescription>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground">{filteredResourceRates.length}</span> of {resourceRates.length} allocations
+                <div className="flex items-center gap-3">
+                  {multiProjectGroups.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={areAllExpanded ? handleCollapseAll : handleExpandAll}
+                      className="h-7 text-xs px-2.5 gap-1.5 font-medium border-border/80 hover:bg-muted/60"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-primary" />
+                      {areAllExpanded ? 'Collapse All' : `Expand Multi-Project (${multiProjectGroups.length})`}
+                    </Button>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    Showing <span className="font-semibold text-foreground">{groupedResourceRates.length}</span> people (<span className="font-semibold text-foreground">{filteredResourceRates.length}</span> allocations)
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -894,29 +812,322 @@ export default function BillingRatePage() {
                         <TableCell className="text-right"><Skeleton className="h-7 w-7 ml-auto rounded" /></TableCell>
                       </TableRow>
                     ))
-                  ) : filteredResourceRates.length === 0 ? (
+                  ) : groupedResourceRates.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="h-32 text-center text-muted-foreground text-sm">
                         No resource billing rates found matching your filter criteria.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredResourceRates.map((res) => {
+                    groupedResourceRates.map((group) => {
+                      const isMulti = group.allocations.length > 1;
+                      const isExpanded = Boolean(expandedPersons[group.key]);
+
+                      if (isMulti) {
+                        const isHighMargin = group.avgMarginPercentage >= 35;
+                        const isLowMargin = group.avgMarginPercentage < 15;
+                        const uniqueRoles = Array.from(new Set(group.allocations.map((a) => a.role)));
+                        const uniqueModels = Array.from(new Set(group.allocations.map((a) => a.pricingModel)));
+
+                        return (
+                          <Fragment key={group.key}>
+                            {/* Parent Collapsible Group Row */}
+                            <TableRow
+                              className={cn(
+                                'hover:bg-muted/40 transition-colors cursor-pointer select-none',
+                                isExpanded && 'bg-muted/20 border-b border-border/60'
+                              )}
+                              onClick={() => togglePersonExpand(group.key)}
+                            >
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      togglePersonExpand(group.key);
+                                    }}
+                                    className="p-1 -ml-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+                                    aria-label={isExpanded ? 'Collapse allocations' : 'Expand allocations'}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-primary" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                  <Avatar className="h-8 w-8 border shrink-0">
+                                    <AvatarImage src={group.avatar} alt={`${group.firstName} ${group.lastName}`} />
+                                    <AvatarFallback className="text-xs font-semibold">
+                                      {getUserInitials(group.firstName, group.lastName)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-semibold text-xs text-foreground truncate">
+                                        {group.firstName} {group.lastName}
+                                      </span>
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-[10px] px-1.5 py-0 font-semibold bg-primary/10 text-primary border-primary/20 shrink-0"
+                                      >
+                                        {group.allocations.length} Projects
+                                      </Badge>
+                                    </div>
+                                    <div className="text-[11px] font-mono text-muted-foreground">
+                                      {group.empId}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {getAccessLevelBadge(group.accessLevel)}
+                              </TableCell>
+                              <TableCell>
+                                {uniqueRoles.length === 1 ? (
+                                  <Badge variant="outline" className="text-[11px] font-medium bg-muted/40">
+                                    {uniqueRoles[0]}
+                                  </Badge>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1 max-w-[160px]">
+                                    {uniqueRoles.map((r) => (
+                                      <Badge key={r} variant="outline" className="text-[10px] font-medium bg-muted/40">
+                                        {r}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                  <span>{group.allocations.length} Project Allocations</span>
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  )}
+                                </div>
+                                <div
+                                  className="text-[10px] text-muted-foreground truncate max-w-[240px]"
+                                  title={group.allocations.map((a) => a.projectName).join(', ')}
+                                >
+                                  {group.allocations.map((a) => a.projectName).join(', ')}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {uniqueModels.length === 1 ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                      'text-[10px] px-2 py-0.5 border font-semibold',
+                                      uniqueModels[0] === 'Fixed Bid'
+                                        ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                    )}
+                                  >
+                                    {uniqueModels[0]}
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-2 py-0.5 border font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                                  >
+                                    Mixed
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'text-[11px] font-mono',
+                                    group.totalAvailability > 100 &&
+                                    'text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 bg-amber-500/10 font-bold'
+                                  )}
+                                >
+                                  {group.totalAvailability}%
+                                </Badge>
+                                <div className="text-[9px] text-muted-foreground">total</div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs">
+                                <div className="font-semibold text-foreground">
+                                  ${group.avgBilledRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-sans">avg / day</div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs">
+                                <div className="text-muted-foreground">
+                                  ${group.avgCostRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-sans">avg / day</div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs">
+                                <div
+                                  className={cn(
+                                    'font-semibold',
+                                    group.avgMargin >= 0
+                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                      : 'text-red-600 dark:text-red-400'
+                                  )}
+                                >
+                                  ${group.avgMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                <div
+                                  className={cn(
+                                    'text-[10px] font-sans',
+                                    isHighMargin
+                                      ? 'text-emerald-600'
+                                      : isLowMargin
+                                        ? 'text-amber-600'
+                                        : 'text-muted-foreground'
+                                  )}
+                                >
+                                  {group.avgMarginPercentage.toFixed(1)}% avg
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => togglePersonExpand(group.key)}
+                                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                                  title={isExpanded ? 'Collapse project allocations' : 'Expand project allocations'}
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronDown className="w-3.5 h-3.5 text-primary" />
+                                      <span className="text-[11px]">Hide</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronRight className="w-3.5 h-3.5" />
+                                      <span className="text-[11px]">View</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+
+                            {/* Nested Project Allocation Rows */}
+                            {isExpanded &&
+                              group.allocations.map((alloc, allocIdx) => {
+                                const isAllocHighMargin = alloc.marginPercentage >= 35;
+                                const isAllocLowMargin = alloc.marginPercentage < 15;
+
+                                return (
+                                  <TableRow
+                                    key={`${group.key}-${alloc.projectId}-${alloc.id}`}
+                                    className="bg-muted/15 hover:bg-muted/30 border-l-2 border-l-primary/60 transition-colors"
+                                  >
+                                    <TableCell className="font-medium pl-8">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground/60 text-xs font-mono select-none">↳</span>
+                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                          Allocation {allocIdx + 1}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-[11px] text-muted-foreground">—</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline" className="text-[11px] font-medium bg-background">
+                                        {alloc.role}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link
+                                        href={`/projects/${alloc.projectId}/pmo/${alloc.pricingModel === 'Fixed Bid' ? 'fb-billing' : 'tnm-billing'}`}
+                                        className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors"
+                                      >
+                                        <span>{alloc.projectName}</span>
+                                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Badge
+                                        variant="secondary"
+                                        className={cn(
+                                          'text-[10px] px-2 py-0.5 border font-semibold',
+                                          alloc.pricingModel === 'Fixed Bid'
+                                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                        )}
+                                      >
+                                        {alloc.pricingModel}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Badge variant="outline" className="text-[11px] font-mono bg-background">
+                                        {alloc.availability}%
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono font-medium text-xs text-foreground">
+                                      ${alloc.billedRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                      ${alloc.costRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-xs">
+                                      <div
+                                        className={cn(
+                                          'font-medium',
+                                          alloc.margin >= 0
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-red-600 dark:text-red-400'
+                                        )}
+                                      >
+                                        ${alloc.margin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                      <div
+                                        className={cn(
+                                          'text-[10px]',
+                                          isAllocHighMargin
+                                            ? 'text-emerald-600'
+                                            : isAllocLowMargin
+                                              ? 'text-amber-600'
+                                              : 'text-muted-foreground'
+                                        )}
+                                      >
+                                        {alloc.marginPercentage.toFixed(1)}%
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => openEditModal(alloc)}
+                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                        title={`Edit Rate for ${alloc.projectName}`}
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                          </Fragment>
+                        );
+                      }
+
+                      // Single-project person allocation
+                      const res = group.allocations[0];
                       const isHighMargin = res.marginPercentage >= 35;
                       const isLowMargin = res.marginPercentage < 15;
 
                       return (
-                        <TableRow key={`${res.projectId}-${res.id}`} className="hover:bg-muted/40 transition-colors">
+                        <TableRow key={group.key} className="hover:bg-muted/40 transition-colors">
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2.5">
-                              <Avatar className="h-8 w-8 border">
+                              <div className="w-4 shrink-0" />
+                              <Avatar className="h-8 w-8 border shrink-0">
                                 <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
                                 <AvatarFallback className="text-xs font-semibold">
                                   {getUserInitials(res.firstName, res.lastName)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-semibold text-xs text-foreground">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-foreground truncate">
                                   {res.firstName} {res.lastName}
                                 </div>
                                 <div className="text-[11px] font-mono text-muted-foreground">
