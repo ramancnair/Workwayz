@@ -1,8 +1,8 @@
 import { db, doc, getDoc, setDoc, collection, getDocs, getActiveDb } from '@/lib/db-provider';
 import type { FpCronJob, CreateCronJobInput, CronInterval } from '@/types/cron-jobs';
-import { executeFpQuery } from '@/lib/fp-query-engine';
-import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
-import type { FpQueryResponse } from '@/types/fp-dashboard';
+import { executeWayFinderQuery as executeFpQuery } from '@/lib/wayfinder-query-engine';
+import { executeWayFinderPmQuery as executeFpPmQuery, type WayFinderPmProjectData as FpPmProjectData } from '@/lib/wayfinder-pm-query-engine';
+import type { WayFinderQueryResponse as FpQueryResponse } from '@/types/wayfinder-dashboard';
 import { sendInternalMessage } from '@/lib/messaging-service';
 
 export const CRON_JOBS_STORAGE_KEY = 'pf_cron_jobs';

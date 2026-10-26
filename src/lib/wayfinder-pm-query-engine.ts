@@ -1,4 +1,4 @@
-import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/fp-dashboard';
+import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/wayfinder-dashboard';
 import { isBugWorkItem } from '@/types';
 
 function formatDateStr(d?: string | null): string {
@@ -1272,3 +1272,7 @@ export function executeFpPmQuery(
     ],
   };
 }
+
+
+export const executeWayFinderPmQuery = executeFpPmQuery;
+export type WayFinderPmProjectData = FpPmProjectData;

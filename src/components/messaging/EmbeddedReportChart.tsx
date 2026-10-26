@@ -16,12 +16,12 @@ import {
 } from 'recharts';
 import { BarChart3, PieChart as PieChartIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { FpChartSpec } from '@/types/fp-dashboard';
+import type { WayFinderChartSpec, FpChartSpec } from '@/types/wayfinder-dashboard';
 
 const PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
 
 interface EmbeddedReportChartProps {
-  chart: FpChartSpec;
+  chart: WayFinderChartSpec;
 }
 
 export function EmbeddedReportChart({ chart }: EmbeddedReportChartProps) {

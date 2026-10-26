@@ -4,12 +4,64 @@ import path from 'path';
 import { getActiveAiDetails } from '@/ai/flows/wayfinder-agent';
 import { getProfilesPath, getEnvLocalPath } from '@/lib/config-paths';
 
+// Fallback customer-usable production Gemini models
+const CUSTOMER_ALLOWED_FALLBACK = [
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash-lite',
+  'gemini-pro-latest',
+  'gemini-3-flash-preview',
+  'gemini-3.1-pro-preview',
+  'gemini-3.1-flash-lite',
+];
+
+// Patterns for models that customers cannot use for text/analytics generation
+const NON_CUSTOMER_PATTERNS = [
+  'lyria',          // Music / audio generation
+  'antigravity',    // Internal IDE coding agent
+  'deep-research',  // Autonomous multi-step research agent
+  'computer-use',   // OS automation
+  'transcribe',     // Speech-to-text
+  'tts',            // Text-to-speech audio
+  'audio',          // Audio processing
+  'image',          // Image generation / editing
+  'banana',         // Image generation code names
+  'robotics',       // Robotics models
+  'argon',          // Internal Google research branch
+  'customtools',    // Internal developer tooling test checkpoints
+  'clip',           // Vision embeddings
+  'embedding',      // Vector embeddings
+  '2.5-flash',      // Deprecated
+  '2.5-pro',        // Deprecated (returns 404)
+  'omni',           // Prototype omni models
+  'gemma',          // Open weights models
+  'aqa',            // Internal Question Answering
+];
+
+const MODEL_PRIORITY: Record<string, number> = {
+  'gemini-3.8-flash': 1,
+  'gemini-flash-latest': 2,
+  'gemini-3.7-flash': 3,
+  'gemini-3.6-flash': 4,
+  'gemini-3.5-flash': 5,
+  'gemini-flash-lite-latest': 6,
+  'gemini-3.5-flash-lite': 7,
+  'gemini-pro-latest': 8,
+  'gemini-3-flash-preview': 9,
+  'gemini-3.1-pro-preview': 10,
+  'gemini-3.1-flash-lite': 11,
+};
+
 // Cache for live models with 5-minute TTL
 let geminiModelCache: { timestamp: number; models: string[] } | null = null;
 
 async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
   if (!apiKey) {
-    return ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'];
+    return CUSTOMER_ALLOWED_FALLBACK;
   }
 
   const now = Date.now();
@@ -27,41 +79,39 @@ async function getLiveGeminiModels(apiKey?: string): Promise<string[]> {
         const filtered = data.models
           .filter((m: any) => {
             const hasGenerate = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
-            const name = (m.name || '').toLowerCase();
-            const isExcluded =
-              name.includes('tts') ||
-              name.includes('robotics') ||
-              name.includes('clip') ||
-              name.includes('embedding') ||
-              name.includes('banana') ||
-              name.includes('2.5-flash') || // deprecated
-              name.includes('preview-customtools');
-            return hasGenerate && !isExcluded;
+            if (!hasGenerate) return false;
+
+            const id = (m.name || '').replace('models/', '');
+            if (!id.startsWith('gemini-')) return false;
+
+            const lower = id.toLowerCase();
+            if (NON_CUSTOMER_PATTERNS.some((p) => lower.includes(p))) return false;
+
+            // Exclude dated internal checkpoint snapshots (e.g. preview-10-2025, preview-04-2026)
+            if (/-\d{2}-\d{4}$/.test(lower)) return false;
+
+            return true;
           })
           .map((m: any) => m.name.replace('models/', ''));
 
-        // Sort models: latest/popular first
+        // Sort models by priority and popularity
         const sorted = filtered.sort((a: string, b: string) => {
-          if (a.includes('3.8-flash') && !b.includes('3.8-flash')) return -1;
-          if (!a.includes('3.8-flash') && b.includes('3.8-flash')) return 1;
-          if (a.includes('flash-latest') && !b.includes('flash-latest')) return -1;
-          if (!a.includes('flash-latest') && b.includes('flash-latest')) return 1;
-          if (a.includes('3.7') && !b.includes('3.7')) return -1;
-          if (!a.includes('3.7') && b.includes('3.7')) return 1;
-          if (a.includes('3.5') && !b.includes('3.5')) return -1;
-          if (!a.includes('3.5') && b.includes('3.5')) return 1;
+          const rankA = MODEL_PRIORITY[a] ?? 99;
+          const rankB = MODEL_PRIORITY[b] ?? 99;
+          if (rankA !== rankB) return rankA - rankB;
           return a.localeCompare(b);
         });
 
-        geminiModelCache = { timestamp: now, models: sorted };
-        return sorted;
+        const finalModels = sorted.length > 0 ? sorted : CUSTOMER_ALLOWED_FALLBACK;
+        geminiModelCache = { timestamp: now, models: finalModels };
+        return finalModels;
       }
     }
   } catch (err) {
     console.warn('Could not fetch live models from Google API, using cached/fallback:', err);
   }
 
-  return geminiModelCache?.models || ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'];
+  return geminiModelCache?.models || CUSTOMER_ALLOWED_FALLBACK;
 }
 
 export async function GET() {

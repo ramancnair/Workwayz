@@ -34,7 +34,7 @@ export function getActiveAiConfig() {
 
   // Provider-aware model sanitization and validation
   if (provider === 'google') {
-    if (!configuredModel || configuredModel === 'local-model' || configuredModel === 'gemini-2.5-flash' || !configuredModel.startsWith('gemini-')) {
+    if (!configuredModel || configuredModel === 'local-model' || configuredModel === 'gemini-2.5-flash' || configuredModel === 'gemini-2.5-pro' || !configuredModel.startsWith('gemini-')) {
       configuredModel = 'gemini-3.8-flash';
     }
   } else if (provider === 'openai') {

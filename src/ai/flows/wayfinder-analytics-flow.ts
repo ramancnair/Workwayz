@@ -2,9 +2,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getActiveAiDetails } from './wayfinder-agent';
 import { db, collection, getDocs, doc, getDoc } from '@/lib/db-provider';
-import { executeFpQuery } from '@/lib/fp-query-engine';
-import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
-import type { FpQueryResponse, FpKpiCard, FpChartSpec, FpTableSpec, FpAuditStamp } from '@/types/fp-dashboard';
+import { executeFpQuery } from '@/lib/wayfinder-query-engine';
+import { executeFpPmQuery, type FpPmProjectData } from '@/lib/wayfinder-pm-query-engine';
+import type { FpQueryResponse, FpKpiCard, FpChartSpec, FpTableSpec, FpAuditStamp } from '@/types/wayfinder-dashboard';
 
 export const FpAnalyticsInputSchema = z.object({
   query: z.string(),
@@ -675,3 +675,7 @@ async function fetchProjectDataForPm(projectId: string): Promise<FpPmProjectData
     paymentMilestones: paymentsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
   };
 }
+
+
+export const runWayFinderAnalyticsQuery = runFpAnalyticsQuery;
+export type WayFinderAnalyticsInput = FpAnalyticsInput;

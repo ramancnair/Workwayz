@@ -1,5 +1,5 @@
 import { collection, getDocs, db } from '@/lib/db-provider';
-import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/fp-dashboard';
+import type { FpQueryResponse, FpKpiCard, FpAuditStamp } from '@/types/wayfinder-dashboard';
 
 export async function executeFpQuery(
   rawQuery: string,
@@ -900,3 +900,6 @@ export async function executeFpQuery(
     ],
   };
 }
+
+
+export const executeWayFinderQuery = executeFpQuery;

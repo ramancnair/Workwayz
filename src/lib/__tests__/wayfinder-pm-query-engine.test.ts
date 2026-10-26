@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { executeFpPmQuery, type FpPmProjectData } from '../fp-pm-query-engine';
+import { executeFpPmQuery, type FpPmProjectData } from '../wayfinder-pm-query-engine';
 
 describe('executeFpPmQuery', () => {
   const mockProjectData: FpPmProjectData = {

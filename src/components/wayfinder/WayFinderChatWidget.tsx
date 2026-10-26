@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import type { WayFinderActionItem, FlowPilotActionItem } from '@/ai/flows/wayfinder-agent';
 import { collection, getDocs, doc, getDoc, db } from '@/lib/db-provider';
+import { getModelDisplayName, CUSTOMER_GEMINI_METADATA } from './WayFinderModelSelector';
 
 import { useToast } from '@/hooks/use-toast';
 
@@ -184,7 +185,7 @@ export function WayFinderChatWidget() {
     isLmStudioRunning: boolean;
   }>({
     lmStudioModels: [],
-    geminiModels: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash', 'gemini-2.5-pro'],
+    geminiModels: ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-pro-latest'],
     isLmStudioRunning: false,
   });
 
@@ -798,18 +799,27 @@ export function WayFinderChatWidget() {
                           <div className="max-h-40 overflow-y-auto space-y-0.5 pr-0.5">
                             {availableModels.geminiModels.map((m) => {
                               const isSelected = aiDetails?.provider === 'google' && aiDetails?.model === m;
+                              const meta = CUSTOMER_GEMINI_METADATA[m];
+                              const displayName = meta?.name || getModelDisplayName(m);
                               return (
                                 <button
                                   key={m}
                                   onClick={() => handleSelectModel('google', m)}
                                   className={cn(
-                                    'w-full text-left px-2 py-1.5 rounded-md text-[11px] font-mono transition-colors flex items-center justify-between gap-1.5',
+                                    'w-full text-left px-2 py-1.5 rounded-md text-[11px] transition-colors flex items-center justify-between gap-1.5',
                                     isSelected
                                       ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30'
                                       : 'hover:bg-accent hover:text-accent-foreground text-foreground/90'
                                   )}
                                 >
-                                  <span className="truncate">{m}</span>
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span className="truncate">{displayName}</span>
+                                    {meta?.tag && (
+                                      <span className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground shrink-0">
+                                        {meta.tag}
+                                      </span>
+                                    )}
+                                  </div>
                                   {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                 </button>
                               );

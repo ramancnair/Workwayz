@@ -6,7 +6,7 @@ import { Sparkles, BarChart3, TrendingUp, CheckCircle2, ArrowRight } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmbeddedReportChart } from './EmbeddedReportChart';
-import type { FpChartSpec, FpKpiCard } from '@/types/fp-dashboard';
+import type { WayFinderChartSpec as FpChartSpec, WayFinderKpiCard as FpKpiCard } from '@/types/wayfinder-dashboard';
 import { cn } from '@/lib/utils';
 
 interface MessageReportRendererProps {

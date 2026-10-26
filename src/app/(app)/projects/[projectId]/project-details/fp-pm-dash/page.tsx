@@ -59,11 +59,11 @@ import {
   ShieldAlert,
   Clock,
 } from 'lucide-react';
-import type { FpQueryResponse, FpKpiCard } from '@/types/fp-dashboard';
-import { executeFpPmQuery, type FpPmProjectData } from '@/lib/fp-pm-query-engine';
+import type { WayFinderQueryResponse as FpQueryResponse, WayFinderKpiCard as FpKpiCard } from '@/types/wayfinder-dashboard';
+import { executeWayFinderPmQuery as executeFpPmQuery, type WayFinderPmProjectData as FpPmProjectData } from '@/lib/wayfinder-pm-query-engine';
 import { cn } from '@/lib/utils';
-import { FpModelSelector } from '@/components/fp-dashboard/FpModelSelector';
-import { FpFallbackAlert } from '@/components/fp-dashboard/FpFallbackAlert';
+import { WayFinderModelSelector } from '@/components/wayfinder/WayFinderModelSelector';
+import { WayFinderFallbackAlert } from '@/components/wayfinder/WayFinderFallbackAlert';
 import { ScheduleCronModal } from '@/components/cron-jobs/ScheduleCronModal';
 import { CronJobsList } from '@/components/cron-jobs/CronJobsList';
 import { loadCronJobs } from '@/lib/cron-jobs-service';
@@ -510,7 +510,7 @@ export default function FpPmDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">AI Model:</span>
-              <FpModelSelector
+              <WayFinderModelSelector
                 selectedModel={selectedModel}
                 onModelChange={(newModel) => {
                   setSelectedModel(newModel);
@@ -692,7 +692,7 @@ export default function FpPmDashboardPage() {
         {response && (
           <div className="space-y-6">
             {/* Rich Actionable Fallback Alert */}
-            <FpFallbackAlert
+            <WayFinderFallbackAlert
               response={response}
               selectedModel={selectedModel}
               onModelChange={(newModel) => setSelectedModel(newModel)}

@@ -4,24 +4,24 @@ import React from 'react';
 import { AlertTriangle, Sparkles, RefreshCw, Cpu, Zap, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { FpQueryResponse } from '@/types/fp-dashboard';
-import { FpModelSelector } from './FpModelSelector';
+import type { WayFinderQueryResponse, FpQueryResponse } from '@/types/wayfinder-dashboard';
+import { WayFinderModelSelector } from './WayFinderModelSelector';
 
-interface FpFallbackAlertProps {
-  response: FpQueryResponse;
+export interface WayFinderFallbackAlertProps {
+  response: WayFinderQueryResponse;
   selectedModel: string;
   onModelChange: (newModel: string) => void;
   onRetry: (modelToUse?: string) => void;
   isLoading?: boolean;
 }
 
-export function FpFallbackAlert({
+export function WayFinderFallbackAlert({
   response,
   selectedModel,
   onModelChange,
   onRetry,
   isLoading = false,
-}: FpFallbackAlertProps) {
+}: WayFinderFallbackAlertProps) {
   if (!response?.isFallback) return null;
 
   const category = response.errorCategory || 'other';
@@ -137,7 +137,7 @@ export function FpFallbackAlert({
 
         {/* Custom Selector Dropdown & Retry */}
         <div className="flex items-center gap-2">
-          <FpModelSelector
+          <WayFinderModelSelector
             selectedModel={selectedModel}
             onModelChange={(newModel) => {
               onModelChange(newModel);
@@ -161,3 +161,7 @@ export function FpFallbackAlert({
     </div>
   );
 }
+
+// Backwards-compatible aliases
+export const FpFallbackAlert = WayFinderFallbackAlert;
+export type FpFallbackAlertProps = WayFinderFallbackAlertProps;

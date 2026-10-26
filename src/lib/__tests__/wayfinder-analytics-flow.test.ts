@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 import { describe, it, expect } from 'vitest';
-import { runFpAnalyticsQuery, classifyAiError } from '@/ai/flows/fp-analytics-flow';
+import { runFpAnalyticsQuery, classifyAiError } from '@/ai/flows/wayfinder-analytics-flow';
 
 describe('classifyAiError', () => {
   it('identifies 503 No capacity available error clearly', () => {

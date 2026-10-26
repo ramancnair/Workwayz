@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { runFpAnalyticsQuery } from '@/ai/flows/fp-analytics-flow';
-import type { FpQueryRequest } from '@/types/fp-dashboard';
+import { runWayFinderAnalyticsQuery as runFpAnalyticsQuery } from '@/ai/flows/wayfinder-analytics-flow';
+import type { WayFinderQueryRequest as FpQueryRequest } from '@/types/wayfinder-dashboard';
 
 export async function POST(request: Request) {
   try {

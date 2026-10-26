@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runFpAnalyticsQuery, type FpAnalyticsInput } from '@/ai/flows/fp-analytics-flow';
+import { runWayFinderAnalyticsQuery as runFpAnalyticsQuery, type WayFinderAnalyticsInput as FpAnalyticsInput } from '@/ai/flows/wayfinder-analytics-flow';
 
 export async function POST(request: Request) {
   try {
