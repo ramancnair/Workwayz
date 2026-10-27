@@ -442,30 +442,10 @@ export default function QualityEstimationsPage() {
                         Variance <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </TableHead>
-                    <TableHead className="w-[160px] cursor-pointer text-right" onClick={() => toggleSort('conformanceRate')}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        Plan Consumed <ArrowUpDown className="h-3 w-3" />
-                      </div>
-                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredMetrics.map((item) => {
-                    const progressValue = Math.min(100, item.conformanceRate);
-                    let progressColor = "bg-emerald-500";
-                    let progressBg = "bg-emerald-500/10";
-                    let progressText = "text-emerald-500";
-
-                    if (item.conformanceRate >= 100) {
-                      progressColor = "bg-rose-500 animate-pulse";
-                      progressBg = "bg-rose-500/10";
-                      progressText = "text-rose-500 font-semibold";
-                    } else if (item.conformanceRate >= 90) {
-                      progressColor = "bg-amber-500";
-                      progressBg = "bg-amber-500/10";
-                      progressText = "text-amber-500 font-semibold";
-                    }
-
                     return (
                       <TableRow key={item.projectId} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
@@ -527,18 +507,6 @@ export default function QualityEstimationsPage() {
                           ) : (
                             <span className="text-xs text-muted-foreground/60 italic">N/A</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-col items-end gap-1.5 min-w-[120px]">
-                            <span className={`text-[12px] ${progressText}`}>
-                              {item.conformanceRate.toFixed(0)}%
-                            </span>
-                            <Progress 
-                              value={progressValue} 
-                              className={`h-1.5 w-24 bg-muted ${progressBg}`}
-                              indicatorClassName={progressColor}
-                            />
-                          </div>
                         </TableCell>
                       </TableRow>
                     );
