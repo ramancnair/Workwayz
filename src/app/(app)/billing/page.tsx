@@ -351,8 +351,8 @@ export default function BillingPage() {
         let resourceCost = 0;
 
         employees.forEach(user => {
-          const start = convertToDate(user.onboardingDate);
-          const end = convertToDate(user.offloadingDate);
+          const start = convertToDate(user.onboardingDate) || startProj;
+          const end = convertToDate(user.offloadingDate) || endProj;
           if (start && end && end >= start) {
             const interval = eachDayOfInterval({ start, end });
             const businessDays = interval.filter(day => {
@@ -398,12 +398,16 @@ export default function BillingPage() {
       // Specific Calendar Interval Calculation [periodStart, periodEnd]
       const { start: pStart, end: pEnd } = activeDateInterval;
 
+      // Project lifetime overlap with this calendar period
+      const projStart = convertToDate(project.startDate);
+      const projEnd = convertToDate(project.endDate);
+
       let revenue = 0;
       let resourceCost = 0;
 
       employees.forEach(user => {
-        const userStart = convertToDate(user.onboardingDate);
-        const userEnd = convertToDate(user.offloadingDate);
+        const userStart = convertToDate(user.onboardingDate) || projStart;
+        const userEnd = convertToDate(user.offloadingDate) || projEnd;
         if (userStart && userEnd && userEnd >= userStart) {
           // Clamp to active calendar interval
           const overlapStart = userStart < pStart ? pStart : userStart;
@@ -423,10 +427,6 @@ export default function BillingPage() {
           }
         }
       });
-
-      // Project lifetime overlap with this calendar period
-      const projStart = convertToDate(project.startDate);
-      const projEnd = convertToDate(project.endDate);
 
       let activeMonthsInPeriod = 0;
       let isProjectActiveInPeriod = false;
@@ -497,21 +497,6 @@ export default function BillingPage() {
     });
   }, [billingSources, activeDateInterval, granularity]);
 
-  // Aggregate metrics for top KPI cards
-  const aggregateMetrics = useMemo(() => {
-    return calculatedBillingData.reduce(
-      (acc, curr) => {
-        acc.totalRevenue += curr.revenue;
-        acc.totalCost += curr.resourceCost;
-        acc.totalFixed += curr.fixedCosts;
-        acc.totalProfit += curr.profit;
-        acc.totalCompleted += curr.completedPayments;
-        return acc;
-      },
-      { totalRevenue: 0, totalCost: 0, totalFixed: 0, totalProfit: 0, totalCompleted: 0 }
-    );
-  }, [calculatedBillingData]);
-
   // Sort and filter logic
   const handleSort = (columnId: keyof ProjectBillingRow) => {
     if (sorting.id === columnId) {
@@ -542,6 +527,21 @@ export default function BillingPage() {
     return filtered;
   }, [calculatedBillingData, searchQuery, sorting]);
 
+  // Aggregate metrics for top KPI cards (reflects active timeframe and filtered rows)
+  const aggregateMetrics = useMemo(() => {
+    return processedData.reduce(
+      (acc, curr) => {
+        acc.totalRevenue += curr.revenue;
+        acc.totalCost += curr.resourceCost;
+        acc.totalFixed += curr.fixedCosts;
+        acc.totalProfit += curr.profit;
+        acc.totalCompleted += curr.completedPayments;
+        return acc;
+      },
+      { totalRevenue: 0, totalCost: 0, totalFixed: 0, totalProfit: 0, totalCompleted: 0 }
+    );
+  }, [processedData]);
+
   const activePeriodTitle = activeDateInterval ? activeDateInterval.label : 'Lifetime';
 
   return (
@@ -549,7 +549,70 @@ export default function BillingPage() {
       <PageHeader 
         title="Billing" 
         description="Executive financial overview of project revenue, cost, profit, and payments." 
-      />
+      >
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {/* Timeframe Granularity Dropdown */}
+          <Select value={granularity} onValueChange={(val: any) => setGranularity(val)}>
+            <SelectTrigger className="w-full sm:w-[130px] bg-background/50 border-muted text-xs h-9">
+              <Calendar className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              <SelectValue placeholder="Timeframe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month" className="text-xs">Monthly</SelectItem>
+              <SelectItem value="quarter" className="text-xs">Quarterly</SelectItem>
+              <SelectItem value="year" className="text-xs">Yearly</SelectItem>
+              <SelectItem value="total" className="text-xs">Lifetime</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Year Dropdown (Displayed for Monthly, Quarterly, and Yearly; hidden for Lifetime) */}
+          {granularity !== 'total' && (
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-full sm:w-[110px] bg-background/50 border-muted font-medium text-xs h-9">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {yearOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Sub-period Dropdown: Month or Quarter based on Timeframe (Hidden for Yearly and Lifetime) */}
+          {granularity === 'month' && (
+            <Select value={selectedMonthNum} onValueChange={setSelectedMonthNum}>
+              <SelectTrigger className="w-full sm:w-[150px] bg-background/50 border-muted font-medium text-xs h-9">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {monthNamesOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {granularity === 'quarter' && (
+            <Select value={selectedQuarterNum} onValueChange={setSelectedQuarterNum}>
+              <SelectTrigger className="w-full sm:w-[160px] bg-background/50 border-muted font-medium text-xs h-9">
+                <SelectValue placeholder="Quarter" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {quarterNamesOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </PageHeader>
 
       {/* Aggregate Cards */}
       {isLoading ? (
@@ -653,7 +716,7 @@ export default function BillingPage() {
 
       {/* Main projects billing list */}
       <Card className="bg-card/50 backdrop-blur-sm">
-        <CardHeader className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 pb-4 border-b border-border/60">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg font-bold">
               <Briefcase className="h-5 w-5 text-blue-500" />
@@ -664,68 +727,7 @@ export default function BillingPage() {
             </CardTitle>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
-            {/* Timeframe Granularity Dropdown */}
-            <Select value={granularity} onValueChange={(val: any) => setGranularity(val)}>
-              <SelectTrigger className="w-full sm:w-[130px] bg-background/50 border-muted text-xs h-9">
-                <Calendar className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Timeframe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month" className="text-xs">Monthly</SelectItem>
-                <SelectItem value="quarter" className="text-xs">Quarterly</SelectItem>
-                <SelectItem value="year" className="text-xs">Yearly</SelectItem>
-                <SelectItem value="total" className="text-xs">Lifetime</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Year Dropdown (Displayed for Monthly, Quarterly, and Yearly; hidden for Lifetime) */}
-            {granularity !== 'total' && (
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full sm:w-[110px] bg-background/50 border-muted font-medium text-xs h-9">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {yearOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Sub-period Dropdown: Month or Quarter based on Timeframe (Hidden for Yearly and Lifetime) */}
-            {granularity === 'month' && (
-              <Select value={selectedMonthNum} onValueChange={setSelectedMonthNum}>
-                <SelectTrigger className="w-full sm:w-[150px] bg-background/50 border-muted font-medium text-xs h-9">
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {monthNamesOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {granularity === 'quarter' && (
-              <Select value={selectedQuarterNum} onValueChange={setSelectedQuarterNum}>
-                <SelectTrigger className="w-full sm:w-[160px] bg-background/50 border-muted font-medium text-xs h-9">
-                  <SelectValue placeholder="Quarter" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {quarterNamesOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             {/* Project Search Box */}
             <div className="relative w-full sm:w-60">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />

@@ -495,7 +495,6 @@ export function getPermittedFallbackRoute(
       candidates: [
         { name: 'Holiday Calendar', path: '/holidays/holiday-calendar' },
         { name: 'Leave Settings', path: '/holidays/leave-settings' },
-        { name: 'Leave Tracker', path: '/holidays/leave-tracker' },
       ],
     },
     {

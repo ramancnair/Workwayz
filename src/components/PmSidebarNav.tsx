@@ -180,6 +180,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'my-projects'
     },
     {
+      id: 'leave-tracker',
+      href: `/holidays/leave-tracker`,
+      label: "Leave Tracker",
+      icon: CalendarCheck,
+      group: 'my-projects'
+    },
+    {
       id: 'projects',
       href: `/project-home`,
       label: "Project Home",
@@ -254,13 +261,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: `/holidays/leave-settings`,
       label: "Leave Settings",
       icon: ClipboardList,
-      group: 'holidays'
-    },
-    {
-      id: 'leave-tracker',
-      href: `/holidays/leave-tracker`,
-      label: "Leave Tracker",
-      icon: CalendarCheck,
       group: 'holidays'
     },
     {

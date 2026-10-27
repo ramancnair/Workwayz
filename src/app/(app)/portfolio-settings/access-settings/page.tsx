@@ -58,6 +58,12 @@ const pageSections: PageSection[] = [
     description: 'Top navigation bars and corresponding sidebar sub-pages across the portfolio.',
     groups: [
       {
+        id: 'top_my_projects',
+        name: 'My Projects',
+        topNavName: 'My Projects',
+        pages: ['Leave Tracker'],
+      },
+      {
         id: 'top_projects',
         name: 'Projects',
         topNavName: 'Projects',
@@ -85,7 +91,7 @@ const pageSections: PageSection[] = [
         id: 'top_holidays',
         name: 'Holidays',
         topNavName: 'Holidays',
-        pages: ['Holiday Calendar', 'Leave Settings', 'Leave Tracker'],
+        pages: ['Holiday Calendar', 'Leave Settings'],
       },
     ],
   },

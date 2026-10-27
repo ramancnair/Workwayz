@@ -73,7 +73,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const showOnlyMyProjects = isEnabled === false;
 
   const getTabValue = () => {
-    if (pathname.startsWith('/my-projects')) return 'my-projects';
+    if (pathname.startsWith('/my-projects') || pathname.startsWith('/holidays/leave-tracker')) return 'my-projects';
     if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
     if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard')) return 'projects';
@@ -113,7 +113,6 @@ export default function AppLayout({ children }: PropsWithChildren) {
       case 'holidays':
         if (hasAccess('Holiday Calendar')) return '/holidays/holiday-calendar';
         if (hasAccess('Leave Settings')) return '/holidays/leave-settings';
-        if (hasAccess('Leave Tracker')) return '/holidays/leave-tracker';
         return '/holidays/holiday-calendar';
       case 'portfolios':
         if (hasAccess('Access Settings')) return '/portfolio-settings/access-settings';
@@ -193,7 +192,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href={getDefaultRouteForTab('users')}>Users</Link>
                               </TabsTrigger>
                             )}
-                            {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings') || hasAccess('Leave Tracker')) && (
+                            {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings')) && (
                               <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
                               </TabsTrigger>

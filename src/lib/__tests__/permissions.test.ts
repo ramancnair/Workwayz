@@ -25,6 +25,8 @@ describe('ProjectFlow Permissions Matrix', () => {
       expect(getPageNameForRoute('/users')).toBe('User List');
       expect(getPageNameForRoute('/utilization')).toBe('Utilization');
       expect(getPageNameForRoute('/holidays/holiday-calendar')).toBe('Holiday Calendar');
+      expect(getPageNameForRoute('/holidays/leave-settings')).toBe('Leave Settings');
+      expect(getPageNameForRoute('/holidays/leave-tracker')).toBe('Leave Tracker');
       expect(getPageNameForRoute('/billing')).toBe('Billing');
       expect(getPageNameForRoute('/portfolio-trash')).toBe('Trash');
     });

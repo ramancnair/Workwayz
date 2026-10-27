@@ -58,11 +58,11 @@ npm run test:e2e:install
 ### Pillar 2: Global Portfolio Workspace (`e2e/02-global-portfolio-workspace.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
-| **TC-PORT-001** | My Projects catalog renders project grid | Project list rendered with filter and creation triggers | ✅ Automated |
+| **TC-PORT-001** | My Projects catalog & Leave Tracker navigation | Project list and Leave Tracker sidebar link under My Projects | ✅ Automated |
 | **TC-PORT-002** | Project Home overview loads KPIs | Portfolio initiative summary cards visible | ✅ Automated |
 | **TC-PORT-003** | Portfolio Executive Dashboard | Budget burn rate and delivery velocity charts load | ✅ Automated |
 | **TC-PORT-004** | WayFinder AI assistant dashboard | AI agent widgets and recommendation cards render | ✅ Automated |
-| **TC-PORT-005** | Billing and Rate cards | Rate card grids, milestone schedules accessible | ✅ Automated |
+| **TC-PORT-005** | Billing and Rate cards | Executive timeframe filters in header, KPI summary cards, and rate tables | ✅ Automated |
 | **TC-PORT-006** | Users roster and team directory | Member roster with role badges displayed | ✅ Automated |
 | **TC-PORT-007** | Resource utilization & Gantt chart | Team capacity percentages and timeline bars visible | ✅ Automated |
 | **TC-PORT-008** | Holidays calendar & leave management | Holiday dates and leave balance tabs active | ✅ Automated |

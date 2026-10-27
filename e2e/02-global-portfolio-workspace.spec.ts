@@ -10,6 +10,7 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await page.goto('/my-projects', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('body')).toContainText(/My Projects/i);
+    await expect(page.locator('a[href="/holidays/leave-tracker"]')).toBeVisible();
     // Search input or filter element should be present
     const searchInput = page.locator('input[placeholder*="Search" i], input[type="search"]').first();
     if (await searchInput.isVisible({ timeout: 1500 })) {

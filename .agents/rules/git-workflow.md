@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Git Workflow, Quality Gates, and Living Documents Policy
 
 - **Author Info**: Always use `ramancnair6282` and `ramancnair6282@gmail.com`.
