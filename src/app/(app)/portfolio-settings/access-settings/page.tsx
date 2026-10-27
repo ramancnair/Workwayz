@@ -59,8 +59,8 @@ const pageSections: PageSection[] = [
     groups: [
       {
         id: 'top_my_projects',
-        name: 'My Projects',
-        topNavName: 'My Projects',
+        name: 'My Workspace',
+        topNavName: 'My Workspace',
         pages: ['Leave Tracker', 'Messages'],
       },
       {

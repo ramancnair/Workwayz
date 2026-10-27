@@ -168,7 +168,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 <Tabs value={activeTab} onValueChange={onTabChange}>
                     <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 border border-border/40">
                         <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
-                          <Link href={getDefaultRouteForTab('my-projects')}>My Projects</Link>
+                          <Link href={getDefaultRouteForTab('my-projects')}>My Workspace</Link>
                         </TabsTrigger>
                         {!showOnlyMyProjects && (
                           <>

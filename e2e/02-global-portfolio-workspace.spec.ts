@@ -9,6 +9,7 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
   test('TC-PORT-001: My Projects view renders portfolio header, search bar, and project grid', async ({ page }) => {
     await page.goto('/my-projects', { waitUntil: 'domcontentloaded' });
 
+    await expect(page.locator('body')).toContainText(/My Workspace/i);
     await expect(page.locator('body')).toContainText(/My Projects/i);
     await expect(page.locator('a[href="/holidays/leave-tracker"]')).toBeVisible();
     await expect(page.locator('a[href="/messages"]')).toBeVisible();
