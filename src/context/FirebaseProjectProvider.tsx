@@ -409,23 +409,26 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
         if (snapshot.docs) { // QuerySnapshot
           const data = snapshot.docs.map(formatData);
-          setState(data);
+          if (name === 'kanbanColumns' && data.length === 0) {
+            setState(defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` })));
+          } else {
+            setState(data);
+          }
         } else if (snapshot.exists()) { // DocumentSnapshot
           setState(formatData(snapshot));
         } else {
           if (name === 'settings') {
             setDoc(doc(rootProjectDocRef, 'settings', 'main'), defaultProjectSettings).catch((e: any) => console.error("Failed to set default project settings", e));
-          } else if (name === 'project') {
-            setError(`Project with ID "${projectId}" not found.`);
           }
           setState(isDoc ? null : []);
         }
       }, (err: any) => {
         console.warn(`[FirebaseProjectProvider] Data access warning for ${name}:`, err.message);
-        if (name === 'project') {
-          setError(`Failed to listen to project ${projectId}: ${err.message}`);
+        if (name === 'kanbanColumns') {
+          setState(defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` })));
+        } else {
+          setState(isDoc ? null : []);
         }
-        setState(isDoc ? null : []);
       });
     });
 

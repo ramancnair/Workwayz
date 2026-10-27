@@ -1775,6 +1775,15 @@ export async function executeWayFinderActionOnClient(action: any) {
         const employeesSnap = await getDocs(collection(db, 'employees'));
         const empDoc = employeesSnap.docs.find((d: any) => d.id === params.userIdOrEmpId || d.data().empId === params.userIdOrEmpId);
         if (!empDoc) throw new Error(`User ${params.userIdOrEmpId} not found`);
+        if (params.isEnabled) {
+          const empData = empDoc.data();
+          const hasJoiningDate = !!(empData.employmentStartDate && String(empData.employmentStartDate).trim() !== '');
+          const parsedCost = Number(empData.costAmount);
+          const hasValidCost = empData.costAmount !== undefined && empData.costAmount !== null && String(empData.costAmount).trim() !== '' && !Number.isNaN(parsedCost) && parsedCost > 0;
+          if (!hasJoiningDate || !hasValidCost) {
+            throw new Error('Joining Date (employmentStartDate) and Cost to Company (costAmount) must be populated before approving the user as active.');
+          }
+        }
         await updateDoc(doc(db, 'employees', empDoc.id), { isEnabled: params.isEnabled, updatedAt: new Date().toISOString() });
         return { success: true, id: empDoc.id, isEnabled: params.isEnabled, url: '/users' };
       }

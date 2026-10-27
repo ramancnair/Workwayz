@@ -63,9 +63,9 @@ npm run test:e2e:install
 | **TC-PORT-003** | Portfolio Executive Dashboard | Budget burn rate and delivery velocity charts load | ✅ Automated |
 | **TC-PORT-004** | WayFinder AI assistant dashboard | AI agent widgets and recommendation cards render | ✅ Automated |
 | **TC-PORT-005** | Billing and Rate cards | Executive timeframe filters in header, KPI summary cards, and rate tables | ✅ Automated |
-| **TC-PORT-006** | Users roster and team directory | Member roster with role badges displayed | ✅ Automated |
+| **TC-PORT-006** | Users roster, mandatory Joining Date & Cost gating | Member roster with role badges and mandatory Joining Date & Cost validation | ✅ Automated |
 | **TC-PORT-007** | Resource utilization & Gantt chart | Team capacity percentages and timeline bars visible | ✅ Automated |
-| **TC-PORT-008** | Holidays calendar & leave management | Holiday dates and leave balance tabs active | ✅ Automated |
+| **TC-PORT-008** | Holidays calendar & Policy A pro-rata leave settings | Holiday dates, Policy A monthly pro-rata quota, and carry-forward balances | ✅ Automated |
 | **TC-PORT-009** | Portfolio administration & trash recovery | Archive and soft-delete recovery workflows | ✅ Automated |
 
 ### Pillar 3: Project Detail Hub (`e2e/03-project-details-and-estimations.spec.ts`)

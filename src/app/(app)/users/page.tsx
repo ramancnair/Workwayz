@@ -117,12 +117,21 @@ const userFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   experience: z.coerce.number().optional(),
-  employmentStartDate: z.string().optional().nullable(),
+  employmentStartDate: z.string({ required_error: 'Joining Date is required' }).trim().min(1, 'Joining Date is required'),
   employmentEndDate: z.string().optional().nullable(),
   accessLevel: z.enum(['Super Admin', 'Administrator', 'Senior Management', 'Project Manager', 'Lead', 'Team Member', 'PMO'], {
     required_error: 'Access Level is required',
   }),
-  costAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  costAmount: z.union([z.string(), z.number()], { required_error: 'Cost to Company is required' })
+    .refine((val) => {
+      if (val === undefined || val === null) return false;
+      const trimmed = String(val).trim();
+      if (!trimmed) return false;
+      const parsed = Number(trimmed);
+      return !Number.isNaN(parsed) && parsed > 0;
+    }, {
+      message: 'Cost to Company is required and must be greater than 0',
+    }),
   costCurrency: z.string().optional(),
   password: z.string().optional().refine(val => !val || val.length >= 6, {
     message: 'Password must be at least 6 characters',
@@ -455,6 +464,17 @@ export default function UsersPage() {
       valuesWithDates.costAmount = !isNaN(parsedCost) ? Math.round(parsedCost * 100) / 100 : null;
     } else {
       valuesWithDates.costAmount = null;
+    }
+
+    if (!valuesWithDates.employmentStartDate || valuesWithDates.costAmount === null || valuesWithDates.costAmount <= 0) {
+      if (!valuesWithDates.employmentStartDate) {
+        form.setError('employmentStartDate', { type: 'manual', message: 'Joining Date is required' });
+      }
+      if (valuesWithDates.costAmount === null || valuesWithDates.costAmount <= 0) {
+        form.setError('costAmount', { type: 'manual', message: 'Cost to Company is required and must be greater than 0' });
+      }
+      setIsSubmitting(false);
+      return;
     }
 
     const sanitizedValues = sanitizeForFirestore(valuesWithDates);
@@ -853,7 +873,7 @@ export default function UsersPage() {
                   )} />
                   <FormField control={form.control} name="employmentStartDate" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Joining Date</FormLabel>
+                      <FormLabel>Joining Date *</FormLabel>
                       <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -910,28 +930,28 @@ export default function UsersPage() {
                       </FormItem>
                     )} />
                   )}
-                  <div className="space-y-2">
-                    <FormLabel>Cost</FormLabel>
-                    <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
-                      <FormField control={form.control} name="costCurrency" render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value || 'USD'}>
-                          <FormControl>
-                            <SelectTrigger className="w-[125px] border-0 focus:ring-0 focus:ring-offset-0 rounded-r-none shadow-none h-full bg-transparent pr-2 pl-3">
-                              <SelectValue placeholder="USD" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="USD">USD ($)</SelectItem>
-                            <SelectItem value="EUR">EUR (€)</SelectItem>
-                            <SelectItem value="GBP">GBP (£)</SelectItem>
-                            <SelectItem value="INR">INR (₹)</SelectItem>
-                            <SelectItem value="CAD">CAD ($)</SelectItem>
-                            <SelectItem value="AUD">AUD ($)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )} />
-                      <div className="h-6 w-px bg-input shrink-0" />
-                      <FormField control={form.control} name="costAmount" render={({ field }) => (
+                  <FormField control={form.control} name="costAmount" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost *</FormLabel>
+                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden">
+                        <FormField control={form.control} name="costCurrency" render={({ field: currencyField }) => (
+                          <Select onValueChange={currencyField.onChange} value={currencyField.value || 'USD'}>
+                            <FormControl>
+                              <SelectTrigger className="w-[125px] border-0 focus:ring-0 focus:ring-offset-0 rounded-r-none shadow-none h-full bg-transparent pr-2 pl-3">
+                                <SelectValue placeholder="USD" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="USD">USD ($)</SelectItem>
+                              <SelectItem value="EUR">EUR (€)</SelectItem>
+                              <SelectItem value="GBP">GBP (£)</SelectItem>
+                              <SelectItem value="INR">INR (₹)</SelectItem>
+                              <SelectItem value="CAD">CAD ($)</SelectItem>
+                              <SelectItem value="AUD">AUD ($)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )} />
+                        <div className="h-6 w-px bg-input shrink-0" />
                         <FormControl>
                           <Input
                             type="text"
@@ -956,9 +976,10 @@ export default function UsersPage() {
                             }}
                           />
                         </FormControl>
-                      )} />
-                    </div>
-                  </div>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
               </div>
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">

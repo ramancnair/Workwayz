@@ -397,20 +397,26 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
             
             if (snapshot.docs) { // QuerySnapshot
                 const data = snapshot.docs.map(formatData);
-                setState(data);
+                if (name === 'kanbanColumns' && data.length === 0) {
+                    setState(defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` })));
+                } else {
+                    setState(data);
+                }
             } else if (snapshot.exists()) { // DocumentSnapshot
                 setState(formatData(snapshot));
             } else {
                  if (name === 'settings') {
                     setDoc(doc(rootProjectDocRef, 'settings', 'main'), defaultProjectSettings).catch(e => console.error("Failed to set default project settings", e));
-                 } else if (name === 'project') {
-                    setError(`Project with ID "${projectId}" not found.`);
                  }
                  setState(isDoc ? null : []);
             }
         }, (err: any) => {
-            console.error(`Error fetching ${name}:`, err);
-            setError(`Failed to listen to the database. (Collection: ${name}, Error: ${err.message})`);
+            console.warn(`[PostgresProjectProvider] Data access warning for ${name}:`, err.message);
+            if (name === 'kanbanColumns') {
+                setState(defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` })));
+            } else {
+                setState(isDoc ? null : []);
+            }
         });
     });
     

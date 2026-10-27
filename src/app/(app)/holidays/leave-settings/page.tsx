@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
 import { getUserInitials } from '@/lib/utils';
+import { calculateEmployeeLeaveQuotaStats } from '@/lib/leave-utils';
 
 const defaultSettings = {
   weeklyOffDays: [0, 6],
@@ -162,41 +163,30 @@ export default function AllocatedLeavesPage() {
   const currentYear = new Date().getFullYear();
   const prevYear = currentYear - 1;
 
-  // Reactively calculate resource balances ledger
+  // Reactively calculate resource balances ledger (Policy A: Monthly Pro-Rata with 15th-of-month cutoff)
   const resourcesLedger = useMemo(() => {
     return employees.map(emp => {
-      const paidTakenPrev = (emp.leavePeriods || [])
-        .filter(p => p.type === 'Paid Leave' || !p.type)
-        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, prevYear), 0);
-
-      const remainingPrev = Math.max(0, allocatedPaidLeaves - paidTakenPrev);
-
-      // Verify active presence in previous year or earlier
-      const hasEmploymentStartDateInPrevYear = emp.employmentStartDate && new Date(emp.employmentStartDate).getFullYear() <= prevYear;
-      const hasOnboardingDateInPrevYear = emp.onboardingDate && new Date(emp.onboardingDate).getFullYear() <= prevYear;
-      const hasLeavesInPrevYearOrBefore = (emp.leavePeriods || []).some(p => p.startDate && new Date(p.startDate).getFullYear() <= prevYear);
-      
-      const existedInPrevYear = !!(hasEmploymentStartDateInPrevYear || hasOnboardingDateInPrevYear || hasLeavesInPrevYearOrBefore);
-
-      const carriedOver = existedInPrevYear && allowCarryOver ? Math.min(remainingPrev, carryOverLimit) : 0;
-      const totalAvailable = allocatedPaidLeaves + carriedOver;
-
-      const paidTakenCurrent = (emp.leavePeriods || [])
-        .filter(p => p.type === 'Paid Leave' || !p.type)
-        .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, currentYear), 0);
-
-      const remainingCurrent = Math.max(0, totalAvailable - paidTakenCurrent);
+      const stats = calculateEmployeeLeaveQuotaStats(
+        emp,
+        currentYear,
+        {
+          allocatedPaidLeavesPerYear: allocatedPaidLeaves,
+          allowCarryOver,
+          carryOverLimit,
+        },
+        calculateBusinessDaysForYear
+      );
 
       return {
         ...emp,
-        carriedOver,
-        allocated: allocatedPaidLeaves,
-        totalAvailable,
-        taken: paidTakenCurrent,
-        remaining: remainingCurrent,
+        carriedOver: stats.carriedOver,
+        allocated: stats.allocated,
+        totalAvailable: stats.totalAvailable,
+        taken: stats.activeYearPaidTaken,
+        remaining: stats.remainingPaid,
       };
     });
-  }, [employees, allocatedPaidLeaves, allowCarryOver, carryOverLimit, calculateBusinessDaysForYear, currentYear, prevYear]);
+  }, [employees, allocatedPaidLeaves, allowCarryOver, carryOverLimit, calculateBusinessDaysForYear, currentYear]);
 
   // Filter resources ledger
   const filteredLedger = useMemo(() => {

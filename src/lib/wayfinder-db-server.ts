@@ -16,6 +16,7 @@ import {
   Timestamp,
 } from '@/lib/db-provider';
 import { generateFullProjectData } from '@/lib/project-autogen';
+import { calculatePolicyALeaveQuotaForYear, parseEmployeeJoiningDate } from '@/lib/leave-utils';
 import { isBugWorkItem, isPbiWorkItem } from '@/types';
 import type {
   Story,
@@ -2655,6 +2656,16 @@ export async function wayfinderToggleUserStatus(params: { userIdOrEmpId: string;
   );
   if (!empDoc) throw new Error(`User "${params.userIdOrEmpId}" not found.`);
 
+  if (params.isEnabled) {
+    const empData = empDoc.data();
+    const hasJoiningDate = !!(empData.employmentStartDate && String(empData.employmentStartDate).trim() !== '');
+    const parsedCost = Number(empData.costAmount);
+    const hasValidCost = empData.costAmount !== undefined && empData.costAmount !== null && String(empData.costAmount).trim() !== '' && !Number.isNaN(parsedCost) && parsedCost > 0;
+    if (!hasJoiningDate || !hasValidCost) {
+      throw new Error('Joining Date (employmentStartDate) and Cost to Company (costAmount) must be populated before approving the user as active.');
+    }
+  }
+
   await updateDoc(doc(db, 'employees', empDoc.id), {
     isEnabled: params.isEnabled,
     updatedAt: new Date().toISOString(),
@@ -2965,6 +2976,12 @@ export async function wayfinderQueryEmployeeLeaveBalance(params: { employeeId: s
 
   const leaves = empDoc.data().leaves || [];
   const targetYear = params.year || new Date().getFullYear();
+  const allocatedQuota = calculatePolicyALeaveQuotaForYear(
+    defaultQuota,
+    targetYear,
+    parseEmployeeJoiningDate(empDoc.data()),
+    { defaultFullIfMissingJoinDate: true }
+  );
 
   const yearLeaves = leaves.filter((l: any) => {
     if (!l.startDate) return false;
@@ -2981,13 +2998,13 @@ export async function wayfinderQueryEmployeeLeaveBalance(params: { employeeId: s
     }
   });
 
-  const remainingBalance = Math.max(0, defaultQuota - usedDays);
+  const remainingBalance = Math.max(0, allocatedQuota - usedDays);
   return {
     employeeId: empDoc.id,
     empId: empDoc.data().empId || empDoc.id,
     name: `${empDoc.data().firstName || ''} ${empDoc.data().lastName || ''}`.trim(),
     year: targetYear,
-    allocatedAnnualQuota: defaultQuota,
+    allocatedAnnualQuota: allocatedQuota,
     usedLeaveDays: usedDays,
     remainingLeaveBalance: remainingBalance,
     leaves: yearLeaves,

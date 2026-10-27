@@ -36,6 +36,7 @@ import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { type User, type LeavePeriod, type Holiday } from '@/types';
 import { cn } from '@/lib/utils';
+import { calculateEmployeeLeaveQuotaStats } from '@/lib/leave-utils';
 import { Badge } from '@/components/ui/badge';
 import { db } from '@/lib/db-provider';
 import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from '@/lib/db-provider';
@@ -313,52 +314,9 @@ export default function LeaveTrackerPage() {
     }
   };
 
-  // Helper function to calculate stats for a specific year
+  // Helper function to calculate stats for a specific year (Policy A: Monthly Pro-Rata with 15th-of-month cutoff)
   const getLeaveQuotaStatsForYear = useCallback((user: User, year: number) => {
-    const prevYear = year - 1;
-    const allocated = leaveSettings.allocatedPaidLeavesPerYear;
-
-    // Previous year paid taken
-    const prevYearPaidTaken = (user.leavePeriods || [])
-      .filter(p => p.type === 'Paid Leave' || !p.type)
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, prevYear), 0);
-
-    const remainingPrev = Math.max(0, allocated - prevYearPaidTaken);
-
-    // Verify active presence in previous year or earlier
-    const hasEmploymentStartDateInPrevYear = user.employmentStartDate && new Date(user.employmentStartDate).getFullYear() <= prevYear;
-    const hasOnboardingDateInPrevYear = user.onboardingDate && new Date(user.onboardingDate).getFullYear() <= prevYear;
-    const hasLeavesInPrevYearOrBefore = (user.leavePeriods || []).some(p => p.startDate && new Date(p.startDate).getFullYear() <= prevYear);
-
-    const existedInPrevYear = !!(hasEmploymentStartDateInPrevYear || hasOnboardingDateInPrevYear || hasLeavesInPrevYearOrBefore);
-
-    const carriedOver = existedInPrevYear && leaveSettings.allowCarryOver
-      ? Math.min(remainingPrev, leaveSettings.carryOverLimit)
-      : 0;
-
-    const totalAvailable = allocated + carriedOver;
-
-    // Calculate taken leaves so far in the active year
-    const activeYearPaidTaken = (user.leavePeriods || [])
-      .filter(p => p.type === 'Paid Leave' || !p.type)
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, year), 0);
-
-    const activeYearLopTaken = (user.leavePeriods || [])
-      .filter(p => p.type === 'Loss of Pay')
-      .reduce((sum, p) => sum + calculateBusinessDaysForYear(p, year), 0);
-
-    const remainingPaid = Math.max(0, totalAvailable - activeYearPaidTaken);
-
-    return {
-      year,
-      activeYear: year,
-      allocated,
-      carriedOver,
-      totalAvailable,
-      activeYearPaidTaken,
-      activeYearLopTaken,
-      remainingPaid,
-    };
+    return calculateEmployeeLeaveQuotaStats(user, year, leaveSettings, calculateBusinessDaysForYear);
   }, [leaveSettings, calculateBusinessDaysForYear]);
 
   // Current year quota stats for UI
@@ -712,7 +670,7 @@ export default function LeaveTrackerPage() {
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
                           <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
                           <Badge variant="outline" className="font-semibold text-[10px] border-primary/20 text-primary bg-primary/5">
-                            Standard Base: {leaveQuotaStats.allocated} Days
+                            Standard Base: {leaveSettings.allocatedPaidLeavesPerYear} Days
                           </Badge>
                         </h4>
 
