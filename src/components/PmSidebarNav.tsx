@@ -60,6 +60,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTestDataStudio, triggerOpenTestDataStudio } from "@/dev-tools";
+import { getEffectiveRoute } from "@/lib/route-utils";
 
 type PmSidebarNavProps = {
   activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects' | 'my-account';
@@ -72,6 +73,19 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const { isEnabled: isTestDataStudioEnabled } = useTestDataStudio();
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string; empId?: string; id?: string }>({ name: '', email: '', avatar: '' });
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [routeTick, setRouteTick] = useState<number>(0);
+
+  useEffect(() => {
+    const handleRouteChange = () => setRouteTick((t) => t + 1);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('workwayz-route-change', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('workwayz-route-change', handleRouteChange);
+    };
+  }, []);
+
+  const effectivePath = getEffectiveRoute(pathname);
 
   useEffect(() => {
     const loadUser = () => {
@@ -369,7 +383,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const isItemActive = (href: string) => {
     if (!href || href === '#') return false;
     const cleanHref = href.replace(/\/$/, '');
-    const cleanPath = pathname.replace(/\/$/, '');
+    const cleanPath = effectivePath.replace(/\/$/, '');
     return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
   };
 

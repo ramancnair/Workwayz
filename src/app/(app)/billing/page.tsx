@@ -772,7 +772,12 @@ export default function BillingPage() {
                     return (
                       <TableRow
                         key={project.id}
-                        onClick={() => router.push(pmoUrl)}
+                        onClick={() => {
+                          try {
+                            sessionStorage.setItem('workwayz_real_route', pmoUrl);
+                          } catch (_) {}
+                          router.push(pmoUrl);
+                        }}
                         className="hover:bg-muted/40 cursor-pointer transition-colors group"
                         title={`View ${project.name} PMO`}
                       >

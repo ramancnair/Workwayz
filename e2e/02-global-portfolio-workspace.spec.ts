@@ -85,4 +85,35 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     const activeTrashTab = page.locator('a[role="tab"][data-state="active"]').filter({ has: page.locator('svg') });
     await expect(activeTrashTab).toBeVisible({ timeout: 10000 });
   });
+
+  test('TC-PORT-010: Browser back button preserves active Billing tab and sidebar after navigating to project PMO', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/billing', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Project Financial Performance/i, { timeout: 20000 });
+
+    // Verify Billing tab is active
+    const billingTab = page.locator('[role="tab"][data-state="active"]');
+    await expect(billingTab).toContainText(/Billing/i);
+
+    // Click first project row in billing table
+    const firstRow = page.locator('table tbody tr').first();
+    if (await firstRow.isVisible()) {
+      await firstRow.click();
+      await page.waitForLoadState('domcontentloaded');
+
+      // Click browser back button
+      await page.goBack({ waitUntil: 'domcontentloaded' });
+
+      // Verify we returned to Billing page
+      await expect(page.locator('body')).toContainText(/Project Financial Performance/i, { timeout: 20000 });
+
+      // Verify Billing tab is STILL active, NOT "My Workspace"
+      const returnedTab = page.locator('[role="tab"][data-state="active"]');
+      await expect(returnedTab).toContainText(/Billing/i);
+      await expect(returnedTab).not.toContainText(/My Workspace/i);
+
+      // Verify sidebar contains Billing menu items
+      await expect(page.locator('aside, nav, [data-sidebar]').first()).toContainText(/Billing Rate/i);
+    }
+  });
 });

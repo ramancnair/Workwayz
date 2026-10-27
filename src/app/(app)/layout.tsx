@@ -16,6 +16,7 @@ import { db } from '@/lib/db-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { getEffectiveRoute } from '@/lib/route-utils';
 
 type AccessLevel = 'Super Admin' | 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -24,8 +25,26 @@ const PORTFOLIO_ROLES: AccessLevel[] = ['Super Admin', 'Administrator', 'Senior 
 export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
+  const [routeTick, setRouteTick] = useState(0);
 
-  const isProjectPage = pathname.startsWith('/projects/');
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setRouteTick((t) => t + 1);
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('workwayz-route-change', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('workwayz-route-change', handleRouteChange);
+    };
+  }, []);
+
+  const effectivePath = useMemo(() => {
+    void routeTick;
+    return getEffectiveRoute(pathname);
+  }, [pathname, routeTick]);
+
+  const isProjectPage = effectivePath.startsWith('/projects/');
   const { open, setOpen } = useSidebarPersistedState();
 
   const [userAccessLevel, setUserAccessLevel] = useState<AccessLevel | null>(null);
@@ -73,19 +92,19 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const showOnlyMyProjects = isEnabled === false;
 
   const getTabValue = () => {
-    if (pathname.startsWith('/my-projects') || pathname.startsWith('/holidays/leave-tracker') || pathname.startsWith('/messages')) return 'my-projects';
-    if (pathname.startsWith('/project-home')) return 'projects';
-    if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
-    if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard')) return 'projects';
-    if (pathname.startsWith('/quality')) return 'quality';
-    if (pathname.startsWith('/billing')) return 'billing';
-    if (pathname.startsWith('/billing-rate')) return 'billing';
-    if (pathname.startsWith('/users')) return 'users';
-    if (pathname.startsWith('/utilization')) return 'users';
-    if (pathname.startsWith('/portfolio-trash') || pathname.startsWith('/trash')) return 'trash'; 
-    if (pathname.startsWith('/holidays')) return 'holidays';
-    if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
-    if (pathname.startsWith('/my-account')) return 'my-account';
+    if (effectivePath.startsWith('/my-projects') || effectivePath.startsWith('/holidays/leave-tracker') || effectivePath.startsWith('/messages')) return 'my-projects';
+    if (effectivePath.startsWith('/project-home')) return 'projects';
+    if (effectivePath.startsWith('/portfolio-dashboard')) return 'projects';
+    if (effectivePath.startsWith('/fp-portfolio-dash') || effectivePath.startsWith('/fp-dashboard')) return 'projects';
+    if (effectivePath.startsWith('/quality')) return 'quality';
+    if (effectivePath.startsWith('/billing')) return 'billing';
+    if (effectivePath.startsWith('/billing-rate')) return 'billing';
+    if (effectivePath.startsWith('/users')) return 'users';
+    if (effectivePath.startsWith('/utilization')) return 'users';
+    if (effectivePath.startsWith('/portfolio-trash') || effectivePath.startsWith('/trash')) return 'trash'; 
+    if (effectivePath.startsWith('/holidays')) return 'holidays';
+    if (effectivePath.startsWith('/portfolio-settings')) return 'portfolios';
+    if (effectivePath.startsWith('/my-account')) return 'my-account';
     return 'my-projects';
   };
 
@@ -140,9 +159,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
   };
 
   const dynamicTab = useMemo(() => {
-    if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
+    if (effectivePath.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
     return null;
-  }, [pathname]);
+  }, [effectivePath]);
 
   if (isProjectPage) {
     return (

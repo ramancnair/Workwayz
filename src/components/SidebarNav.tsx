@@ -72,6 +72,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { unsubscribeAllListeners } from "@/lib/db-provider";
+import { getEffectiveRoute } from "@/lib/route-utils";
 
 export function SidebarNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
@@ -79,6 +80,19 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const { toggleSidebar } = useSidebar();
   const { project } = useProject();
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string }>({ name: '', email: '', avatar: '' });
+  const [routeTick, setRouteTick] = useState(0);
+
+  useEffect(() => {
+    const handleRouteChange = () => setRouteTick((t) => t + 1);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('workwayz-route-change', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('workwayz-route-change', handleRouteChange);
+    };
+  }, []);
+
+  const effectivePath = getEffectiveRoute(pathname);
 
   useEffect(() => {
     const loadUser = () => {
@@ -377,17 +391,17 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
   ];
 
-  const isTestingPath = pathname.startsWith(`${basePath}/testing`);
-  const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
-  const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
-  const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
-  const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
-  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
-  const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
-  const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
-  const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
-  const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => pathname.startsWith(basePath + p));
-  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+  const isTestingPath = effectivePath.startsWith(`${basePath}/testing`);
+  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`);
+  const isInitialEstimationPath = effectivePath.startsWith(`${basePath}/initial-estimation`);
+  const isReleasesPath = effectivePath.startsWith(`${basePath}/releases`);
+  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`);
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => effectivePath.startsWith(basePath + p));
+  const isSettingsPath = effectivePath.startsWith(`${basePath}/project-settings`) || effectivePath.startsWith(`${basePath}/settings`);
+  const isTrashPath = effectivePath.startsWith(`${basePath}/project-trash`) || effectivePath.startsWith(`${basePath}/trash`);
+  const isHolidaysPath = effectivePath.startsWith(`${basePath}/holidays`);
+  const isPmoPath = ['/pmo/documents', '/pmo/fb-payment-milestones', '/pmo/tnm-payment-milestones', '/pmo/business-continuity', '/pmo/fb-billing', '/pmo/tnm-billing'].some(p => effectivePath.startsWith(basePath + p));
+  const isDevelopmentPath = effectivePath.startsWith(`${basePath}/development`);
 
 
   const { hasAccess } = usePermissions();
@@ -413,7 +427,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const isItemActive = (href: string) => {
     if (!href || href === '#') return false;
     const cleanHref = href.replace(/\/$/, '');
-    const cleanPath = pathname.replace(/\/$/, '');
+    const cleanPath = effectivePath.replace(/\/$/, '');
     return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
   };
 

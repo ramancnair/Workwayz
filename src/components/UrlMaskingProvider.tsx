@@ -2,14 +2,16 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { extractRouteFromNextTree } from '@/lib/route-utils';
 
 /**
  * UrlMaskingProvider
  * 
  * Ensures that the browser address bar always remains clean at the root URL ('/')
  * across all internal pages in Workwayz (Full Root URL Masking), while storing
- * the real active route in sessionStorage so that browser refreshes (F5) reload
- * the exact active page seamlessly.
+ * the real active route in sessionStorage and history.state so that browser refreshes (F5)
+ * and browser back/forward history navigation preserve the exact active page, tab,
+ * and sidebar states seamlessly.
  */
 export function UrlMaskingProvider() {
   const pathname = usePathname();
@@ -35,7 +37,20 @@ export function UrlMaskingProvider() {
       if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/setup-wizard')) {
         try {
           isReplacingRef.current = true;
-          window.history.replaceState(window.history.state, '', '/');
+          const currentState = window.history.state;
+          const currentRealRoute =
+            currentState?.__workwayz_real_route ||
+            (pathname && pathname !== '/' ? pathname : null) ||
+            (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('workwayz_real_route') : null);
+
+          const maskedState =
+            currentState && typeof currentState === 'object'
+              ? { ...currentState, ...(currentRealRoute ? { __workwayz_real_route: currentRealRoute } : {}) }
+              : currentRealRoute
+              ? { __workwayz_real_route: currentRealRoute }
+              : currentState;
+
+          window.history.replaceState(maskedState, '', '/');
         } catch (err) {
           console.warn('[UrlMaskingProvider] Failed to mask URL:', err);
         } finally {
@@ -67,43 +82,98 @@ export function UrlMaskingProvider() {
     const maskUrl = () => {
       if (window.location.pathname !== '/' && !window.location.pathname.startsWith('/setup-wizard')) {
         try {
-          originalReplaceState(window.history.state, '', '/');
+          const currentState = window.history.state;
+          const currentRealRoute =
+            currentState?.__workwayz_real_route ||
+            (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('workwayz_real_route') : null);
+
+          const maskedState =
+            currentState && typeof currentState === 'object'
+              ? { ...currentState, ...(currentRealRoute ? { __workwayz_real_route: currentRealRoute } : {}) }
+              : currentRealRoute
+              ? { __workwayz_real_route: currentRealRoute }
+              : currentState;
+
+          originalReplaceState(maskedState, '', '/');
         } catch (_) {}
       }
     };
 
     window.history.pushState = function (data, unused, url) {
-      const res = originalPushState(data, unused, url);
-      if (url && typeof url === 'string' && !url.startsWith('/setup-wizard') && url !== '/' && url !== '/login') {
+      const realUrl = typeof url === 'string' ? url : url ? String(url) : '';
+      const isEligible = realUrl && !realUrl.startsWith('/setup-wizard') && realUrl !== '/' && realUrl !== '/login';
+
+      if (isEligible) {
         try {
-          sessionStorage.setItem('workwayz_real_route', url);
+          sessionStorage.setItem('workwayz_real_route', realUrl);
         } catch (_) {}
       }
+
+      const enrichedData =
+        data && typeof data === 'object'
+          ? { ...data, ...(isEligible ? { __workwayz_real_route: realUrl } : {}) }
+          : isEligible
+          ? { __workwayz_real_route: realUrl }
+          : data;
+
+      const res = originalPushState(enrichedData, unused, url);
       setTimeout(maskUrl, 0);
       return res;
     };
 
     window.history.replaceState = function (data, unused, url) {
-      const res = originalReplaceState(data, unused, url);
-      if (url && typeof url === 'string' && !url.startsWith('/setup-wizard') && url !== '/' && url !== '/login') {
+      const realUrl = typeof url === 'string' ? url : url ? String(url) : '';
+      const isEligible = realUrl && !realUrl.startsWith('/setup-wizard') && realUrl !== '/' && realUrl !== '/login';
+
+      if (isEligible) {
         try {
-          sessionStorage.setItem('workwayz_real_route', url);
+          sessionStorage.setItem('workwayz_real_route', realUrl);
         } catch (_) {}
       }
+
+      const enrichedData =
+        data && typeof data === 'object'
+          ? { ...data, ...(isEligible ? { __workwayz_real_route: realUrl } : {}) }
+          : isEligible
+          ? { __workwayz_real_route: realUrl }
+          : data;
+
+      const res = originalReplaceState(enrichedData, unused, url);
       setTimeout(maskUrl, 0);
       return res;
     };
 
-    const handlePopState = () => {
+    const handlePopStateCapture = (event: PopStateEvent) => {
+      const targetRoute =
+        event.state?.__workwayz_real_route ||
+        extractRouteFromNextTree(event.state?.__PRIVATE_NEXTJS_INTERNALS_TREE?.tree);
+
+      if (targetRoute && targetRoute !== '/' && targetRoute !== '/login' && !targetRoute.startsWith('/setup-wizard')) {
+        try {
+          sessionStorage.setItem('workwayz_real_route', targetRoute);
+        } catch (_) {}
+
+        // Temporarily set location to real route so Next.js onPopState receives the correct href
+        try {
+          originalReplaceState(event.state, '', targetRoute);
+        } catch (_) {}
+
+        try {
+          window.dispatchEvent(new CustomEvent('workwayz-route-change', { detail: { route: targetRoute } }));
+        } catch (_) {}
+      }
+
       setTimeout(maskUrl, 0);
+      setTimeout(maskUrl, 50);
+      setTimeout(maskUrl, 150);
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handlePopStateCapture, true);
 
     return () => {
       window.history.pushState = originalPushState;
       window.history.replaceState = originalReplaceState;
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('popstate', handlePopStateCapture, true);
     };
   }, []);
 

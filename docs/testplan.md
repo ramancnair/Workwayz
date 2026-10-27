@@ -67,6 +67,7 @@ npm run test:e2e:install
 | **TC-PORT-007** | Resource utilization & Gantt chart | Team capacity percentages and timeline bars visible | ✅ Automated |
 | **TC-PORT-008** | Holidays calendar & Policy A pro-rata leave settings | Holiday dates, Policy A monthly pro-rata quota, and carry-forward balances | ✅ Automated |
 | **TC-PORT-009** | Portfolio administration & trash recovery | Archive and soft-delete recovery workflows | ✅ Automated |
+| **TC-PORT-010** | Browser back button state preservation | Restores active Billing tab and sidebar sub-navigation after navigating to project PMO | ✅ Automated |
 
 ### Pillar 3: Project Detail Hub (`e2e/03-project-details-and-estimations.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |

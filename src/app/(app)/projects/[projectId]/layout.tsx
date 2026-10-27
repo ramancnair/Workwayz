@@ -4,7 +4,7 @@
 import { usePathname, useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { type PropsWithChildren, use, useMemo, useEffect } from "react";
+import { type PropsWithChildren, use, useMemo, useEffect, useState } from "react";
 import { ProjectProvider, useProject } from "@/context/ProjectContext";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -13,9 +13,26 @@ import { cn } from '@/lib/utils';
 import { Settings, Trash2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getEffectiveRoute } from '@/lib/route-utils';
 
 function ProjectLayoutContent({ children }: PropsWithChildren) {
   const pathname = usePathname();
+  const [routeTick, setRouteTick] = useState(0);
+
+  useEffect(() => {
+    const handleRouteChange = () => setRouteTick((t) => t + 1);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('workwayz-route-change', handleRouteChange);
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('workwayz-route-change', handleRouteChange);
+    };
+  }, []);
+
+  const effectivePath = useMemo(() => {
+    void routeTick;
+    return getEffectiveRoute(pathname);
+  }, [pathname, routeTick]);
   const router = useRouter();
   const { projectId } = useParams() as { projectId: string };
   const { project, isLoading } = useProject();
@@ -56,18 +73,18 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     return true;
   }, [project, isLoading, basePath, pathname]);
 
-  const isSettingsPath = pathname.startsWith(`${basePath}/project-settings`) || pathname.startsWith(`${basePath}/settings`);
-  const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
-  const isTestingPath = pathname.startsWith(`${basePath}/testing`);
-  const isProjectPath = pathname.startsWith(`${basePath}/project-details`);
-  const isInitialEstimationPath = pathname.startsWith(`${basePath}/initial-estimation`);
-  const isReleasesPath = pathname.startsWith(`${basePath}/releases`);
-  const isResourcesPath = pathname.startsWith(`${basePath}/resources`);
-  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => pathname.startsWith(basePath + p));
-  const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
-  const isPmoPath = pathname.startsWith(`${basePath}/pmo`);
+  const isSettingsPath = effectivePath.startsWith(`${basePath}/project-settings`) || effectivePath.startsWith(`${basePath}/settings`);
+  const isTrashPath = effectivePath.startsWith(`${basePath}/project-trash`) || effectivePath.startsWith(`${basePath}/trash`);
+  const isTestingPath = effectivePath.startsWith(`${basePath}/testing`);
+  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`);
+  const isInitialEstimationPath = effectivePath.startsWith(`${basePath}/initial-estimation`);
+  const isReleasesPath = effectivePath.startsWith(`${basePath}/releases`);
+  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`);
+  const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => effectivePath.startsWith(basePath + p));
+  const isHolidaysPath = effectivePath.startsWith(`${basePath}/holidays`);
+  const isPmoPath = effectivePath.startsWith(`${basePath}/pmo`);
 
-  const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+  const isDevelopmentPath = effectivePath.startsWith(`${basePath}/development`);
 
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
@@ -81,7 +98,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
     if (isPmoPath) return 'pmo';
     if (isSettingsPath) return 'settings';
     if (isTrashPath) return 'trash';
-    if (pathname.startsWith('/my-account')) return 'my-account';
+    if (effectivePath.startsWith('/my-account')) return 'my-account';
     return '';
   };
 
