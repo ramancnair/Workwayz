@@ -638,7 +638,39 @@ export default function LeaveTrackerPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Leave Tracker" description="Manage your leave days." />
+        <PageHeader
+          title="Leave Tracker"
+          description="Manage your leave days."
+          titleAddon={
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Leave allocation and carry-forward policy information"
+                    className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                  >
+                    <Info className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="start" className="max-w-sm p-3 text-xs leading-relaxed space-y-1.5">
+                  <p className="font-semibold text-foreground">Leave Allocation &amp; Carry-Forward Logic (Policy A)</p>
+                  <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                    <li>
+                      <span className="font-medium text-foreground">Joining Year Pro-Rata:</span> Annual quota is pro-rated by eligible months worked (rounded to the nearest 0.5 day).
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">15th-of-Month Cutoff:</span> Joining on or before the 15th counts that month as 1 full month; joining after the 15th counts only remaining full months.
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">Carry Forward:</span> Unused balance from the previous year&apos;s pro-rated quota carries over on Jan 1, capped at the Carry-Forward Days Limit.
+                    </li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          }
+        />
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="overflow-hidden border-border/40 shadow-lg">
@@ -669,36 +701,7 @@ export default function LeaveTrackerPage() {
                       {/* Premium Global Leave Ledger */}
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
-                            <TooltipProvider delayDuration={150}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    aria-label="Leave allocation and carry-forward policy information"
-                                    className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors normal-case font-normal"
-                                  >
-                                    <Info className="h-3.5 w-3.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right" align="start" className="max-w-sm p-3 text-xs leading-relaxed space-y-1.5 normal-case font-normal">
-                                  <p className="font-semibold text-foreground">Leave Allocation &amp; Carry-Forward Logic (Policy A)</p>
-                                  <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                                    <li>
-                                      <span className="font-medium text-foreground">Joining Year Pro-Rata:</span> Annual quota is pro-rated by eligible months worked (rounded to the nearest 0.5 day).
-                                    </li>
-                                    <li>
-                                      <span className="font-medium text-foreground">15th-of-Month Cutoff:</span> Joining on or before the 15th counts that month as 1 full month; joining after the 15th counts only remaining full months.
-                                    </li>
-                                    <li>
-                                      <span className="font-medium text-foreground">Carry Forward:</span> Unused balance from the previous year&apos;s pro-rated quota carries over on Jan 1, capped at the Carry-Forward Days Limit.
-                                    </li>
-                                  </ul>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </span>
+                          <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
                           <Badge variant="outline" className="font-semibold text-[10px] border-primary/20 text-primary bg-primary/5">
                             Standard Base: {leaveSettings.allocatedPaidLeavesPerYear} Days
                           </Badge>
