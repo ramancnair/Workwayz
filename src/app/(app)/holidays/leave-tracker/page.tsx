@@ -33,11 +33,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { format, isSameDay, eachDayOfInterval } from 'date-fns';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { Info, PlusCircle, Trash2 } from 'lucide-react';
 import { type User, type LeavePeriod, type Holiday } from '@/types';
 import { cn } from '@/lib/utils';
 import { calculateEmployeeLeaveQuotaStats } from '@/lib/leave-utils';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { db } from '@/lib/db-provider';
 import { onSnapshot, doc, collection, query, where, updateDoc, arrayUnion, arrayRemove } from '@/lib/db-provider';
 import { v4 as uuidv4 } from 'uuid';
@@ -668,7 +669,36 @@ export default function LeaveTrackerPage() {
                       {/* Premium Global Leave Ledger */}
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center justify-between">
-                          <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>Global Leave Pool Ledger ({leaveQuotaStats.activeYear})</span>
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="Leave allocation and carry-forward policy information"
+                                    className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors normal-case font-normal"
+                                  >
+                                    <Info className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" align="start" className="max-w-sm p-3 text-xs leading-relaxed space-y-1.5 normal-case font-normal">
+                                  <p className="font-semibold text-foreground">Leave Allocation &amp; Carry-Forward Logic (Policy A)</p>
+                                  <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                    <li>
+                                      <span className="font-medium text-foreground">Joining Year Pro-Rata:</span> Annual quota is pro-rated by eligible months worked (rounded to the nearest 0.5 day).
+                                    </li>
+                                    <li>
+                                      <span className="font-medium text-foreground">15th-of-Month Cutoff:</span> Joining on or before the 15th counts that month as 1 full month; joining after the 15th counts only remaining full months.
+                                    </li>
+                                    <li>
+                                      <span className="font-medium text-foreground">Carry Forward:</span> Unused balance from the previous year&apos;s pro-rated quota carries over on Jan 1, capped at the Carry-Forward Days Limit.
+                                    </li>
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </span>
                           <Badge variant="outline" className="font-semibold text-[10px] border-primary/20 text-primary bg-primary/5">
                             Standard Base: {leaveSettings.allocatedPaidLeavesPerYear} Days
                           </Badge>

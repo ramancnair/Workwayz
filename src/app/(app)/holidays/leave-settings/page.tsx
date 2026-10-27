@@ -29,7 +29,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info, Search } from 'lucide-react';
 import { getUserInitials } from '@/lib/utils';
 import { calculateEmployeeLeaveQuotaStats } from '@/lib/leave-utils';
 
@@ -161,7 +162,6 @@ export default function AllocatedLeavesPage() {
   }, [holidays, weeklyOffDays]);
 
   const currentYear = new Date().getFullYear();
-  const prevYear = currentYear - 1;
 
   // Reactively calculate resource balances ledger (Policy A: Monthly Pro-Rata with 15th-of-month cutoff)
   const resourcesLedger = useMemo(() => {
@@ -282,7 +282,36 @@ export default function AllocatedLeavesPage() {
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 pb-6">
           <div>
-            <CardTitle>Resource Leave Accounts</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Resource Leave Accounts</CardTitle>
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Leave allocation and carry-forward policy information"
+                      className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" align="start" className="max-w-sm p-3 text-xs leading-relaxed space-y-1.5">
+                    <p className="font-semibold text-foreground">Leave Allocation &amp; Carry-Forward Logic (Policy A)</p>
+                    <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                      <li>
+                        <span className="font-medium text-foreground">Joining Year Pro-Rata:</span> Annual quota is pro-rated by eligible months worked (rounded to the nearest 0.5 day).
+                      </li>
+                      <li>
+                        <span className="font-medium text-foreground">15th-of-Month Cutoff:</span> Joining on or before the 15th counts that month as 1 full month; joining after the 15th counts only remaining full months.
+                      </li>
+                      <li>
+                        <span className="font-medium text-foreground">Carry Forward:</span> Unused balance from the previous year&apos;s pro-rated quota carries over on Jan 1, capped at the Carry-Forward Days Limit.
+                      </li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <CardDescription>
               Summary of carry-forward leaves, allocated annual quotas, and current balances for the year {currentYear}.
             </CardDescription>
@@ -305,10 +334,10 @@ export default function AllocatedLeavesPage() {
                   <TableHead className="w-[12%]">User ID</TableHead>
                   <TableHead className="w-[30%]">Resource</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="text-center">Carry Forward ({prevYear})</TableHead>
+                  <TableHead className="text-center">Carry Forward</TableHead>
                   <TableHead className="text-center">Annual Quota</TableHead>
                   <TableHead className="text-center">Total Available</TableHead>
-                  <TableHead className="text-center">Paid Taken ({currentYear})</TableHead>
+                  <TableHead className="text-center">Paid Taken</TableHead>
                   <TableHead className="text-right pr-6 font-semibold">Remaining Balance</TableHead>
                 </TableRow>
               </TableHeader>
