@@ -61,7 +61,7 @@ const pageSections: PageSection[] = [
         id: 'top_my_projects',
         name: 'My Projects',
         topNavName: 'My Projects',
-        pages: ['Leave Tracker'],
+        pages: ['Leave Tracker', 'Messages'],
       },
       {
         id: 'top_projects',

@@ -73,7 +73,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const showOnlyMyProjects = isEnabled === false;
 
   const getTabValue = () => {
-    if (pathname.startsWith('/my-projects') || pathname.startsWith('/holidays/leave-tracker')) return 'my-projects';
+    if (pathname.startsWith('/my-projects') || pathname.startsWith('/holidays/leave-tracker') || pathname.startsWith('/messages')) return 'my-projects';
     if (pathname.startsWith('/project-home')) return 'projects';
     if (pathname.startsWith('/portfolio-dashboard')) return 'projects';
     if (pathname.startsWith('/fp-portfolio-dash') || pathname.startsWith('/fp-dashboard')) return 'projects';
@@ -85,7 +85,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     if (pathname.startsWith('/portfolio-trash') || pathname.startsWith('/trash')) return 'trash'; 
     if (pathname.startsWith('/holidays')) return 'holidays';
     if (pathname.startsWith('/portfolio-settings')) return 'portfolios';
-    if (pathname.startsWith('/my-account') || pathname.startsWith('/messages')) return 'my-account';
+    if (pathname.startsWith('/my-account')) return 'my-account';
     return 'my-projects';
   };
 
@@ -140,7 +140,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   };
 
   const dynamicTab = useMemo(() => {
-    if (pathname.startsWith('/my-account') || pathname.startsWith('/messages')) return { value: 'my-account', label: 'Profile & Account' };
+    if (pathname.startsWith('/my-account')) return { value: 'my-account', label: 'Profile & Account' };
     return null;
   }, [pathname]);
 

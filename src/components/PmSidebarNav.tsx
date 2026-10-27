@@ -187,6 +187,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'my-projects'
     },
     {
+      id: 'messages',
+      href: '/messages',
+      label: 'Messages',
+      icon: Mail,
+      group: 'my-projects'
+    },
+    {
       id: 'projects',
       href: `/project-home`,
       label: "Project Home",
@@ -324,13 +331,6 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       href: '/my-account',
       label: 'Account Settings',
       icon: UserCog,
-      group: 'account'
-    },
-    {
-      id: 'messages',
-      href: '/messages',
-      label: 'Messages',
-      icon: Mail,
       group: 'account'
     },
   ];
