@@ -1428,43 +1428,71 @@ export async function wayfinderQueryQualityEstimations(params?: { portfolioId?: 
 
   const projectEstimations: any[] = [];
   for (const proj of projects) {
-    let devInitial = 0;
-    let hzInitial = 0;
+    const [
+      initSysSnap,
+      initHzSnap,
+      sysSnap,
+      hzSnap,
+      storiesSnap,
+      logsSnap,
+    ] = await Promise.all([
+      getDocs(collection(db, 'projects', proj.id, 'initialImpactedSystems')),
+      getDocs(collection(db, 'projects', proj.id, 'initialHorizontals')),
+      getDocs(collection(db, 'projects', proj.id, 'impactedSystems')),
+      getDocs(collection(db, 'projects', proj.id, 'horizontals')),
+      getDocs(collection(db, 'projects', proj.id, 'stories')),
+      getDocs(collection(db, 'projects', proj.id, 'worklogs')),
+    ]);
 
-    const sysSnap = await getDocs(collection(db, 'projects', proj.id, 'impactedSystems'));
-    sysSnap.docs.forEach((d: any) => {
-      devInitial += d.data().estimate || 0;
-    });
+    const initialSystems = (initSysSnap.docs.length > 0 ? initSysSnap.docs : sysSnap.docs).map((d: any) => d.data());
+    const initialHorizontals = (initHzSnap.docs.length > 0 ? initHzSnap.docs : hzSnap.docs).map((d: any) => d.data());
+    const horizontals = hzSnap.docs.map((d: any) => d.data());
+    const stories = storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
-    const hzSnap = await getDocs(collection(db, 'projects', proj.id, 'horizontals'));
-    hzSnap.docs.forEach((d: any) => {
-      if (d.data().isEnabled !== false) {
-        const wt = d.data().weightage || 0;
-        hzInitial += (devInitial * wt) / 100;
-      }
-    });
-
+    const devInitial = initialSystems.reduce((acc: number, sys: any) => acc + (sys.estimate || 0), 0);
+    const hzInitialWeightage = initialHorizontals
+      .filter((h: any) => h.isEnabled !== false)
+      .reduce((acc: number, h: any) => acc + (h.weightage || 0), 0);
+    const hzInitial = (hzInitialWeightage / 100) * devInitial;
     const totalInitial = devInitial > 0 ? devInitial + hzInitial : null;
-    const storiesSnap = await getDocs(collection(db, 'projects', proj.id, 'stories'));
-    let devPlannedHours = 0;
-    storiesSnap.docs.forEach((s: any) => {
-      const data = s.data();
-      if (data.itemType === 'Story' || data.itemType === 'Requirement/Story' || data.itemType === 'User Story' || data.itemType === 'Task') {
-        devPlannedHours += data.estimatedHours || 0;
+
+    const activeStories = stories.filter((s: any) => !s.isDeleted);
+    const parentToSubTasksMap: Record<string, any[]> = {};
+    activeStories.forEach((s: any) => {
+      if (s.parentStoryId && (s.itemType === 'Sub Task' || s.itemType === 'Subtasks')) {
+        if (!parentToSubTasksMap[s.parentStoryId]) parentToSubTasksMap[s.parentStoryId] = [];
+        parentToSubTasksMap[s.parentStoryId].push(s);
       }
     });
+
+    const standaloneItems = activeStories.filter(
+      (s: any) => !s.parentStoryId && s.itemType !== 'Bug' && s.itemType !== 'Bug / Defect' && s.itemType !== 'In-Sprint Bug'
+    );
+    let devPlannedHours = 0;
+    standaloneItems.forEach((item: any) => {
+      const subTasks = parentToSubTasksMap[item.id] || [];
+      if (subTasks.length > 0) {
+        devPlannedHours += subTasks.reduce((sum: number, st: any) => sum + (st.estimatedHours || 0), 0);
+      } else {
+        devPlannedHours += item.estimatedHours || 0;
+      }
+    });
+
     const devPlannedDays = devPlannedHours / 8;
-    const hzPlannedDays = (devPlannedDays * 15) / 100;
+    const hzPlannedWeightage = horizontals
+      .filter((h: any) => h.isEnabled !== false)
+      .reduce((acc: number, h: any) => acc + (h.weightage || 0), 0);
+    const hzPlannedDays = (hzPlannedWeightage / 100) * devPlannedDays;
     const totalPlannedDays = devPlannedDays + hzPlannedDays;
 
-    const logsSnap = await getDocs(collection(db, 'projects', proj.id, 'worklogs'));
     let actualHours = 0;
     logsSnap.docs.forEach((l: any) => {
-      actualHours += l.data().hours || 0;
+      const logData = l.data();
+      actualHours += logData.totalHours ?? logData.hours ?? 0;
     });
     const actualDays = actualHours / 8;
 
-    const variance = totalInitial ? totalPlannedDays - totalInitial : null;
+    const variance = totalPlannedDays > 0 || actualDays > 0 ? actualDays - totalPlannedDays : null;
     const conformanceRate = totalPlannedDays > 0 ? (actualDays / totalPlannedDays) * 100 : 0;
 
     projectEstimations.push({

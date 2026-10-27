@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { isProjectInYear, getAvailableProjectYears } from '@/lib/project-year-filter';
-import type { Project, ProjectStatus } from '@/types';
+import { isBugWorkItem, type Project, type ProjectStatus } from '@/types';
 
 type ProjectEstimations = {
   projectId: string;
@@ -42,17 +42,17 @@ type ProjectEstimations = {
   hzInitial: number;
   totalInitial: number | null;
   
-  // Planned Estimates (man days)
+  // Final Estimates (man days)
   devPlanned: number;
   hzPlanned: number;
   totalPlanned: number;
   
-  // Actual Effort (man days)
+  // Actual Efforts (man days)
   actualEffort: number;
   
   // Variance & Conformance
-  variance: number | null; // Planned - Initial
-  conformanceRate: number; // Actual / Planned %
+  variance: number | null; // Actual Efforts - Final Estimates
+  conformanceRate: number; // Actual Efforts / Final Estimates %
 };
 
 const statusStyles: Record<ProjectStatus, string> = {
@@ -112,12 +112,12 @@ export default function QualityEstimationsPage() {
 
         // --- 1. Initial Estimations Calculations ---
         const devInitial = initialSystems.reduce((acc, sys) => acc + (sys.estimate || 0), 0);
-        const enabledInitialHorizontals = initialHorizontals.filter(h => h.isEnabled);
+        const enabledInitialHorizontals = initialHorizontals.filter(h => h.isEnabled !== false);
         const hzInitialWeightage = enabledInitialHorizontals.reduce((acc, h) => acc + (h.weightage || 0), 0);
         const hzInitial = (hzInitialWeightage / 100) * devInitial;
         const totalInitial = devInitial > 0 ? devInitial + hzInitial : null;
 
-        // --- 2. Planned Estimations Calculations ---
+        // --- 2. Final Estimations Calculations ---
         // Avoid double counting story effort and its sub-task effort:
         // Identify active sub-tasks (non-deleted sub-tasks of existing stories)
         const activeStories = stories.filter(s => !(s as any).isDeleted);
@@ -125,7 +125,7 @@ export default function QualityEstimationsPage() {
         
         activeStories.forEach(s => {
           const parentId = (s as any).parentStoryId;
-          if (parentId && s.itemType === 'Sub Task') {
+          if (parentId && (s.itemType === 'Sub Task' || s.itemType === 'Subtasks')) {
             if (!parentToSubTasksMap[parentId]) {
               parentToSubTasksMap[parentId] = [];
             }
@@ -134,7 +134,7 @@ export default function QualityEstimationsPage() {
         });
 
         // Standalone items that are not bugs
-        const standaloneItems = activeStories.filter(s => !(s as any).parentStoryId && s.itemType !== 'Bug');
+        const standaloneItems = activeStories.filter(s => !(s as any).parentStoryId && !isBugWorkItem(s.itemType));
 
         let totalPlannedHours = 0;
         standaloneItems.forEach(item => {
@@ -151,17 +151,18 @@ export default function QualityEstimationsPage() {
 
         const devPlanned = totalPlannedHours / 8; // 1 man-day = 8 man-hours
 
-        // Planned horizontals (sum of all weightages * total development effort)
-        const hzPlannedWeightage = horizontals.reduce((acc, h) => acc + (h.weightage || 0), 0);
+        // Planned horizontals (sum of enabled weightages * total development effort)
+        const enabledPlannedHorizontals = horizontals.filter(h => h.isEnabled !== false);
+        const hzPlannedWeightage = enabledPlannedHorizontals.reduce((acc, h) => acc + (h.weightage || 0), 0);
         const hzPlanned = (hzPlannedWeightage / 100) * devPlanned;
         const totalPlanned = devPlanned + hzPlanned;
 
         // --- 3. Actual Effort Calculations ---
-        const totalActualHours = worklogs.reduce((acc, w) => acc + (w.totalHours || 0), 0);
+        const totalActualHours = worklogs.reduce((acc, w) => acc + (w.totalHours ?? w.hours ?? 0), 0);
         const actualEffort = totalActualHours / 8; // 1 man-day = 8 man-hours
 
         // --- 4. Variances & Progress Metrics ---
-        const variance = totalInitial !== null ? totalPlanned - totalInitial : null;
+        const variance = totalPlanned > 0 || actualEffort > 0 ? actualEffort - totalPlanned : null;
         const conformanceRate = totalPlanned > 0 ? (actualEffort / totalPlanned) * 100 : 0;
 
         return {
@@ -270,8 +271,9 @@ export default function QualityEstimationsPage() {
       totalActualDays += m.actualEffort;
     });
 
-    const averageVariance = projectsWithInitial > 0 
-      ? list.filter(m => m.totalInitial !== null).reduce((sum, m) => sum + (m.variance || 0), 0) / projectsWithInitial 
+    const projectsWithVariance = list.filter(m => m.variance !== null);
+    const averageVariance = projectsWithVariance.length > 0 
+      ? projectsWithVariance.reduce((sum, m) => sum + (m.variance || 0), 0) / projectsWithVariance.length 
       : 0;
 
     const overallCompletion = totalPlannedDays > 0 ? (totalActualDays / totalPlannedDays) * 100 : 0;
