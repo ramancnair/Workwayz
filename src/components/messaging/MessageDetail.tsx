@@ -80,12 +80,15 @@ export function MessageDetail({
         <div className="flex items-center gap-2">
           {onBackToList && (
             <Button
-              size="icon"
+              size="sm"
               variant="ghost"
               onClick={onBackToList}
-              className="md:hidden h-8 w-8 text-muted-foreground"
+              aria-label="Back to messages"
+              title="Back to messages"
+              className="h-8 px-2.5 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
             </Button>
           )}
 

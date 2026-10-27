@@ -18,8 +18,13 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     await expect(page.locator('body')).toContainText(/Release|Milestones|Target Date|Status/i);
   });
 
-  test('TC-ADM-001: User Profile screen renders personal details and credentials view', async ({ page }) => {
+  test('TC-ADM-001: User Profile and Messages views render personal details and single-column message list', async ({ page }) => {
     await page.goto('/my-account', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Account|Profile|Email|Password|Settings/i);
+
+    await page.goto('/messages', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/New Message|Inbox|Sent|Starred|Trash/i);
+    await expect(page.getByPlaceholder('Search messages...')).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('Select a message to read');
   });
 });

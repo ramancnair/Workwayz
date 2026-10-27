@@ -429,83 +429,76 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* 2. Message List Panel */}
-      <div
-        className={`w-80 md:w-96 border-r border-border flex flex-col shrink-0 ${
-          selectedMessage ? 'hidden md:flex' : 'flex flex-1 md:flex-initial'
-        }`}
-      >
-        {/* Search & Filter Header */}
-        <div className="p-3 border-b border-border bg-background/50 space-y-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search messages..."
-              className="pl-8 h-9 text-xs"
-            />
-          </div>
-          <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-            <div className="flex items-center gap-2">
-              <span className="capitalize font-semibold text-foreground">
-                {currentFolder}
-              </span>
-              <span>{filteredMessages.length} message{filteredMessages.length === 1 ? '' : 's'}</span>
+      {/* 2. Single Right Column: Message List OR Selected Message Detail (Gmail-style view) */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {selectedMessage ? (
+          <MessageDetail
+            message={selectedMessage}
+            userIdentifiers={userIdentifiers}
+            folder={currentFolder}
+            onReply={handleReply}
+            onReplyAll={handleReplyAll}
+            onToggleStar={handleToggleStar}
+            onToggleRead={handleToggleRead}
+            onDeleteMessage={handleDeleteMessage}
+            onRestoreMessage={handleRestoreMessage}
+            onBackToList={() => setSelectedMessage(null)}
+          />
+        ) : (
+          <>
+            {/* Search & Filter Header */}
+            <div className="p-3 px-6 border-b border-border bg-background/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="capitalize font-semibold text-sm text-foreground">
+                  {currentFolder}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {filteredMessages.length} message{filteredMessages.length === 1 ? '' : 's'}
+                </span>
+                {currentFolder === 'trash' && filteredMessages.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsEmptyTrashConfirmOpen(true)}
+                    className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 font-medium"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Empty Trash
+                  </Button>
+                )}
+              </div>
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search messages..."
+                  className="pl-8 h-9 text-xs"
+                />
+              </div>
             </div>
-            {currentFolder === 'trash' && filteredMessages.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setIsEmptyTrashConfirmOpen(true)}
-                className="h-6 px-2 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 font-medium"
-              >
-                <Trash2 className="h-3 w-3" />
-                Empty Trash
-              </Button>
-            )}
-          </div>
-        </div>
 
-        {/* Message Items List */}
-        <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-48 text-xs text-muted-foreground">
-              Loading messages...
+            {/* Message Items List */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-48 text-xs text-muted-foreground">
+                  Loading messages...
+                </div>
+              ) : (
+                <MessageList
+                  messages={filteredMessages}
+                  selectedMessageId={null}
+                  onSelectMessage={handleSelectMessage}
+                  userIdentifiers={userIdentifiers}
+                  folder={currentFolder}
+                  onToggleStar={handleToggleStar}
+                  onDeleteMessage={handleDeleteMessage}
+                  onRestoreMessage={handleRestoreMessage}
+                />
+              )}
             </div>
-          ) : (
-            <MessageList
-              messages={filteredMessages}
-              selectedMessageId={selectedMessage?.id || null}
-              onSelectMessage={handleSelectMessage}
-              userIdentifiers={userIdentifiers}
-              folder={currentFolder}
-              onToggleStar={handleToggleStar}
-              onDeleteMessage={handleDeleteMessage}
-              onRestoreMessage={handleRestoreMessage}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* 3. Message Detail Panel */}
-      <div
-        className={`flex-1 flex flex-col overflow-hidden ${
-          !selectedMessage ? 'hidden md:flex' : 'flex'
-        }`}
-      >
-        <MessageDetail
-          message={selectedMessage}
-          userIdentifiers={userIdentifiers}
-          folder={currentFolder}
-          onReply={handleReply}
-          onReplyAll={handleReplyAll}
-          onToggleStar={handleToggleStar}
-          onToggleRead={handleToggleRead}
-          onDeleteMessage={handleDeleteMessage}
-          onRestoreMessage={handleRestoreMessage}
-          onBackToList={() => setSelectedMessage(null)}
-        />
+          </>
+        )}
       </div>
 
       {/* Compose Message Dialog */}
