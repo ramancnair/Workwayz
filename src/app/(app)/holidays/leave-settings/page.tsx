@@ -333,7 +333,7 @@ export default function AllocatedLeavesPage() {
                 <TableRow>
                   <TableHead className="w-[12%]">User ID</TableHead>
                   <TableHead className="w-[30%]">Resource</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Access Level</TableHead>
                   <TableHead className="text-center">Carry Forward</TableHead>
                   <TableHead className="text-center">Annual Quota</TableHead>
                   <TableHead className="text-center">Total Available</TableHead>
@@ -355,7 +355,7 @@ export default function AllocatedLeavesPage() {
                           <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{res.role || 'N/A'}</TableCell>
+                      <TableCell className="text-sm">{res.accessLevel || 'N/A'}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">
                           + {res.carriedOver}
