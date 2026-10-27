@@ -24,6 +24,9 @@ test.describe('Pillar 5: Quality Assurance & Testing Suite', () => {
     await page.goto('/quality/estimations', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('h2')).toContainText('Estimation Variance & Drift');
     await expect(page.locator('body')).toContainText('Estimation Variance & Conformance Matrix');
+    await expect(page.locator('body')).toContainText('Initial Estimates');
+    await expect(page.locator('body')).toContainText('Final Estimate');
+    await expect(page.locator('body')).toContainText('Actual Effort');
 
     // 2. Defect Containment & Leakage Funnel
     await page.goto('/quality/defects', { waitUntil: 'domcontentloaded' });

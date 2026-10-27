@@ -329,7 +329,7 @@ export default function QualityEstimationsPage() {
         <Card className="border border-border/40 bg-card/75 backdrop-blur shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-purple-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ballpark Estimates</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Initial Estimates</CardTitle>
             <Calculator className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
@@ -343,7 +343,7 @@ export default function QualityEstimationsPage() {
         <Card className="border border-border/40 bg-card/75 backdrop-blur shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Planned Plan</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Final Estimate</CardTitle>
             <Layers className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -357,7 +357,7 @@ export default function QualityEstimationsPage() {
         <Card className="border border-border/40 bg-card/75 backdrop-blur shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-emerald-500" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Actual Consumed</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Actual Effort</CardTitle>
             <Activity className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
@@ -422,17 +422,17 @@ export default function QualityEstimationsPage() {
                     </TableHead>
                     <TableHead className="w-[180px] cursor-pointer text-right" onClick={() => toggleSort('totalInitial')}>
                       <div className="flex items-center justify-end gap-1.5">
-                        Initial Estimate <ArrowUpDown className="h-3 w-3" />
+                        Initial Estimates <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </TableHead>
                     <TableHead className="w-[180px] cursor-pointer text-right" onClick={() => toggleSort('totalPlanned')}>
                       <div className="flex items-center justify-end gap-1.5">
-                        Planned Estimate <ArrowUpDown className="h-3 w-3" />
+                        Final Estimate <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </TableHead>
                     <TableHead className="w-[130px] cursor-pointer text-right" onClick={() => toggleSort('actualEffort')}>
                       <div className="flex items-center justify-end gap-1.5">
-                        Actual Logged <ArrowUpDown className="h-3 w-3" />
+                        Actual Effort <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </TableHead>
                     <TableHead className="w-[120px] cursor-pointer text-right" onClick={() => toggleSort('variance')}>
