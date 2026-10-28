@@ -259,7 +259,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                     )}
                     {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Calendar')) && (
                       <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
+                        <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('PMO Documents') || hasAccess('PMO FB Billing') || hasAccess('PMO FB Payment Milestones') || hasAccess('PMO TnM Billing') || hasAccess('PMO TnM Payment Milestones') || hasAccess('Business Continuity')) && (

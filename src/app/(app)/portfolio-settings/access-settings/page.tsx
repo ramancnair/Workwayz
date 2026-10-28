@@ -89,8 +89,8 @@ const pageSections: PageSection[] = [
       },
       {
         id: 'top_holidays',
-        name: 'Holidays',
-        topNavName: 'Holidays',
+        name: 'Time Off',
+        topNavName: 'Time Off',
         pages: ['Holiday Calendar', 'Leave Settings'],
       },
     ],
@@ -176,8 +176,8 @@ const pageSections: PageSection[] = [
       },
       {
         id: 'top_proj_holidays',
-        name: 'Holidays',
-        topNavName: 'Holidays',
+        name: 'Time Off',
+        topNavName: 'Time Off',
         pages: [
           'Project Holiday Calendar',
           'Leave Calendar',

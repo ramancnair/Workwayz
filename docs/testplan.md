@@ -65,7 +65,7 @@ npm run test:e2e:install
 | **TC-PORT-005** | Billing and Rate cards | Executive timeframe filters in header, KPI summary cards, and rate tables | ✅ Automated |
 | **TC-PORT-006** | Users roster, mandatory Joining Date & Cost gating | Member roster with role badges and mandatory Joining Date & Cost validation | ✅ Automated |
 | **TC-PORT-007** | Resource utilization & Gantt chart | Team capacity percentages and timeline bars visible | ✅ Automated |
-| **TC-PORT-008** | Holidays calendar & Policy A pro-rata leave settings | Holiday dates, Policy A monthly pro-rata quota, and carry-forward balances | ✅ Automated |
+| **TC-PORT-008** | Company Holidays & Leave Policy & Quotas | Holiday dates, monthly pro-rata quota, and carry-forward balances | ✅ Automated |
 | **TC-PORT-009** | Portfolio administration & trash recovery | Archive and soft-delete recovery workflows | ✅ Automated |
 | **TC-PORT-010** | Browser back button state preservation | Restores active Billing tab and sidebar sub-navigation after navigating to project PMO | ✅ Automated |
 | **TC-PORT-011** | Billing Rate docked horizontal scrollbar | Wide tables show a horizontal scrollbar docked inside the viewport that scrolls the table sideways | ✅ Automated |

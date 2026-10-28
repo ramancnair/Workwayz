@@ -123,7 +123,7 @@ export default function ProjectHolidayPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Holiday Calendar" description="Manage weekly off-days and yearly holidays for this project." />
+        <PageHeader title="Project Holidays" description="Manage weekly off-days and yearly holidays for this project." />
         
         <Card>
             <CardHeader>

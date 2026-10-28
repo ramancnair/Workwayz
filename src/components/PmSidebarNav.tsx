@@ -273,14 +273,14 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
     {
       id: 'holidays',
       href: `/holidays/holiday-calendar`,
-      label: "Holiday Calendar",
+      label: "Company Holidays",
       icon: CalendarDays,
       group: 'holidays'
     },
     {
       id: 'leave-settings',
       href: `/holidays/leave-settings`,
-      label: "Leave Settings",
+      label: "Leave Policy & Quotas",
       icon: ClipboardList,
       group: 'holidays'
     },

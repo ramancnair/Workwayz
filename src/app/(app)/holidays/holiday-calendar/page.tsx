@@ -227,7 +227,7 @@ export default function HolidayPage() {
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <PageHeader title="Holiday Calendar" description="Manage global weekly off-days and yearly holidays." />
+        <PageHeader title="Company Holidays" description="Manage global weekly off-days and yearly holidays." />
 
         <div className="grid gap-6">
           <Card>

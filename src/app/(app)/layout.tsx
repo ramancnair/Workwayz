@@ -213,7 +213,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                             )}
                             {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings')) && (
                               <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
-                                <Link href={getDefaultRouteForTab('holidays')}>Holidays</Link>
+                                <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (

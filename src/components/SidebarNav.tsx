@@ -318,7 +318,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   const holidaysMenuItems = [
     {
       href: `${basePath}/holidays`,
-      label: "Holiday Calendar",
+      label: "Company Holidays",
       icon: CalendarDays,
     },
     {

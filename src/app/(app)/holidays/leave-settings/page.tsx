@@ -216,7 +216,7 @@ export default function AllocatedLeavesPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <PageHeader 
-        title="Leave Settings" 
+        title="Leave Policy & Quotas" 
         description="Manage global paid leave allocation quotas, carry-overs, and active resource balances."
         titleAddon={
           <TooltipProvider delayDuration={150}>

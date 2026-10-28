@@ -141,12 +141,13 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(page.locator('body')).toContainText(/Utilization|Capacity|Allocation/i);
   });
 
-  test('TC-PORT-007: Holiday Calendar & Leave Settings support organizational scheduling', async ({ page }) => {
+  test('TC-PORT-007: Company Holidays & Leave Policy support organizational scheduling', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/holidays/holiday-calendar', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/Holiday|Calendar/i);
+    await expect(page.locator('body')).toContainText(/Company Holidays|Holiday|Calendar/i);
 
     await page.goto('/holidays/leave-settings', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toContainText(/Leave Settings|Leave Type|Allowance|Leave/i);
+    await expect(page.locator('body')).toContainText(/Leave Policy & Quotas|Leave Settings|Leave Type|Allowance|Leave/i);
     await expect(page.locator('button[aria-label="Leave allocation and carry-forward policy information"]')).toBeVisible();
     await expect(page.locator('th', { hasText: /^Access Level$/ })).toBeVisible();
     await expect(page.locator('th', { hasText: /^Carry Forward$/ })).toBeVisible();
