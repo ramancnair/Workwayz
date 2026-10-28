@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment, useRef } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/db-provider';
 import {
@@ -69,6 +69,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TableScrollContainer, TableScrollHeaderControls } from '@/components/ui/table-scroll-container';
 import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import { groupResourceRatesByPerson, type PersonResourceGroup } from '@/lib/billing-rate-grouping';
 import type { Project, User, AccessLevel, ImpactedSystem, Horizontal } from '@/types';
@@ -169,6 +170,12 @@ export default function BillingRatePage() {
   const [editBilledRate, setEditBilledRate] = useState<string>('');
   const [editCostRate, setEditCostRate] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Table wrapper refs for TableScrollContainer
+  const resourceTableRef = useRef<HTMLDivElement | null>(null);
+  const benchmarkTableRef = useRef<HTMLDivElement | null>(null);
+  const specsSystemsTableRef = useRef<HTMLDivElement | null>(null);
+  const specsHorizontalsTableRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch all projects, global users & rates in real-time
   useEffect(() => {
@@ -596,8 +603,9 @@ export default function BillingRatePage() {
 
       {/* Main Tabs Container */}
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b pb-3">
-          <TabsList className="inline-flex w-auto items-center justify-start gap-1 p-1 bg-muted/80 rounded-lg shrink-0">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 border-b pb-3 max-w-full">
+          <div className="max-w-full overflow-x-auto pb-1">
+            <TabsList className="inline-flex w-auto items-center justify-start gap-1 p-1 bg-muted/80 rounded-lg shrink-0">
             <TabsTrigger value="resources" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
               <Users className="w-3.5 h-3.5" />
               <span>Resource Rates</span>
@@ -620,10 +628,11 @@ export default function BillingRatePage() {
               </Badge>
             </TabsTrigger>
           </TabsList>
+          </div>
 
           {/* Search bar & Filters */}
-          <div className="flex items-center gap-2 flex-wrap lg:justify-end">
-            <div className="relative w-full sm:w-64">
+          <div className="flex items-center gap-2 flex-wrap xl:justify-end max-w-full">
+            <div className="relative w-full sm:w-56 min-w-[160px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name, role, access level..."
@@ -693,35 +702,37 @@ export default function BillingRatePage() {
 
         {/* Tab 1: Resource Rates Directory */}
         <TabsContent value="resources" className="space-y-4">
-          <Card className="border shadow-sm">
-            <CardHeader className="py-4 px-6 border-b">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold">Project Resource Rate Directory</CardTitle>
-                  <CardDescription className="text-xs">
-                    Comprehensive view of assigned project resources, Access Levels, designated project roles, daily billed rates, and profit margins.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  {multiProjectGroups.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={areAllExpanded ? handleCollapseAll : handleExpandAll}
-                      className="h-7 text-xs px-2.5 gap-1.5 font-medium border-border/80 hover:bg-muted/60"
-                    >
-                      <Layers className="w-3.5 h-3.5 text-primary" />
-                      {areAllExpanded ? 'Collapse All' : `Expand Multi-Project (${multiProjectGroups.length})`}
-                    </Button>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    Showing <span className="font-semibold text-foreground">{groupedResourceRates.length}</span> people (<span className="font-semibold text-foreground">{filteredResourceRates.length}</span> allocations)
+          <Card className="border shadow-sm overflow-hidden">
+            <TableScrollContainer wrapperRef={resourceTableRef} label="Resource rates columns">
+              <CardHeader className="py-4 px-6 border-b">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base font-semibold">Project Resource Rate Directory</CardTitle>
+                    <CardDescription className="text-xs">
+                      Comprehensive view of assigned project resources, Access Levels, designated project roles, daily billed rates, and profit margins.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {multiProjectGroups.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={areAllExpanded ? handleCollapseAll : handleExpandAll}
+                        className="h-7 text-xs px-2.5 gap-1.5 font-medium border-border/80 hover:bg-muted/60"
+                      >
+                        <Layers className="w-3.5 h-3.5 text-primary" />
+                        {areAllExpanded ? 'Collapse All' : `Expand Multi-Project (${multiProjectGroups.length})`}
+                      </Button>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      Showing <span className="font-semibold text-foreground">{groupedResourceRates.length}</span> people (<span className="font-semibold text-foreground">{filteredResourceRates.length}</span> allocations)
+                    </div>
+                    <TableScrollHeaderControls />
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table wrapperRef={resourceTableRef} wrapperClassName="table-scroll-wrapper">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[220px]">
@@ -1038,10 +1049,11 @@ export default function BillingRatePage() {
                                     <TableCell>
                                       <Link
                                         href={`/projects/${alloc.projectId}/pmo/${alloc.pricingModel === 'Fixed Bid' ? 'fb-billing' : 'tnm-billing'}`}
-                                        className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors"
+                                        className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors max-w-[200px]"
+                                        title={alloc.projectName}
                                       >
-                                        <span>{alloc.projectName}</span>
-                                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                                        <span className="truncate">{alloc.projectName}</span>
+                                        <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
                                       </Link>
                                     </TableCell>
                                     <TableCell className="text-center">
@@ -1147,10 +1159,11 @@ export default function BillingRatePage() {
                           <TableCell>
                             <Link
                               href={`/projects/${res.projectId}/pmo/${res.pricingModel === 'Fixed Bid' ? 'fb-billing' : 'tnm-billing'}`}
-                              className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors"
+                              className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors max-w-[200px]"
+                              title={res.projectName}
                             >
-                              <span>{res.projectName}</span>
-                              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
+                              <span className="truncate">{res.projectName}</span>
+                              <ExternalLink className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
                             </Link>
                           </TableCell>
                           <TableCell className="text-center">
@@ -1203,8 +1216,9 @@ export default function BillingRatePage() {
                 </TableBody>
               </Table>
             </CardContent>
-          </Card>
-        </TabsContent>
+          </TableScrollContainer>
+        </Card>
+      </TabsContent>
 
         {/* Tab 2: Role & Access Level Benchmarks */}
         <TabsContent value="benchmarks" className="space-y-6">
@@ -1253,11 +1267,13 @@ export default function BillingRatePage() {
                     Aggregated daily billing rates, internal cost, and profit margins organized by System Access Level.
                   </p>
                 </div>
+                <TableScrollHeaderControls />
               </div>
 
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <Table>
+              <Card className="border shadow-sm overflow-hidden">
+                <TableScrollContainer wrapperRef={benchmarkTableRef} label="Access level columns">
+                  <CardContent className="p-0">
+                    <Table wrapperRef={benchmarkTableRef} wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[200px]">Access Level</TableHead>
@@ -1311,9 +1327,10 @@ export default function BillingRatePage() {
                     </TableBody>
                   </Table>
                 </CardContent>
-              </Card>
-            </div>
-          )}
+              </TableScrollContainer>
+            </Card>
+          </div>
+        )}
 
           {/* Section 2: Project Roles Rates (Dynamically discovers any new project role) */}
           {(benchmarkView === 'all' || benchmarkView === 'projectRoles') && (
@@ -1439,14 +1456,18 @@ export default function BillingRatePage() {
                     Component and module-level daily billing rates configured across Technology and Functional systems.
                   </p>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {impactedSystemsRates.length} Impacted Systems
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {impactedSystemsRates.length} Impacted Systems
+                  </Badge>
+                  <TableScrollHeaderControls />
+                </div>
               </div>
 
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <Table>
+              <Card className="border shadow-sm overflow-hidden">
+                <TableScrollContainer wrapperRef={specsSystemsTableRef} label="Impacted systems columns">
+                  <CardContent className="p-0">
+                    <Table wrapperRef={specsSystemsTableRef} wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">System / Module Name</TableHead>
@@ -1528,11 +1549,12 @@ export default function BillingRatePage() {
                     </TableBody>
                   </Table>
                 </CardContent>
-              </Card>
-            </div>
-          )}
+              </TableScrollContainer>
+            </Card>
+          </div>
+        )}
 
-          {/* Section B: Horizontals Rates */}
+        {/* Section B: Horizontals Rates */}
           {(specView === 'all' || specView === 'horizontals') && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
@@ -1545,14 +1567,18 @@ export default function BillingRatePage() {
                     Standard daily billing rates for cross-cutting horizontal capabilities (QA & Testing, Architecture, DevOps, Compliance).
                   </p>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {horizontalsRates.length} Horizontals Configured
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {horizontalsRates.length} Horizontals Configured
+                  </Badge>
+                  <TableScrollHeaderControls />
+                </div>
               </div>
 
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <Table>
+              <Card className="border shadow-sm overflow-hidden">
+                <TableScrollContainer wrapperRef={specsHorizontalsTableRef} label="Horizontals columns">
+                  <CardContent className="p-0">
+                    <Table wrapperRef={specsHorizontalsTableRef} wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">Horizontal Capability</TableHead>
@@ -1626,10 +1652,11 @@ export default function BillingRatePage() {
                     </TableBody>
                   </Table>
                 </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
+              </TableScrollContainer>
+            </Card>
+          </div>
+        )}
+      </TabsContent>
       </Tabs>
 
       {/* Edit Rate Dialog */}
