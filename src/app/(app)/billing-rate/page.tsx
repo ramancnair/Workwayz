@@ -1120,11 +1120,8 @@ export default function BillingRatePage() {
             <CardHeader className="py-4 px-6 border-b">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <span>Rate Card</span>
-                    <Badge variant="outline" className="text-[10px] font-normal border-primary/30 text-primary">
-                      Sales & Client Reference
-                    </Badge>
+                  <CardTitle className="text-base font-semibold">
+                    Rate Card
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Standard daily billing rates for technical and horizontal roles segmented by experience tier (Low, Medium, High).
