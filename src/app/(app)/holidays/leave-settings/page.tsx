@@ -314,11 +314,11 @@ export default function AllocatedLeavesPage() {
           searchQuery.trim() ? "pb-6" : "p-6"
         )}>
           <div>
-            <CardTitle>Resource Leave Accounts</CardTitle>
+            <CardTitle>Resource Leave Balances</CardTitle>
             <CardDescription>
               {searchQuery.trim()
-                ? `Showing leave account results for "${searchQuery.trim()}" in ${currentYear}.`
-                : `Search by name or employee ID to view a resource's leave account for ${currentYear}.`}
+                ? `Showing leave balance results for "${searchQuery.trim()}" in ${currentYear}.`
+                : `Search by name or employee ID to view a resource's leave balance for ${currentYear}.`}
             </CardDescription>
           </div>
           <div className="flex items-center w-full md:w-80 relative">

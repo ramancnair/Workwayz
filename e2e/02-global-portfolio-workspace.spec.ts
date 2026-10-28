@@ -155,7 +155,7 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(searchInput).toBeVisible();
     await expect(page.locator('table')).not.toBeVisible();
 
-    // Search by name or emp ID to reveal the resource leave accounts table
+    // Search by name or emp ID to reveal the resource leave balances table
     await searchInput.fill('Aswin');
     await expect(page.locator('th', { hasText: /^Access Level$/ })).toBeVisible();
     await expect(page.locator('th', { hasText: /^Carry Forward$/ })).toBeVisible();
