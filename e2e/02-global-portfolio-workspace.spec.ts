@@ -149,9 +149,18 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await page.goto('/holidays/leave-settings', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Leave Policy & Quotas|Leave Settings|Leave Type|Allowance|Leave/i);
     await expect(page.locator('button[aria-label="Leave allocation and carry-forward policy information"]')).toBeVisible();
+
+    // Verify search bar is visible and resource table is hidden by default
+    const searchInput = page.getByPlaceholder(/Search by name or emp ID/i);
+    await expect(searchInput).toBeVisible();
+    await expect(page.locator('table')).not.toBeVisible();
+
+    // Search by name or emp ID to reveal the resource leave accounts table
+    await searchInput.fill('Aswin');
     await expect(page.locator('th', { hasText: /^Access Level$/ })).toBeVisible();
     await expect(page.locator('th', { hasText: /^Carry Forward$/ })).toBeVisible();
     await expect(page.locator('th', { hasText: /^Paid Taken$/ })).toBeVisible();
+    await expect(page.locator('body')).toContainText('Aswin');
   });
 
   test('TC-PORT-008: Portfolio Settings displays enterprise access, database, and auth settings', async ({ page }) => {

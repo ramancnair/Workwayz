@@ -30,8 +30,8 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info, Search } from 'lucide-react';
-import { getUserInitials } from '@/lib/utils';
+import { Info, Search, X } from 'lucide-react';
+import { getUserInitials, cn } from '@/lib/utils';
 import { calculateEmployeeLeaveQuotaStats } from '@/lib/leave-utils';
 
 const defaultSettings = {
@@ -191,7 +191,7 @@ export default function AllocatedLeavesPage() {
   // Filter resources ledger
   const filteredLedger = useMemo(() => {
     const queryStr = searchQuery.toLowerCase().trim();
-    if (!queryStr) return resourcesLedger;
+    if (!queryStr) return [];
     return resourcesLedger.filter(res => 
       `${res.firstName} ${res.lastName}`.toLowerCase().includes(queryStr) ||
       res.empId.toLowerCase().includes(queryStr)
@@ -309,77 +309,94 @@ export default function AllocatedLeavesPage() {
 
       {/* Resources Ledger Table */}
       <Card>
-        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0 pb-6">
+        <CardHeader className={cn(
+          "flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0",
+          searchQuery.trim() ? "pb-6" : "p-6"
+        )}>
           <div>
             <CardTitle>Resource Leave Accounts</CardTitle>
             <CardDescription>
-              Summary of carry-forward leaves, allocated annual quotas, and current balances for the year {currentYear}.
+              {searchQuery.trim()
+                ? `Showing leave account results for "${searchQuery.trim()}" in ${currentYear}.`
+                : `Search by name or employee ID to view a resource's leave account for ${currentYear}.`}
             </CardDescription>
           </div>
           <div className="flex items-center w-full md:w-80 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search resources by name..."
+              placeholder="Search by name or emp ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-full bg-background"
+              className="pl-9 pr-8 h-9 w-full bg-background"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/40">
-                <TableRow>
-                  <TableHead className="w-[12%]">User ID</TableHead>
-                  <TableHead className="w-[30%]">Resource</TableHead>
-                  <TableHead>Access Level</TableHead>
-                  <TableHead className="text-center">Carry Forward</TableHead>
-                  <TableHead className="text-center">Annual Quota</TableHead>
-                  <TableHead className="text-center">Total Available</TableHead>
-                  <TableHead className="text-center">Paid Taken</TableHead>
-                  <TableHead className="text-right pr-6 font-semibold">Remaining Balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLedger.length > 0 ? (
-                  filteredLedger.map((res) => (
-                    <TableRow key={res.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-medium text-xs text-muted-foreground">{res.empId}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-7 w-7 border">
-                            <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
-                            <AvatarFallback className="text-xs font-semibold">{getUserInitials(res.firstName, res.lastName)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{res.accessLevel || 'N/A'}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">
-                          + {res.carriedOver}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center font-medium">{res.allocated}</TableCell>
-                      <TableCell className="text-center font-semibold text-foreground">{res.totalAvailable}</TableCell>
-                      <TableCell className="text-center text-muted-foreground">{res.taken}</TableCell>
-                      <TableCell className="text-right pr-6 font-bold text-sm text-primary">
-                        {res.remaining}
+        {searchQuery.trim() && (
+          <CardContent>
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="w-[12%]">User ID</TableHead>
+                    <TableHead className="w-[30%]">Resource</TableHead>
+                    <TableHead>Access Level</TableHead>
+                    <TableHead className="text-center">Carry Forward</TableHead>
+                    <TableHead className="text-center">Annual Quota</TableHead>
+                    <TableHead className="text-center">Total Available</TableHead>
+                    <TableHead className="text-center">Paid Taken</TableHead>
+                    <TableHead className="text-right pr-6 font-semibold">Remaining Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLedger.length > 0 ? (
+                    filteredLedger.map((res) => (
+                      <TableRow key={res.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="font-medium text-xs text-muted-foreground">{res.empId}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-7 w-7 border">
+                              <AvatarImage src={res.avatar} alt={`${res.firstName} ${res.lastName}`} />
+                              <AvatarFallback className="text-xs font-semibold">{getUserInitials(res.firstName, res.lastName)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-sm">{res.firstName} {res.lastName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{res.accessLevel || 'N/A'}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">
+                            + {res.carriedOver}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-medium">{res.allocated}</TableCell>
+                        <TableCell className="text-center font-semibold text-foreground">{res.totalAvailable}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">{res.taken}</TableCell>
+                        <TableCell className="text-right pr-6 font-bold text-sm text-primary">
+                          {res.remaining}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-32 text-center text-muted-foreground text-sm">
+                        No matching resources found for &quot;{searchQuery}&quot;.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground text-sm">
-                      No matching resources found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
