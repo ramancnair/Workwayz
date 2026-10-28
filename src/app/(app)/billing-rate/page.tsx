@@ -467,7 +467,7 @@ export default function BillingRatePage() {
                       </Button>
                     </TableHead>
                     <TableHead className="text-center">Pricing Model</TableHead>
-                    <TableHead className="text-center">Availability</TableHead>
+                    <TableHead className="text-center">Allocation</TableHead>
                     <TableHead className="text-right">
                       <Button
                         variant="ghost"
