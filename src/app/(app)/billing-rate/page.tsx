@@ -51,28 +51,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import { groupResourceRatesByPerson, type PersonResourceGroup } from '@/lib/billing-rate-grouping';
 import type { Project, User, AccessLevel } from '@/types';
-
-const SYSTEM_ACCESS_LEVELS: AccessLevel[] = [
-  'Super Admin',
-  'Administrator',
-  'Senior Management',
-  'Project Manager',
-  'Lead',
-  'Team Member',
-  'PMO',
-];
 
 interface ResourceRateRow {
   id: string;
@@ -98,15 +81,10 @@ interface ResourceRateRow {
 export default function BillingRatePage() {
   const { toast } = useToast();
   const [resourceRates, setResourceRates] = useState<ResourceRateRow[]>([]);
-  const [projectsList, setProjectsList] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filters & Search
+  // Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('ALL');
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
-  const [selectedAccessLevelFilter, setSelectedAccessLevelFilter] = useState<string>('ALL');
-  const [selectedModelFilter, setSelectedModelFilter] = useState<string>('ALL');
 
   // Sorting
   const [sortField, setSortField] = useState<keyof ResourceRateRow>('billedRate');
@@ -141,8 +119,6 @@ export default function BillingRatePage() {
           const rawProjects = projectsSnapshot.docs
             .map((d: any) => ({ ...d.data(), id: d.id } as Project))
             .filter((p) => !p.isArchived);
-
-          setProjectsList(rawProjects.map((p) => ({ id: p.id, name: p.name })));
 
           // Fetch global users and employees map for accurate access level resolution
           const [usersSnapshot, employeesSnapshot] = await Promise.all([
@@ -226,31 +202,10 @@ export default function BillingRatePage() {
     return () => unsubscribe();
   }, [toast]);
 
-  // Unique project roles dynamically discovered across all projects
-  const availableRoles = useMemo(() => {
-    const rolesSet = new Set<string>();
-    resourceRates.forEach((r) => {
-      if (r.role && r.role.trim()) rolesSet.add(r.role.trim());
-    });
-    return Array.from(rolesSet).sort();
-  }, [resourceRates]);
-
   // Filtered & Sorted Resource Rates
   const filteredResourceRates = useMemo(() => {
     return resourceRates
       .filter((item) => {
-        if (selectedProjectFilter !== 'ALL' && item.projectId !== selectedProjectFilter) {
-          return false;
-        }
-        if (selectedRoleFilter !== 'ALL' && item.role !== selectedRoleFilter) {
-          return false;
-        }
-        if (selectedAccessLevelFilter !== 'ALL' && item.accessLevel !== selectedAccessLevelFilter) {
-          return false;
-        }
-        if (selectedModelFilter !== 'ALL' && item.pricingModel !== selectedModelFilter) {
-          return false;
-        }
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
           const fullName = `${item.firstName} ${item.lastName}`.toLowerCase();
@@ -258,12 +213,14 @@ export default function BillingRatePage() {
           const role = (item.role || '').toLowerCase();
           const access = (item.accessLevel || '').toLowerCase();
           const project = item.projectName.toLowerCase();
+          const pricingModel = (item.pricingModel || '').toLowerCase();
           return (
             fullName.includes(q) ||
             empId.includes(q) ||
             role.includes(q) ||
             access.includes(q) ||
-            project.includes(q)
+            project.includes(q) ||
+            pricingModel.includes(q)
           );
         }
         return true;
@@ -281,16 +238,7 @@ export default function BillingRatePage() {
         if (valA > valB) return sortAsc ? 1 : -1;
         return 0;
       });
-  }, [
-    resourceRates,
-    selectedProjectFilter,
-    selectedRoleFilter,
-    selectedAccessLevelFilter,
-    selectedModelFilter,
-    searchQuery,
-    sortField,
-    sortAsc,
-  ]);
+  }, [resourceRates, searchQuery, sortField, sortAsc]);
 
   // Group filtered resource rates by person (empId or name) with aggregate statistics
   const groupedResourceRates = useMemo<PersonResourceGroup[]>(() => {
@@ -437,69 +385,17 @@ export default function BillingRatePage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Search bar & Filters */}
+          {/* Search bar */}
           <div className="flex items-center gap-2 flex-wrap lg:justify-end">
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-80">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, role, access level..."
+                placeholder="Search name, role, access level, project..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-9 text-xs"
               />
             </div>
-            <Select value={selectedProjectFilter} onValueChange={setSelectedProjectFilter}>
-              <SelectTrigger className="w-[140px] h-9 text-xs">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Projects</SelectItem>
-                {projectsList.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedRoleFilter} onValueChange={setSelectedRoleFilter}>
-              <SelectTrigger className="w-[130px] h-9 text-xs">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Roles</SelectItem>
-                {availableRoles.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedAccessLevelFilter} onValueChange={setSelectedAccessLevelFilter}>
-              <SelectTrigger className="w-[130px] h-9 text-xs">
-                <SelectValue placeholder="Access Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Access Levels</SelectItem>
-                {SYSTEM_ACCESS_LEVELS.map((lvl) => (
-                  <SelectItem key={lvl} value={lvl}>
-                    {lvl}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedModelFilter} onValueChange={setSelectedModelFilter}>
-              <SelectTrigger className="w-[120px] h-9 text-xs">
-                <SelectValue placeholder="Pricing Model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Models</SelectItem>
-                <SelectItem value="Fixed Bid">Fixed Bid</SelectItem>
-                <SelectItem value="T&M">T&M</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
