@@ -81,8 +81,8 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(page.locator('body')).toContainText(/Medium Experience/i);
     await expect(page.locator('body')).toContainText(/High Experience/i);
 
-    // Click Add Role button
-    const addBtn = page.getByRole('button', { name: /Add Role|Add First Role/i }).first();
+    // Click Add Role button (top right header button)
+    const addBtn = page.getByRole('button', { name: /Add Role/i }).first();
     await expect(addBtn).toBeVisible();
     await addBtn.click();
 

@@ -1239,16 +1239,6 @@ export default function BillingRatePage() {
                                 : 'No rate card roles configured yet. Add standard tech and horizontal roles with Low, Medium, and High experience rates as a reference for sales and client billing.'}
                             </p>
                           </div>
-                          {(!searchQuery && rateCardCategoryFilter === 'all') && (
-                            <Button
-                              size="sm"
-                              onClick={openAddRateCardModal}
-                              className="mt-2 text-xs h-8 gap-1.5"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              Add First Role
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
