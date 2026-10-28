@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E Configuration for ProjectFlow
+ * Playwright E2E Configuration for Workwayz
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({

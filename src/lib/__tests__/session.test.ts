@@ -199,11 +199,18 @@ describe('Session Validation Utilities (session.ts)', () => {
   it('migrateLegacyStorageKeys should move legacy projectflow_* keys to workwayz_* keys', () => {
     mockStorage['projectflow_user'] = 'legacy-user';
     mockStorage['projectflow_last_activity'] = '999';
+    mockStorage['projectflow_db_provider'] = 'supabase';
+    mockStorage['projectflow_firebase_config'] = '{}';
+    mockStorage['projectflow_remember_me'] = 'true';
 
     migrateLegacyStorageKeys();
 
     expect(mockStorage[USER_STORAGE_KEY]).toBe('legacy-user');
     expect(mockStorage[ACTIVITY_STORAGE_KEY]).toBe('999');
+    expect(mockStorage['workwayz_db_provider']).toBe('supabase');
+    expect(mockStorage['workwayz_firebase_config']).toBe('{}');
+    expect(mockStorage['workwayz_remember_me']).toBe('true');
+    expect(mockStorage['projectflow_db_provider']).toBeUndefined();
     expect(mockStorage['projectflow_user']).toBeUndefined();
     expect(mockStorage['projectflow_last_activity']).toBeUndefined();
   });

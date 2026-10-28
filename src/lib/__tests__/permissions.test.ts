@@ -5,7 +5,7 @@ import {
   defaultAccessSettings,
 } from '../permissions';
 
-describe('ProjectFlow Permissions Matrix', () => {
+describe('Workwayz Permissions Matrix', () => {
   describe('Route to Page Name Resolution (getPageNameForRoute)', () => {
     it('should return null for public or universal paths', () => {
       expect(getPageNameForRoute('/')).toBeNull();

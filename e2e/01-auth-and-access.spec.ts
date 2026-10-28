@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 import { setupAuthenticatedWorkspace } from './helpers/testSetup';
 
 test.describe('Pillar 1: Authentication & Access Control', () => {
-  test('TC-AUTH-001: Public landing page displays ProjectFlow branding and navigation CTAs', async ({ page }) => {
+  test('TC-AUTH-001: Public landing page displays Workwayz branding and navigation CTAs', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
     // Branding and header
-    await expect(page.locator('body')).toContainText(/Workwayz|ProjectFlow/i);
+    await expect(page.locator('body')).toContainText(/Workwayz/i);
     await expect(page.locator('body')).toContainText(/Log in|Sign In/i);
 
     // CTAs / inputs
@@ -48,7 +48,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
       user: {
         accessLevel: 'Administrator',
         name: 'Alex Vance (Administrator)',
-        email: 'admin@projectflow.demo',
+        email: 'admin@workwayz.demo',
       },
     });
 
@@ -62,7 +62,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
       user: {
         accessLevel: 'Team Member',
         name: 'Junior Member',
-        email: 'member@projectflow.demo',
+        email: 'member@workwayz.demo',
       },
     });
 
@@ -85,7 +85,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
         uid: 'admin-test-001',
         empId: 'E100001',
         name: 'Alex Vance',
-        email: 'admin@projectflow.demo',
+        email: 'admin@workwayz.demo',
         accessLevel: 'Administrator',
         issuedAt: Date.now() - 10 * 60 * 1000,
         rememberMe: false,
@@ -108,7 +108,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
         uid: 'admin-test-001',
         empId: 'E100001',
         name: 'Alex Vance',
-        email: 'admin@projectflow.demo',
+        email: 'admin@workwayz.demo',
         accessLevel: 'Administrator',
         issuedAt: Date.now() - 10 * 60 * 1000,
         rememberMe: true,

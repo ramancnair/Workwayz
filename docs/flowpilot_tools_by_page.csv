@@ -1,5 +1,5 @@
 Section,Top Nav Group,Page Name,Proposed Tool Name,Purpose / Required Capability,Implemented
-Portfolio Level Pages,Projects,Project Home,createProject,"Create Project: Creates a new project in ProjectFlow workspace under a portfolio, initializing default Kanban columns, settings, and environments.",Yes
+Portfolio Level Pages,Projects,Project Home,createProject,"Create Project: Creates a new project in Workwayz workspace under a portfolio, initializing default Kanban columns, settings, and environments.",Yes
 Portfolio Level Pages,Projects,Project Home,createPortfolio,"Create Portfolio: Creates a new Portfolio container in the workspace to group and organize projects.",Yes
 Portfolio Level Pages,Projects,Project Home,listProjects,"List All Projects: Lists all projects currently in the workspace with ID, name, portfolio, and status.",Yes
 Portfolio Level Pages,Projects,Project Home,listPortfolios,"List Portfolios: Lists all portfolios available in the workspace.",Yes

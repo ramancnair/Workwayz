@@ -1,6 +1,6 @@
 # ESLint Issues and Resolution Report
 
-This document records the comprehensive audit, categorized breakdown, code fixes, and final resolution status of all ESLint issues in **ProjectFlow**.
+This document records the comprehensive audit, categorized breakdown, code fixes, and final resolution status of all ESLint issues in **Workwayz**.
 
 ---
 
@@ -38,7 +38,7 @@ This document records the comprehensive audit, categorized breakdown, code fixes
 
 ### Group A: Critical Runtime & Hook Violations (5 Files, 61 Errors Fixed)
 
-#### 1. [kanban/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/development/kanban/page.tsx)
+#### 1. [kanban/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/development/kanban/page.tsx)
 - **Issues**:
   - `react-hooks/rules-of-hooks`: Line 327 called `useProject().impactedSystems.find(...)` inside `[...subTasks, ...bugs].map(...)`.
   - `react/no-unescaped-entities`: Line 1403 contained unescaped `you're` in dialog description.
@@ -48,21 +48,21 @@ This document records the comprehensive audit, categorized breakdown, code fixes
   - Escaped `you're` to `you&apos;re`.
 - **Status**: **Resolved**
 
-#### 2. [fb-billing/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/pmo/fb-billing/page.tsx)
+#### 2. [fb-billing/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/pmo/fb-billing/page.tsx)
 - **Issues**:
   - `react-hooks/rules-of-hooks`: 10 errors. Guard `if (!project || project.pricingModel !== 'Fixed Bid') return null;` at line 62 preceded 9 `useState` hooks and 1 `useMemo` hook (`revenueData`).
 - **Fix Applied**:
   - Relocated the guard condition to right before the JSX `return (` statement after all hook declarations.
 - **Status**: **Resolved**
 
-#### 3. [tnm-billing/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/pmo/tnm-billing/page.tsx)
+#### 3. [tnm-billing/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/pmo/tnm-billing/page.tsx)
 - **Issues**:
   - `react-hooks/rules-of-hooks`: 17 errors. Guard `if (!project || project.pricingModel !== 'T&M') return null;` at line 71 preceded 10 `useState`, 6 `useMemo`, and 1 `useEffect` hook.
 - **Fix Applied**:
   - Relocated the guard condition to right before the JSX `return (` statement after all hook declarations.
 - **Status**: **Resolved**
 
-#### 4. [tnm-payment-milestones/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/pmo/tnm-payment-milestones/page.tsx)
+#### 4. [tnm-payment-milestones/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/pmo/tnm-payment-milestones/page.tsx)
 - **Issues**:
   - `react-hooks/rules-of-hooks`: 11 errors. Guard at line 101 preceded `useState`, `useForm`, `useMemo`, and `useEffect`.
   - `react/no-unescaped-entities`: Line 550 unescaped double quotes `"{deletingMilestone?.name}"`.
@@ -71,7 +71,7 @@ This document records the comprehensive audit, categorized breakdown, code fixes
   - Escaped double quotes to `&quot;{deletingMilestone?.name}&quot;`.
 - **Status**: **Resolved**
 
-#### 5. [fb-payment-milestones/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/pmo/fb-payment-milestones/page.tsx)
+#### 5. [fb-payment-milestones/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/pmo/fb-payment-milestones/page.tsx)
 - **Issues**:
   - `react/jsx-no-undef`: 3 errors. `<Card>` and `<CardContent>` used at lines 484, 485, and 714 without being imported.
   - `react-hooks/rules-of-hooks`: 19 errors. Guard at line 107 preceded all local state, form, memo, and effect hooks.
@@ -88,40 +88,40 @@ This document records the comprehensive audit, categorized breakdown, code fixes
 
 | File | Line(s) | Original Content | Replacement | Status |
 | :--- | :---: | :--- | :--- | :---: |
-| [my-projects/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/my-projects/page.tsx) | 221 | `project's resource list` | `project&apos;s resource list` | **Resolved** |
-| [ai-config/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/portfolio-settings/ai-config/page.tsx) | 351 | `Click "Add New Connection"` | `Click &quot;Add New Connection&quot;` | **Resolved** |
-| [archive/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/portfolio-settings/archive/page.tsx) | 277 | `project's End Date` | `project&apos;s End Date` | **Resolved** |
-| [authentication/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/portfolio-settings/authentication/page.tsx) | 353 | `Click "Add New Setup"` | `Click &quot;Add New Setup&quot;` | **Resolved** |
-| [database/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/portfolio-settings/database/page.tsx) | 405 | `Click "Add New Connection"` | `Click &quot;Add New Connection&quot;` | **Resolved** |
-| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/project-home/page.tsx) | 1070 | `"{deletingProject?.name}"` | `&quot;{deletingProject?.name}&quot;` | **Resolved** |
-| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/project-home/page.tsx) | 1089 | `"{archivingProject?.name}"` | `&quot;{archivingProject?.name}&quot;` | **Resolved** |
-| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/project-home/page.tsx) | 1107 | `"{deletingPortfolio?.name}"` | `&quot;{deletingPortfolio?.name}&quot;` | **Resolved** |
-| [backlog/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/development/backlog/page.tsx) | 1913 | `when you're done` | `when you&apos;re done` | **Resolved** |
-| [backlog/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/development/backlog/page.tsx) | 2686 | `when you're done` | `when you&apos;re done` | **Resolved** |
-| [development-tasks/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/development/development-tasks/page.tsx) | 832 | `"{deletingSubTask?.title}"` | `&quot;{deletingSubTask?.title}&quot;` | **Resolved** |
-| [grooming/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/development/grooming/page.tsx) | 1747 | `when you're done` | `when you&apos;re done` | **Resolved** |
-| [initial-estimation/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx) | 425 | `project's goals` | `project&apos;s goals` | **Resolved** |
-| [initial-estimation/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx) | 894 | `"{deletingHorizontal?.name}"` | `&quot;{deletingHorizontal?.name}&quot;` | **Resolved** |
-| [documents/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/pmo/documents/page.tsx) | 524 | `"{deletingDocument?.name}"` | `&quot;{deletingDocument?.name}&quot;` | **Resolved** |
-| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 555 | `project's goals` | `project&apos;s goals` | **Resolved** |
-| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1071 | `"{deletingEnv?.name}"` | `&quot;{deletingEnv?.name}&quot;` | **Resolved** |
-| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1091 | `"{deletingSystem?.name}"` | `&quot;{deletingSystem?.name}&quot;` | **Resolved** |
-| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1111 | `"{deletingHorizontal?.name}"` | `&quot;{deletingHorizontal?.name}&quot;` | **Resolved** |
-| [releases/project-releases/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/releases/project-releases/page.tsx) | 528 | `"{deletingItem?.name}"` | `&quot;{deletingItem?.name}&quot;` | **Resolved** |
-| [resources/project-resources/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/resources/project-resources/page.tsx) | 357 | `resource's total availability` | `resource&apos;s total availability` | **Resolved** |
-| [testing/test-cases/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/testing/test-cases/page.tsx) | 713 | `"{deletingTestCase?.title}"` | `&quot;{deletingTestCase?.title}&quot;` | **Resolved** |
-| [testing/test-cycle/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(app)/projects/[projectId]/testing/test-cycle/page.tsx) | 752 | `click "Move Here"` | `click &quot;Move Here&quot;` | **Resolved** |
-| [login/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/app/(auth)/login/page.tsx) | 227 | `Don't have an account?` | `Don&apos;t have an account?` | **Resolved** |
-| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/SetupWizard.tsx) | 309 | `Let's configure` | `Let&apos;s configure` | **Resolved** |
-| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/SetupWizard.tsx) | 554 | `You're almost there!` | `You&apos;re almost there!` | **Resolved** |
-| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/SetupWizard.tsx) | 556 | `'Complete Setup'` | `&apos;Complete Setup&apos;` | **Resolved** |
-| [StoryEditDialog.tsx](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/src/components/kanban/StoryEditDialog.tsx) | 948 | `when you're done` | `when you&apos;re done` | **Resolved** |
+| [my-projects/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/my-projects/page.tsx) | 221 | `project's resource list` | `project&apos;s resource list` | **Resolved** |
+| [ai-config/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/portfolio-settings/ai-config/page.tsx) | 351 | `Click "Add New Connection"` | `Click &quot;Add New Connection&quot;` | **Resolved** |
+| [archive/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/portfolio-settings/archive/page.tsx) | 277 | `project's End Date` | `project&apos;s End Date` | **Resolved** |
+| [authentication/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/portfolio-settings/authentication/page.tsx) | 353 | `Click "Add New Setup"` | `Click &quot;Add New Setup&quot;` | **Resolved** |
+| [database/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/portfolio-settings/database/page.tsx) | 405 | `Click "Add New Connection"` | `Click &quot;Add New Connection&quot;` | **Resolved** |
+| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/project-home/page.tsx) | 1070 | `"{deletingProject?.name}"` | `&quot;{deletingProject?.name}&quot;` | **Resolved** |
+| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/project-home/page.tsx) | 1089 | `"{archivingProject?.name}"` | `&quot;{archivingProject?.name}&quot;` | **Resolved** |
+| [project-home/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/project-home/page.tsx) | 1107 | `"{deletingPortfolio?.name}"` | `&quot;{deletingPortfolio?.name}&quot;` | **Resolved** |
+| [backlog/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/development/backlog/page.tsx) | 1913 | `when you're done` | `when you&apos;re done` | **Resolved** |
+| [backlog/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/development/backlog/page.tsx) | 2686 | `when you're done` | `when you&apos;re done` | **Resolved** |
+| [development-tasks/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/development/development-tasks/page.tsx) | 832 | `"{deletingSubTask?.title}"` | `&quot;{deletingSubTask?.title}&quot;` | **Resolved** |
+| [grooming/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/development/grooming/page.tsx) | 1747 | `when you're done` | `when you&apos;re done` | **Resolved** |
+| [initial-estimation/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx) | 425 | `project's goals` | `project&apos;s goals` | **Resolved** |
+| [initial-estimation/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/initial-estimation/specifications/page.tsx) | 894 | `"{deletingHorizontal?.name}"` | `&quot;{deletingHorizontal?.name}&quot;` | **Resolved** |
+| [documents/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/pmo/documents/page.tsx) | 524 | `"{deletingDocument?.name}"` | `&quot;{deletingDocument?.name}&quot;` | **Resolved** |
+| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 555 | `project's goals` | `project&apos;s goals` | **Resolved** |
+| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1071 | `"{deletingEnv?.name}"` | `&quot;{deletingEnv?.name}&quot;` | **Resolved** |
+| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1091 | `"{deletingSystem?.name}"` | `&quot;{deletingSystem?.name}&quot;` | **Resolved** |
+| [project-details/specifications/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/project-details/specifications/page.tsx) | 1111 | `"{deletingHorizontal?.name}"` | `&quot;{deletingHorizontal?.name}&quot;` | **Resolved** |
+| [releases/project-releases/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/releases/project-releases/page.tsx) | 528 | `"{deletingItem?.name}"` | `&quot;{deletingItem?.name}&quot;` | **Resolved** |
+| [resources/project-resources/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/resources/project-resources/page.tsx) | 357 | `resource's total availability` | `resource&apos;s total availability` | **Resolved** |
+| [testing/test-cases/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/testing/test-cases/page.tsx) | 713 | `"{deletingTestCase?.title}"` | `&quot;{deletingTestCase?.title}&quot;` | **Resolved** |
+| [testing/test-cycle/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(app)/projects/[projectId]/testing/test-cycle/page.tsx) | 752 | `click "Move Here"` | `click &quot;Move Here&quot;` | **Resolved** |
+| [login/page.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/app/(auth)/login/page.tsx) | 227 | `Don't have an account?` | `Don&apos;t have an account?` | **Resolved** |
+| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/components/SetupWizard.tsx) | 309 | `Let's configure` | `Let&apos;s configure` | **Resolved** |
+| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/components/SetupWizard.tsx) | 554 | `You're almost there!` | `You&apos;re almost there!` | **Resolved** |
+| [SetupWizard.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/components/SetupWizard.tsx) | 556 | `'Complete Setup'` | `&apos;Complete Setup&apos;` | **Resolved** |
+| [StoryEditDialog.tsx](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/src/components/kanban/StoryEditDialog.tsx) | 948 | `when you're done` | `when you&apos;re done` | **Resolved** |
 
 ---
 
 ## 4. Configuration Changes
 
-### [eslint.config.mjs](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/eslint.config.mjs)
+### [eslint.config.mjs](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/eslint.config.mjs)
 Configured using Next.js 16 Flat Config with `eslint-config-next/core-web-vitals`:
 ```javascript
 import nextVitals from "eslint-config-next/core-web-vitals";
@@ -156,7 +156,7 @@ const eslintConfig = [
 export default eslintConfig;
 ```
 
-### [package.json](file:///c:/Users/Raman/Documents/Antigravity/ProjectFlow/package.json)
+### [package.json](file:///c:/Users/Raman/Documents/Antigravity/Workwayz/package.json)
 Updated script:
 ```json
 "lint": "eslint ."

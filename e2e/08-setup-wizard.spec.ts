@@ -7,7 +7,7 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
     await page.goto('/setup-wizard?force=true', { waitUntil: 'domcontentloaded' });
 
     // Wait for the setup wizard card to render after profile loading completes
-    const heading = page.locator('h1:has-text("Welcome to Workwayz Setup"), h1:has-text("Welcome to ProjectFlow Setup")');
+    const heading = page.locator('h1:has-text("Welcome to Workwayz Setup")');
     await expect(heading).toBeVisible({ timeout: 15000 });
 
     // Verify stepper indicator titles
@@ -61,7 +61,7 @@ test.describe('Pillar 8: Setup Wizard & Initial Configuration', () => {
     await setupAuthenticatedWorkspace(page, { targetUrl: '/setup-wizard?force=true' });
 
     // Wait for setup wizard card
-    await expect(page.locator('h1:has-text("Welcome to Workwayz Setup"), h1:has-text("Welcome to ProjectFlow Setup")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1:has-text("Welcome to Workwayz Setup")')).toBeVisible({ timeout: 15000 });
 
     // Look for close button (X icon or button)
     const closeBtn = page.locator('button:has(svg.lucide-x), button:has-text("Close"), button[aria-label="Close"]').first();

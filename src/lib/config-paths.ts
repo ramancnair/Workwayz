@@ -3,7 +3,7 @@ import fs from 'fs';
 import os from 'os';
 
 /**
- * Resolves the persistent data directory for storing Workwayz/ProjectFlow
+ * Resolves the persistent data directory for storing Workwayz
  * configuration files (`connections.json`, `.env.local`).
  *
  * Persistence Hierarchy:

@@ -55,7 +55,7 @@ describe('GitHub Issue Reporter (github-reporter.ts)', () => {
         errorMessage: 'hasActiveStudioData is not defined',
         pageUrl: 'http://localhost:3000/portfolio-settings/test-data-studio',
         severity: 'high',
-        userEmail: 'dev@projectflow.com',
+        userEmail: 'dev@workwayz.com',
       };
 
       const body = buildIssueBody(payload);
@@ -63,7 +63,7 @@ describe('GitHub Issue Reporter (github-reporter.ts)', () => {
       expect(body).toContain('| **Error Type** | `ReferenceError` |');
       expect(body).toContain('| **Error Code / Digest** | `DIGEST_12345` |');
       expect(body).toContain('| **Page URL** | `http://localhost:3000/portfolio-settings/test-data-studio` |');
-      expect(body).toContain('| **Reported By** | `dev@projectflow.com` |');
+      expect(body).toContain('| **Reported By** | `dev@workwayz.com` |');
     });
 
     it('displays the full error code and stack trace directly without collapsed details tag', () => {

@@ -5,7 +5,7 @@ trigger: always_on
 # Project Context
 
 This project was migrated from Firebase Studio.
-App Name: ProjectFlow
+App Name: Workwayz
 
 # Migration Guidelines
 

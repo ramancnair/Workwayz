@@ -1,4 +1,4 @@
-# Build ProjectFlow
+# Build Workwayz
 
 This workflow describes the steps needed to install dependencies, typecheck, compile, and build the Next.js project.
 

@@ -1,6 +1,6 @@
 # Workwayz Setup Guide: Supabase DB & Keycloak Auth
 
-This guide provides comprehensive instructions for installing and setting up ProjectFlow using **Supabase** as the database and **Keycloak** for authentication. Both services will be run locally via Docker.
+This guide provides comprehensive instructions for installing and setting up Workwayz using **Supabase** as the database and **Keycloak** for authentication. Both services will be run locally via Docker.
 
 ## 1. Prerequisites
 
@@ -13,8 +13,8 @@ This guide provides comprehensive instructions for installing and setting up Pro
 Open your terminal or command prompt and run:
 
 ```bash
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
+git clone https://github.com/ramancnair/Workwayz.git
+cd Workwayz
 npm install
 ```
 *(The `npm install` command will install Next.js, React, and all necessary application dependencies).*
@@ -51,17 +51,17 @@ npm install
 3. Log in with Username: `admin`, Password: `admin`.
 4. **Create a Realm**:
    - In the top-left dropdown (which defaults to "master"), click **Create Realm**.
-   - Name the realm `projectflow` and click **Create**.
+   - Name the realm `workwayz` and click **Create**.
 5. **Create a Client**:
-   - In the left sidebar under the `projectflow` realm, click **Clients**, then **Create client**.
-   - **Client ID**: `projectflow-client`. Leave the rest as default and click **Next**.
+   - In the left sidebar under the `workwayz` realm, click **Clients**, then **Create client**.
+   - **Client ID**: `workwayz-client`. Leave the rest as default and click **Next**.
    - **Client authentication**: Toggle this **ON**.
    - **Standard flow**: Enabled. **Direct access grants**: Enabled. Click **Next**.
    - **Valid redirect URIs**: Enter `http://localhost:3000/*`.
    - **Web origins**: Enter `http://localhost:3000`.
    - Click **Save**.
 6. **Get Credentials**:
-   - Navigate to the **Credentials** tab for the `projectflow-client` you just created.
+   - Navigate to the **Credentials** tab for the `workwayz-client` you just created.
    - Copy the **Client Secret**. You will need this for the wizard.
 
 ## 5. Set Up AI Providers
@@ -79,7 +79,7 @@ npm install
 
 Workwayz provides a Configuration UI to easily set up your `.env.local` file.
 
-1. Navigate back to your `ProjectFlow` directory terminal and start the server:
+1. Navigate back to your `Workwayz` directory terminal and start the server:
    ```bash
    npm run dev
    ```
@@ -91,20 +91,20 @@ Workwayz provides a Configuration UI to easily set up your `.env.local` file.
 4. **Auth Configuration** (from Keycloak):
    - **Provider**: Select `Keycloak`.
    - **Keycloak URL**: `http://localhost:8080`.
-   - **Keycloak Realm**: `projectflow`.
-   - **Keycloak Client ID**: `projectflow-client`.
-   - **Admin Client ID**: `projectflow-client`.
+   - **Keycloak Realm**: `workwayz`.
+   - **Keycloak Client ID**: `workwayz-client`.
+   - **Admin Client ID**: `workwayz-client`.
    - **Admin Client Secret**: Paste the Client Secret you copied from Keycloak.
 5. **AI Configuration**:
    - Select `Google AI Studio` and provide your copied API key, OR select `LM Studio` and provide the local URL.
-6. Click **Save**. ProjectFlow will automatically generate your `.env.local` file.
+6. Click **Save**. Workwayz will automatically generate your `.env.local` file.
 7. Stop the dev server (`Ctrl + C`) and restart it:
    ```bash
    npm run dev
    ```
 
 ### Alternative: Manual `.env.local` Setup
-If you prefer not to use the wizard, create a `.env.local` file in your `ProjectFlow` root directory:
+If you prefer not to use the wizard, create a `.env.local` file in your `Workwayz` root directory:
 
 ```env
 NEXT_PUBLIC_DATABASE_PROVIDER="supabase"
@@ -114,9 +114,9 @@ NEXT_PUBLIC_SUPABASE_URL="http://localhost:8000"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="<your-anon-key>"
 
 NEXT_PUBLIC_KEYCLOAK_URL="http://localhost:8080"
-NEXT_PUBLIC_KEYCLOAK_REALM="projectflow"
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID="projectflow-client"
-KEYCLOAK_ADMIN_CLIENT_ID="projectflow-client"
+NEXT_PUBLIC_KEYCLOAK_REALM="workwayz"
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID="workwayz-client"
+KEYCLOAK_ADMIN_CLIENT_ID="workwayz-client"
 KEYCLOAK_ADMIN_CLIENT_SECRET="<your-keycloak-client-secret>"
 
 NEXT_PUBLIC_AI_PROVIDER="google"

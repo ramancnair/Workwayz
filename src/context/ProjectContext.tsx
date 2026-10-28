@@ -210,7 +210,7 @@ export function useProject() {
 export function ProjectProvider({ children, projectId }: PropsWithChildren<{ projectId: string }>) {
   const [dbProvider, setDbProvider] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('projectflow_db_provider');
+      const cached = localStorage.getItem('workwayz_db_provider');
       if (cached) return cached;
     }
     return process.env.NEXT_PUBLIC_DB_PROVIDER || 'supabase';
@@ -223,7 +223,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
         if (data.dbProvider) {
           setDbProvider(data.dbProvider);
           if (typeof window !== 'undefined') {
-            localStorage.setItem('projectflow_db_provider', data.dbProvider);
+            localStorage.setItem('workwayz_db_provider', data.dbProvider);
           }
         }
       })

@@ -1,6 +1,6 @@
 # Workwayz Setup Guide: Firebase Database & Auth
 
-This guide provides comprehensive instructions for installing and setting up ProjectFlow using **Firebase** for both the database and authentication.
+This guide provides comprehensive instructions for installing and setting up Workwayz using **Firebase** for both the database and authentication.
 
 ## 1. Prerequisites
 
@@ -12,11 +12,11 @@ This guide provides comprehensive instructions for installing and setting up Pro
 Open your terminal or command prompt and run the following commands:
 
 ```bash
-git clone https://github.com/ramancnair/ProjectFlow.git
-cd ProjectFlow
+git clone https://github.com/ramancnair/Workwayz.git
+cd Workwayz
 npm install
 ```
-*(The `npm install` command will download and install all necessary dependencies, libraries, and frameworks required by ProjectFlow).*
+*(The `npm install` command will download and install all necessary dependencies, libraries, and frameworks required by Workwayz).*
 
 ## 3. Set Up Firebase (DB & Auth)
 
@@ -37,7 +37,7 @@ npm install
 
 ## 4. Set Up AI Providers
 
-ProjectFlow uses AI features to suggest improvements for tasks and tests. You can choose either a cloud provider or run a local AI model.
+Workwayz uses AI features to suggest improvements for tasks and tests. You can choose either a cloud provider or run a local AI model.
 
 ### Option A: Google AI Studio (Recommended)
 1. Go to [Google AI Studio](https://aistudio.google.com/).
@@ -81,7 +81,7 @@ Workwayz includes a built-in Configuration UI that automatically generates your 
    ```
 
 ### Alternative: Manual `.env.local` Setup
-If you prefer, you can skip the wizard and create a file named `.env.local` in the root folder (`ProjectFlow/`) with the following content:
+If you prefer, you can skip the wizard and create a file named `.env.local` in the root folder (`Workwayz/`) with the following content:
 
 ```env
 NEXT_PUBLIC_DATABASE_PROVIDER="firebase"

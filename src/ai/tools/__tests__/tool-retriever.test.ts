@@ -23,7 +23,7 @@ describe('Tier 2: WayFinder Tool Retrieval & Discovery Benchmark (TC-AGENT-RETR-
           { role: 'user', content: 'What is the status of BUG-101?' },
           { role: 'model', content: 'BUG-101 is currently in To Do with high defect priority.' },
         ],
-        currentProjectName: 'ProjectFlow Core',
+        currentProjectName: 'Workwayz Core',
       });
 
       expect(query).toContain('Move it to In Progress');

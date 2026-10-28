@@ -1,12 +1,12 @@
-# ProjectFlow: Build Size, Packaging & Distribution Guide
+# Workwayz: Build Size, Packaging & Distribution Guide
 
-This document compiles the architecture, folder size analysis, and distribution strategies for ProjectFlow across Docker, desktop bundles, and the npm registry.
+This document compiles the architecture, folder size analysis, and distribution strategies for Workwayz across Docker, desktop bundles, and the npm registry.
 
 ---
 
 ## 1. Build Size vs. Raw Folder Size
 
-When compiling ProjectFlow, folder sizes behave differently depending on the context:
+When compiling Workwayz, folder sizes behave differently depending on the context:
 
 | Context | Raw / Dev Size | Production Built Size | Size Change | What It Contains |
 | :--- | :--- | :--- | :--- | :--- |
@@ -22,14 +22,14 @@ Running `npm run build` on your local development machine does not delete your s
 
 ## 2. Why the GitHub Release Is Under 100 MB
 
-In GitHub Releases, the published Docker container archive (`projectflow-web-image-v*.tar.gz`) is typically **~70 MB to 95 MB**, while the running container is **~200 MB to 250 MB**.
+In GitHub Releases, the published Docker container archive (`workwayz-web-image-v*.tar.gz`) is typically **~70 MB to 95 MB**, while the running container is **~200 MB to 250 MB**.
 
 ### Key Factors Behind the Small Release Size:
 1. **`gzip -9` Compression**:
    In [`.github/workflows/release.yml`](../.github/workflows/release.yml), the build workflow compresses the exported Docker image tarball with maximum gzip compression:
    ```bash
-   gzip -9 /tmp/projectflow-web-image.tar
-   mv /tmp/projectflow-web-image.tar.gz ./projectflow-web-image-v${{ github.ref_name }}.tar.gz
+   gzip -9 /tmp/workwayz-web-image.tar
+   mv /tmp/workwayz-web-image.tar.gz ./workwayz-web-image-v${{ github.ref_name }}.tar.gz
    ```
    Because code, JSON, and Linux binaries have high repetition, gzip compresses the ~220 MB `.tar` image by 60%–70%, yielding an archive under 100 MB.
 2. **Next.js Dependency Tracing (`output: 'standalone'`)**:
@@ -47,7 +47,7 @@ In GitHub Releases, the published Docker container archive (`projectflow-web-ima
 
 You can distribute a non-dockerized build for desktops (Windows, macOS, Linux) without requiring users to download development tools or raw dependencies.
 
-### Real ProjectFlow Measurements:
+### Real Workwayz Measurements:
 * **`.next/standalone`** (compiled server + minimal production dependencies): **48.65 MB**
 * **`.next/static`** (compiled client JS & CSS): **5.14 MB**
 * **Total uncompressed desktop folder**: **~54 MB**
@@ -62,9 +62,9 @@ You can distribute a non-dockerized build for desktops (Windows, macOS, Linux) w
    cp -r public .next/standalone/public
    ```
 2. **Package for release**:
-   Zip the `.next/standalone` folder as `projectflow-desktop-vX.X.zip` (~14 MB).
+   Zip the `.next/standalone` folder as `workwayz-desktop-vX.X.zip` (~14 MB).
 3. **End-user experience**:
-   * User downloads `projectflow-desktop-vX.X.zip` (~14 MB).
+   * User downloads `workwayz-desktop-vX.X.zip` (~14 MB).
    * User extracts the zip (unpacks to ~54 MB).
    * User runs `start.bat` (Windows) or `start.sh` (Mac/Linux), which invokes `node server.js`.
    * The app opens immediately at `http://localhost:3000`.
@@ -93,20 +93,20 @@ You can distribute a non-dockerized build for desktops (Windows, macOS, Linux) w
 
 ## 5. Distributing via the npm Registry
 
-You can publish ProjectFlow directly to the npm registry (similar to tools like `npx prisma studio` or `npx vercel`).
+You can publish Workwayz directly to the npm registry (similar to tools like `npx prisma studio` or `npx vercel`).
 
 ### User Experience:
 #### Instant Zero-Install Run:
 ```bash
-npx projectflow
+npx workwayz
 ```
 * Downloads the compressed ~14 MB package into temporary npm cache.
 * Launches the server on `http://localhost:3000` and opens the browser.
 
 #### Global CLI Installation:
 ```bash
-npm install -g projectflow
-projectflow
+npm install -g workwayz
+workwayz
 ```
 
 ### How Version Updates Work:
@@ -117,24 +117,24 @@ projectflow
    npm publish
    ```
 2. **Client Updates**:
-   * Users running `npx projectflow@latest` always get the newest version automatically on each run.
+   * Users running `npx workwayz@latest` always get the newest version automatically on each run.
    * Users with global installs update with a single command:
      ```bash
-     npm update -g projectflow
+     npm update -g workwayz
      ```
 3. **In-App Update Alerts**:
-   The app can query `https://registry.npmjs.org/projectflow/latest` on startup. If a newer semver tag exists, an in-app banner can alert the user:
-   > *"A new version (v1.1.0) is available! Run `npm update -g projectflow` to update."*
+   The app can query `https://registry.npmjs.org/workwayz/latest` on startup. If a newer semver tag exists, an in-app banner can alert the user:
+   > *"A new version (v1.1.0) is available! Run `npm update -g workwayz` to update."*
 
 ### Configuring `package.json` for npm Distribution:
 To ensure only the standalone build is uploaded (and never the raw source or 1.16 GB `node_modules`), specify the `"files"` and `"bin"` fields in `package.json`:
 
 ```json
 {
-  "name": "projectflow",
+  "name": "workwayz",
   "version": "1.0.0",
   "bin": {
-    "projectflow": "./bin/cli.js"
+    "workwayz": "./bin/cli.js"
   },
   "files": [
     "bin/",
@@ -160,7 +160,7 @@ const server = spawn('node', [serverPath], {
   env: process.env,
 });
 
-console.log(`\n🚀 ProjectFlow running at http://localhost:${process.env.PORT}\n`);
+console.log(`\n🚀 Workwayz running at http://localhost:${process.env.PORT}\n`);
 ```
 
 ### Public vs. Private Distribution:

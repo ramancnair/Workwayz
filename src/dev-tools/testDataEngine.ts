@@ -611,7 +611,7 @@ export async function generateEmployees(
       const empId = `E${currentIdCounter.toString().padStart(3, '0')}`;
       const fName = FIRST_NAMES[(currentIdCounter + i) % FIRST_NAMES.length];
       const lName = LAST_NAMES[(currentIdCounter + i * 2) % LAST_NAMES.length];
-      const email = `${fName.toLowerCase()}.${lName.toLowerCase()}.${currentIdCounter}@projectflow.io`;
+      const email = `${fName.toLowerCase()}.${lName.toLowerCase()}.${currentIdCounter}@workwayz.test`;
 
       const startDate = new Date(Date.now() - Math.floor(Math.random() * 365 * 2 * 86400000)).toISOString();
       const costAmount = (Math.floor(Math.random() * 60) + 60) * 1000;
@@ -1286,7 +1286,7 @@ export async function wipeWorkspaceTestData(
       }
     } else {
       // Fallback if no log exists: ONLY target users explicitly stamped with createdByStudio
-      // OR users with explicit studio test emails: e.g. @projectflow.io AND with isTestData flag.
+      // OR users with explicit studio test emails: e.g. @workwayz.test (or legacy @projectflow.io) AND with isTestData flag.
       // NEVER delete genuine employees who lack studio markers!
       onProgress?.('No studio log found. Scanning exclusively for studio-tagged test users...');
       const uSnap = await getDocs(collection(db, 'employees'));
@@ -1300,7 +1300,7 @@ export async function wipeWorkspaceTestData(
 
         const isStudioUser =
           data.createdByStudio === true ||
-          (data.isTestData === true && data.email?.includes('@projectflow.io'));
+          (data.isTestData === true && (data.email?.includes('@workwayz.test') || data.email?.includes('@projectflow.io')));
 
         if (isStudioUser) {
           usersToDelete.push({

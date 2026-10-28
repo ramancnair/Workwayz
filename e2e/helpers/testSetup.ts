@@ -18,7 +18,7 @@ export const DEFAULT_ADMIN_USER: TestUserOptions = {
   uid: 'admin-test-001',
   empId: 'E100001',
   name: 'Alex Vance (Administrator)',
-  email: 'admin@projectflow.demo',
+  email: 'admin@workwayz.demo',
   accessLevel: 'Administrator',
   role: 'Administrator',
 };
@@ -37,7 +37,7 @@ export async function setupAuthenticatedWorkspace(
     uid: user.uid || 'admin-test-001',
     empId: user.empId || 'E100001',
     name: user.name || 'Alex Vance (Administrator)',
-    email: user.email || 'admin@projectflow.demo',
+    email: user.email || 'admin@workwayz.demo',
     accessLevel: user.accessLevel || 'Administrator',
     role: user.role || 'Administrator',
     issuedAt: Date.now(),
@@ -58,7 +58,7 @@ export async function setupAuthenticatedWorkspace(
   // Pre-seed localStorage before DOM evaluates
   await page.addInitScript((session) => {
     localStorage.setItem('workwayz_user', JSON.stringify(session));
-    localStorage.setItem('projectflow_remember_me', 'true');
+    localStorage.setItem('workwayz_remember_me', 'true');
     localStorage.setItem('pf_has_admin', 'true');
     localStorage.setItem('pf_admin_setup_done', 'true');
     sessionStorage.setItem('workwayz_session_active', 'true');
@@ -70,7 +70,7 @@ export async function setupAuthenticatedWorkspace(
 
   // If Setup Wizard dialog unexpectedly appears, close or dismiss it
   try {
-    const wizardHeading = page.locator('text=ProjectFlow Setup Wizard, text=Select Database Engine');
+    const wizardHeading = page.locator('text=Workwayz Setup Wizard, text=Select Database Engine');
     if (await wizardHeading.isVisible({ timeout: 800 })) {
       const closeBtn = page.locator('button:has-text("Close"), button[aria-label="Close"]').first();
       if (await closeBtn.isVisible()) {

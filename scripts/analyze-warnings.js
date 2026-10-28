@@ -9,7 +9,7 @@ let totalWarnings = 0;
 
 data.forEach(file => {
   if (file.warningCount > 0) {
-    const rel = file.filePath.replace(/^.*ProjectFlow[\\\/]/, '').replace(/\\/g, '/');
+    const rel = file.filePath.replace(/^.*Workwayz[\\\/]/, '').replace(/\\/g, '/');
     fileCounts[rel] = file.warningCount;
     file.messages.forEach(m => {
       ruleCounts[m.ruleId] = (ruleCounts[m.ruleId] || 0) + 1;

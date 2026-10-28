@@ -1,4 +1,4 @@
-# Preview ProjectFlow
+# Preview Workwayz
 
 This workflow describes the steps needed to run the project in a development server locally.
 

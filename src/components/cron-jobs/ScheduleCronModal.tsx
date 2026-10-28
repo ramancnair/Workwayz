@@ -180,7 +180,7 @@ export function ScheduleCronModal({
     let creatorInfo = {
       userId: 'admin',
       name: 'Administrator',
-      email: 'admin@projectflow.local',
+      email: 'admin@workwayz.local',
     };
     try {
       const stored = localStorage.getItem('currentUser');
@@ -189,7 +189,7 @@ export function ScheduleCronModal({
         creatorInfo = {
           userId: u.empId || u.id || 'admin',
           name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'User',
-          email: u.email || 'user@projectflow.local',
+          email: u.email || 'user@workwayz.local',
         };
       }
     } catch {}

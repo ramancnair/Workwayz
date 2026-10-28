@@ -125,7 +125,7 @@ ${payload.componentStack.trim()}
 export async function createGitHubIssue(payload: GitHubIssuePayload): Promise<GitHubIssueResult> {
   const token = process.env.GITHUB_TOKEN;
   const owner = process.env.GITHUB_REPO_OWNER || 'ramancnair';
-  const repo = process.env.GITHUB_REPO_NAME || 'ProjectFlow';
+  const repo = process.env.GITHUB_REPO_NAME || 'Workwayz';
 
   if (!token) {
     return {
@@ -185,7 +185,7 @@ export async function updateGitHubIssue(
 ): Promise<GitHubIssueResult> {
   const token = process.env.GITHUB_TOKEN;
   const owner = process.env.GITHUB_REPO_OWNER || 'ramancnair';
-  const repo = process.env.GITHUB_REPO_NAME || 'ProjectFlow';
+  const repo = process.env.GITHUB_REPO_NAME || 'Workwayz';
 
   if (!token) {
     return {

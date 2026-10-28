@@ -10,7 +10,7 @@ import {
   matchSearchQuery,
 } from '../utils';
 
-describe('ProjectFlow Utility Functions (utils.ts)', () => {
+describe('Workwayz Utility Functions (utils.ts)', () => {
   describe('cn (Tailwind class merging)', () => {
     it('should merge classes and handle conditionals correctly', () => {
       expect(cn('bg-red-500', 'text-white')).toBe('bg-red-500 text-white');

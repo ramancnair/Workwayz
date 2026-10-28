@@ -1,7 +1,7 @@
 -- ==============================================================================
--- ProjectFlow Complete Database Schema for Supabase (QA Branch / Cloud & Docker)
+-- Workwayz Complete Database Schema for Supabase (QA Branch / Cloud & Docker)
 -- ==============================================================================
--- This script provisions the complete schema for ProjectFlow, covering:
+-- This script provisions the complete schema for Workwayz, covering:
 --  1. Portfolios & Global Settings
 --  2. Employees & Access Control
 --  3. Projects & Project Members

@@ -111,8 +111,8 @@ describe('Studio Creation Log & Asset Tracking', () => {
             { id: 'P2600002', name: 'AI Hub (Batch 26-2)', portfolioId: 'PF001' },
           ],
           users: [
-            { id: 'E001', email: 'alex.vance.1@projectflow.io', accessLevel: 'Administrator', role: 'Developer' },
-            { id: 'E002', email: 'jordan.chen.2@projectflow.io', accessLevel: 'Project Manager', role: 'PM' },
+            { id: 'E001', email: 'alex.vance.1@workwayz.test', accessLevel: 'Administrator', role: 'Developer' },
+            { id: 'E002', email: 'jordan.chen.2@workwayz.test', accessLevel: 'Project Manager', role: 'PM' },
           ],
         },
         {
@@ -126,7 +126,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
             { id: 'P2600003', name: 'Settlement Rail (Batch 26-3)', portfolioId: 'PF002' },
           ],
           users: [
-            { id: 'E003', email: 'morgan.mercer.3@projectflow.io', accessLevel: 'Lead', role: 'Architect' },
+            { id: 'E003', email: 'morgan.mercer.3@workwayz.test', accessLevel: 'Lead', role: 'Architect' },
           ],
         },
       ],
@@ -142,7 +142,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
     const adminUser = active.users.find(u => u.accessLevel === 'Administrator');
     expect(adminUser).toBeDefined();
     expect(adminUser?.id).toBe('E001');
-    expect(adminUser?.email).toBe('alex.vance.1@projectflow.io');
+    expect(adminUser?.email).toBe('alex.vance.1@workwayz.test');
   });
 
   it('should record studio assets into persistent log and retrieve from storage cache', async () => {
@@ -155,7 +155,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
         { id: 'PF010', name: 'Studio Portfolio 1' } as any,
       ],
       users: [
-        { id: 'E010', email: 'admin.studio.10@projectflow.io', accessLevel: 'Administrator' } as any,
+        { id: 'E010', email: 'admin.studio.10@workwayz.test', accessLevel: 'Administrator' } as any,
       ],
     });
 
@@ -192,7 +192,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
           projects: [{ id: 'P2600099', name: 'Studio Test Project', portfolioId: 'PF099' }],
           portfolios: [{ id: 'PF099', name: 'Studio Test Portfolio' }],
           users: [
-            { id: 'E099', email: 'studio.admin.99@projectflow.io', accessLevel: 'Administrator' },
+            { id: 'E099', email: 'studio.admin.99@workwayz.test', accessLevel: 'Administrator' },
           ],
         },
       ],
@@ -229,7 +229,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
       preset: 'minimal',
       projects: [{ id: 'P2600101', name: 'Project Run 1', portfolioId: 'PF101' } as any],
       portfolios: [{ id: 'PF101', name: 'Portfolio Run 1' } as any],
-      users: [{ id: 'E101', email: 'user.run1@projectflow.io', accessLevel: 'Administrator' } as any],
+      users: [{ id: 'E101', email: 'user.run1@workwayz.test', accessLevel: 'Administrator' } as any],
     });
 
     expect(logAfterRun1.batches).toHaveLength(1);
@@ -241,7 +241,7 @@ describe('Studio Creation Log & Asset Tracking', () => {
       preset: 'standard',
       projects: [{ id: 'P2600201', name: 'Project Run 2', portfolioId: 'PF201' } as any],
       portfolios: [{ id: 'PF201', name: 'Portfolio Run 2' } as any],
-      users: [{ id: 'E201', email: 'user.run2@projectflow.io', accessLevel: 'Project Manager' } as any],
+      users: [{ id: 'E201', email: 'user.run2@workwayz.test', accessLevel: 'Project Manager' } as any],
     });
 
     expect(logAfterRun2.batches).toHaveLength(2);

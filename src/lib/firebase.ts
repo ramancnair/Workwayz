@@ -1,3 +1,4 @@
+import './legacy-storage-migration';
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getAuth, type Auth } from 'firebase/auth';
@@ -16,7 +17,7 @@ export const firebaseConfig: any = {
 // Client-side cache check from localStorage
 if (typeof window !== 'undefined' && !firebaseConfig.projectId) {
   try {
-    const cachedConfig = localStorage.getItem('projectflow_firebase_config');
+    const cachedConfig = localStorage.getItem('workwayz_firebase_config');
     if (cachedConfig) {
       const parsed = JSON.parse(cachedConfig);
       if (parsed.projectId) {
@@ -118,7 +119,7 @@ export async function initFirebaseClient(): Promise<boolean> {
         firebaseConfig.storageBucket = `${data.firebaseProjectId}.firebasestorage.app`;
 
         try {
-          localStorage.setItem('projectflow_firebase_config', JSON.stringify({
+          localStorage.setItem('workwayz_firebase_config', JSON.stringify({
             projectId: firebaseConfig.projectId,
             apiKey: firebaseConfig.apiKey,
             authDomain: firebaseConfig.authDomain,

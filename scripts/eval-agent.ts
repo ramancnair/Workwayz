@@ -63,7 +63,7 @@ async function runEvaluation() {
       const retrieval = await retrieveCandidateTools({
         lastUserMessage: tc.prompt,
         currentProjectId: 'test-proj-001',
-        currentProjectName: 'ProjectFlow Core',
+        currentProjectName: 'Workwayz Core',
         maxResults: 14,
       });
       retrievedTools = retrieval.candidateToolNames;

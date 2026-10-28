@@ -422,16 +422,16 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
       }
 
       // Persist active dbProvider in localStorage for instant client initialization
-      localStorage.setItem('projectflow_db_provider', dbProvider);
+      localStorage.setItem('workwayz_db_provider', dbProvider);
       if (dbProvider === 'firebase' && fbProjectId) {
-        localStorage.setItem('projectflow_firebase_config', JSON.stringify({
+        localStorage.setItem('workwayz_firebase_config', JSON.stringify({
           projectId: fbProjectId,
           apiKey: fbApiKey,
           authDomain: `${fbProjectId}.firebaseapp.com`,
           storageBucket: `${fbProjectId}.firebasestorage.app`,
         }));
       } else if (dbProvider === 'supabase') {
-        localStorage.removeItem('projectflow_firebase_config');
+        localStorage.removeItem('workwayz_firebase_config');
       }
 
       if (onClose) {

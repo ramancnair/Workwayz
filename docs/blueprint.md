@@ -1,4 +1,4 @@
-# **App Name**: ProjectFlow
+# **App Name**: Workwayz
 
 ## Core Features:
 

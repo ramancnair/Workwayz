@@ -1,3 +1,4 @@
+import './legacy-storage-migration';
 import * as FB from 'firebase/firestore';
 import * as SB from './supabase-firestore-adapter';
 import { db as fbDb, auth as fbAuth } from './firebase';
@@ -9,7 +10,7 @@ export function setRuntimeDbProvider(provider: string | null) {
   _runtimeDbProvider = provider;
   if (typeof window !== 'undefined' && provider) {
     try {
-      localStorage.setItem('projectflow_db_provider', provider);
+      localStorage.setItem('workwayz_db_provider', provider);
     } catch {}
   }
 }
@@ -19,7 +20,7 @@ export function isSupabaseActive(): boolean {
     return _runtimeDbProvider === 'supabase' || _runtimeDbProvider === 'postgres';
   }
   if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem('projectflow_db_provider');
+    const cached = localStorage.getItem('workwayz_db_provider');
     if (cached) return cached === 'supabase' || cached === 'postgres';
   }
   const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;

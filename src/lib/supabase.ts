@@ -1,3 +1,4 @@
+import './legacy-storage-migration';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
             };
             if (typeof window !== 'undefined' && data.dbProvider) {
                 try {
-                    localStorage.setItem('projectflow_db_provider', data.dbProvider);
+                    localStorage.setItem('workwayz_db_provider', data.dbProvider);
                 } catch (_) {}
             }
             return _runtimeConfig!;
