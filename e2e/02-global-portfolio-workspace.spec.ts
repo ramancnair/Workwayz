@@ -26,10 +26,22 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(page.locator('body')).toContainText(/Project Home|Portfolio|Active Projects/i);
   });
 
-  test('TC-PORT-003: Portfolio Dashboard displays consolidated performance metrics and charts', async ({ page }) => {
+  test('TC-PORT-003: Portfolio Dashboard displays consolidated performance metrics and unified project defect distribution', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/portfolio-dashboard', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('body')).toContainText(/Portfolio Dashboard|Overview|Projects|Health/i);
+
+    const qualityTab = page.getByRole('tab', { name: /Quality & Tech Debt/i });
+    await expect(qualityTab).toBeVisible({ timeout: 20000 });
+    await qualityTab.click();
+
+    const defectCard = page.getByTestId('project-defect-distribution-card');
+    await expect(defectCard).toBeVisible();
+    await expect(defectCard).toContainText(/Open Defects by Project/i);
+    await expect(defectCard).toContainText(/Total Open:/i);
+    await expect(page.getByText('Defect Severity Distribution')).toHaveCount(0);
+    await expect(page.getByText('Top Defect Hotspots')).toHaveCount(0);
   });
 
   test('TC-PORT-004: WayFinder (FP) AI Dashboard renders intelligent operational insights', async ({ page }) => {

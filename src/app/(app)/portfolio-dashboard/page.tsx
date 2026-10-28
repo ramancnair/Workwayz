@@ -13,9 +13,10 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { isProjectInYear, getAvailableProjectYears } from '@/lib/project-year-filter';
-import type { Project, Risk, Issue, RiskSeverity, RiskProbability, IssuePriority, RagStatus, Portfolio, Release, Story, TestCase } from '@/types';
+import { isBugWorkItem, type Project, type Risk, type Issue, type RiskSeverity, type RiskProbability, type IssuePriority, type RagStatus, type Portfolio, type Release, type Story, type TestCase } from '@/types';
 import { format, differenceInDays, isPast, parseISO } from 'date-fns';
 import {
   Circle,
@@ -98,6 +99,7 @@ export default function PortfolioDashboardPage() {
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'quality' | 'raid'>('overview');
+  const [defectSortBy, setDefectSortBy] = useState<'total' | 'critical'>('total');
   const [viewingRisk, setViewingRisk] = useState<EnrichedRisk | null>(null);
   const [viewingIssue, setViewingIssue] = useState<EnrichedIssue | null>(null);
 
@@ -179,7 +181,7 @@ export default function PortfolioDashboardPage() {
               const sSnap = await getDocs(collection(db, 'projects', pId, 'stories'));
               sSnap.forEach((d: any) => {
                 const story = d.data() as Story;
-                if (story.itemType === 'Bug' || story.severity) {
+                if (story.isDeleted !== true && (isBugWorkItem(story.itemType) || Boolean(story.severity))) {
                   fetchedDefects.push({
                     ...story,
                     id: d.id,
@@ -291,28 +293,58 @@ export default function PortfolioDashboardPage() {
     }).length;
     const releaseOnTimeRate = upcomingReleases.length > 0 ? Math.round((onTimeReleases / upcomingReleases.length) * 100) : 100;
 
-    // 4. Quality & Defect Metrics
-    const criticalBugs = filteredDefects.filter((d) => d.severity === 'Critical');
-    const highBugs = filteredDefects.filter((d) => d.severity === 'High');
-    const openDefects = filteredDefects.filter((d) => d.status !== 'Done' && d.status !== 'Closed');
+    // 4. Quality & Defect Metrics (strictly active/open defects)
+    const getNormalizedSeverity = (d: EnrichedDefect): 'Critical' | 'High' | 'Medium' | 'Low' => {
+      if (d.severity === 'Critical' || d.severity === 'High' || d.severity === 'Medium' || d.severity === 'Low') {
+        return d.severity;
+      }
+      return 'Medium';
+    };
 
-    // Projects ranked by open defect count
-    const projectDefectMap: Record<string, { projectName: string; projectId: string; count: number; critical: number }> = {};
+    const openDefects = filteredDefects.filter((d) => d.status !== 'Done' && d.status !== 'Closed');
+    const criticalBugs = openDefects.filter((d) => getNormalizedSeverity(d) === 'Critical');
+    const highBugs = openDefects.filter((d) => getNormalizedSeverity(d) === 'High');
+    const mediumBugs = openDefects.filter((d) => getNormalizedSeverity(d) === 'Medium');
+    const lowBugs = openDefects.filter((d) => getNormalizedSeverity(d) === 'Low');
+
+    // Per-project open defect distribution by severity
+    const projectDefectMap: Record<
+      string,
+      {
+        projectName: string;
+        projectId: string;
+        total: number;
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+      }
+    > = {};
+
     openDefects.forEach((d) => {
       if (!projectDefectMap[d.projectId]) {
         projectDefectMap[d.projectId] = {
           projectName: d.projectName,
           projectId: d.projectId,
-          count: 0,
+          total: 0,
           critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
         };
       }
-      projectDefectMap[d.projectId].count++;
-      if (d.severity === 'Critical') {
-        projectDefectMap[d.projectId].critical++;
-      }
+      const entry = projectDefectMap[d.projectId];
+      entry.total++;
+      const sev = getNormalizedSeverity(d);
+      if (sev === 'Critical') entry.critical++;
+      else if (sev === 'High') entry.high++;
+      else if (sev === 'Medium') entry.medium++;
+      else entry.low++;
     });
-    const qualityHotspots = Object.values(projectDefectMap).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    const projectDefectList = Object.values(projectDefectMap);
+    const maxProjectDefects = projectDefectList.reduce((max, p) => Math.max(max, p.total), 0);
+    const zeroDefectProjectsCount = Math.max(0, totalProjects - projectDefectList.length);
 
     // 5. Commercial & Financial Exposure
     const totalContractValue = filteredProjects.reduce((acc, p) => acc + (p.projectValue || 0), 0);
@@ -333,8 +365,12 @@ export default function PortfolioDashboardPage() {
       releaseOnTimeRate,
       criticalBugsCount: criticalBugs.length,
       highBugsCount: highBugs.length,
+      mediumBugsCount: mediumBugs.length,
+      lowBugsCount: lowBugs.length,
       totalOpenDefects: openDefects.length,
-      qualityHotspots,
+      projectDefectList,
+      maxProjectDefects,
+      zeroDefectProjectsCount,
       totalContractValue,
       fixedBidCount: fixedBidProjects.length,
       tnmCount: tnmProjects.length,
@@ -342,6 +378,25 @@ export default function PortfolioDashboardPage() {
       totalTestCases: filteredTestCases.length,
     };
   }, [filteredProjects, filteredReleases, filteredDefects, filteredTestCases]);
+
+  const sortedProjectDefects = useMemo(() => {
+    return [...metrics.projectDefectList].sort((a, b) => {
+      if (defectSortBy === 'critical') {
+        return (
+          b.critical - a.critical ||
+          b.high - a.high ||
+          b.total - a.total ||
+          a.projectName.localeCompare(b.projectName, undefined, { numeric: true, sensitivity: 'base' })
+        );
+      }
+      return (
+        b.total - a.total ||
+        b.critical - a.critical ||
+        b.high - a.high ||
+        a.projectName.localeCompare(b.projectName, undefined, { numeric: true, sensitivity: 'base' })
+      );
+    });
+  }, [metrics.projectDefectList, defectSortBy]);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
@@ -789,117 +844,231 @@ export default function PortfolioDashboardPage() {
 
             {/* TAB 2: QUALITY & TECH DEBT */}
             <TabsContent value="quality" className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Defect Severity Breakdown */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base font-semibold">Defect Severity Distribution</CardTitle>
-                    <CardDescription>Active bugs logged across portfolio development sprints</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between text-xs mb-1 font-medium">
-                          <span className="flex items-center gap-1.5 text-red-500 font-semibold">
-                            <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Critical Severity
-                          </span>
-                          <span>{metrics.criticalBugsCount} Bugs</span>
-                        </div>
-                        <Progress
-                          value={
-                            metrics.totalOpenDefects
-                              ? (metrics.criticalBugsCount / metrics.totalOpenDefects) * 100
-                              : 0
-                          }
-                          className="h-2 bg-secondary"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1 font-medium">
-                          <span className="flex items-center gap-1.5 text-orange-500 font-semibold">
-                            <span className="h-2.5 w-2.5 rounded-full bg-orange-500" /> High Severity
-                          </span>
-                          <span>{metrics.highBugsCount} Bugs</span>
-                        </div>
-                        <Progress
-                          value={
-                            metrics.totalOpenDefects ? (metrics.highBugsCount / metrics.totalOpenDefects) * 100 : 0
-                          }
-                          className="h-2 bg-secondary"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-xs mb-1 font-medium">
-                          <span className="flex items-center gap-1.5 text-amber-500">
-                            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Medium Severity
-                          </span>
-                          <span>
-                            {
-                              filteredDefects.filter((d) => d.severity === 'Medium' || (!d.severity && d.itemType === 'Bug'))
-                                .length
-                            }{' '}
-                            Bugs
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            metrics.totalOpenDefects
-                              ? (filteredDefects.filter((d) => d.severity === 'Medium').length / metrics.totalOpenDefects) * 100
-                              : 0
-                          }
-                          className="h-2 bg-secondary"
-                        />
-                      </div>
+              <Card data-testid="project-defect-distribution-card">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base font-semibold">Open Defects by Project</CardTitle>
+                      <CardDescription>
+                        Active defect distribution by severity across portfolio projects
+                      </CardDescription>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Quality Hotspots by Project */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base font-semibold">Top Defect Hotspots</CardTitle>
-                    <CardDescription>Projects with highest concentration of open defects</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {metrics.qualityHotspots.length > 0 ? (
-                      <div className="space-y-3">
-                        {metrics.qualityHotspots.map((h, i) => (
-                          <div
-                            key={h.projectId}
-                            className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 hover:bg-muted/40 transition-colors text-xs"
-                          >
-                            <div className="min-w-0 pr-3">
-                              <Link
-                                href={`/projects/${h.projectId}/development/kanban`}
-                                className="font-semibold text-foreground hover:underline truncate block"
-                              >
-                                {i + 1}. {h.projectName}
-                              </Link>
-                              <span className="text-[11px] text-muted-foreground">
-                                {h.critical > 0 ? (
-                                  <span className="text-red-500 font-medium">{h.critical} critical blockers</span>
-                                ) : (
-                                  'Zero critical blockers'
-                                )}
-                              </span>
-                            </div>
-                            <Badge variant="outline" className="border-red-500/30 text-red-500 font-bold">
-                              {h.count} defects
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10 text-muted-foreground text-xs">
-                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-                        No projects currently have open defect backlogs.
+                    {sortedProjectDefects.length > 1 && (
+                      <div
+                        className="inline-flex items-center rounded-lg border border-border/60 bg-muted/40 p-0.5 text-xs self-start"
+                        role="group"
+                        aria-label="Sort project defects"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setDefectSortBy('total')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md font-medium transition-colors',
+                            defectSortBy === 'total'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          By Total
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDefectSortBy('critical')}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md font-medium transition-colors',
+                            defectSortBy === 'critical'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          By Critical
+                        </button>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+
+                  {/* Portfolio-wide Severity Legend & Totals */}
+                  <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-red-500 shrink-0" />
+                        <span className="text-muted-foreground">Critical</span>
+                        <span className="font-semibold text-foreground tabular-nums">{metrics.criticalBugsCount}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-orange-500 shrink-0" />
+                        <span className="text-muted-foreground">High</span>
+                        <span className="font-semibold text-foreground tabular-nums">{metrics.highBugsCount}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-400 shrink-0" />
+                        <span className="text-muted-foreground">Medium</span>
+                        <span className="font-semibold text-foreground tabular-nums">{metrics.mediumBugsCount}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-[3px] bg-slate-400 shrink-0" />
+                        <span className="text-muted-foreground">Low</span>
+                        <span className="font-semibold text-foreground tabular-nums">{metrics.lowBugsCount}</span>
+                      </span>
+                    </div>
+
+                    <span className="text-muted-foreground">
+                      Total Open:{' '}
+                      <strong className="font-semibold text-foreground tabular-nums">
+                        {metrics.totalOpenDefects}
+                      </strong>{' '}
+                      {metrics.totalOpenDefects === 1 ? 'bug' : 'bugs'}
+                    </span>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {sortedProjectDefects.length > 0 ? (
+                    <TooltipProvider delayDuration={150}>
+                      <div className="space-y-3">
+                        {sortedProjectDefects.map((proj, index) => {
+                          const barWidthPercent =
+                            metrics.maxProjectDefects > 0
+                              ? Math.max(6, (proj.total / metrics.maxProjectDefects) * 100)
+                              : 0;
+                          const criticalPct = proj.total > 0 ? (proj.critical / proj.total) * 100 : 0;
+                          const highPct = proj.total > 0 ? (proj.high / proj.total) * 100 : 0;
+                          const mediumPct = proj.total > 0 ? (proj.medium / proj.total) * 100 : 0;
+                          const lowPct = proj.total > 0 ? (proj.low / proj.total) * 100 : 0;
+
+                          return (
+                            <div
+                              key={proj.projectId}
+                              data-testid="project-defect-row"
+                              className="flex flex-col md:flex-row md:items-center gap-2.5 md:gap-5 p-3 rounded-lg border border-border/50 bg-card/40 hover:bg-muted/30 transition-colors"
+                            >
+                              {/* Left: Project Name & Non-Zero Severity Micro-Breakdown */}
+                              <div className="md:w-[34%] lg:w-[32%] shrink-0 min-w-0">
+                                <Link
+                                  href={`/projects/${proj.projectId}/development/kanban`}
+                                  className="text-xs sm:text-sm font-semibold text-foreground hover:text-primary hover:underline truncate block"
+                                  title={proj.projectName}
+                                >
+                                  {index + 1}. {proj.projectName}
+                                </Link>
+                                <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] tabular-nums">
+                                  {proj.critical > 0 && (
+                                    <span className="text-red-500 font-medium">{proj.critical} Critical</span>
+                                  )}
+                                  {proj.high > 0 && (
+                                    <span className="text-orange-500 font-medium">{proj.high} High</span>
+                                  )}
+                                  {proj.medium > 0 && (
+                                    <span className="text-amber-500/90 dark:text-amber-400/90">{proj.medium} Med</span>
+                                  )}
+                                  {proj.low > 0 && (
+                                    <span className="text-muted-foreground">{proj.low} Low</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Middle: Proportional Thick Horizontal Stacked Severity Bar */}
+                              <div className="flex-1 min-w-0">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      className="w-full h-4 rounded-md bg-secondary/50 overflow-hidden flex items-center cursor-default"
+                                      aria-label={`${proj.projectName}: ${proj.total} open bugs (${proj.critical} Critical, ${proj.high} High, ${proj.medium} Medium, ${proj.low} Low)`}
+                                    >
+                                      <div
+                                        data-testid="project-defect-bar"
+                                        style={{ width: `${barWidthPercent}%` }}
+                                        className="h-full flex rounded-md overflow-hidden divide-x divide-background/30"
+                                      >
+                                        {proj.critical > 0 && (
+                                          <div
+                                            style={{ width: `${criticalPct}%` }}
+                                            className="h-full bg-red-500 hover:bg-red-400 transition-colors"
+                                          />
+                                        )}
+                                        {proj.high > 0 && (
+                                          <div
+                                            style={{ width: `${highPct}%` }}
+                                            className="h-full bg-orange-500 hover:bg-orange-400 transition-colors"
+                                          />
+                                        )}
+                                        {proj.medium > 0 && (
+                                          <div
+                                            style={{ width: `${mediumPct}%` }}
+                                            className="h-full bg-amber-400 hover:bg-amber-300 transition-colors"
+                                          />
+                                        )}
+                                        {proj.low > 0 && (
+                                          <div
+                                            style={{ width: `${lowPct}%` }}
+                                            className="h-full bg-slate-400 hover:bg-slate-300 transition-colors"
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs space-y-1.5 p-2.5">
+                                    <div className="font-semibold text-foreground border-b border-border/60 pb-1">
+                                      {proj.projectName} ({proj.total} {proj.total === 1 ? 'bug' : 'bugs'})
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-[3px] bg-red-500" />
+                                        Critical: <strong>{proj.critical}</strong> ({Math.round(criticalPct)}%)
+                                      </span>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-[3px] bg-orange-500" />
+                                        High: <strong>{proj.high}</strong> ({Math.round(highPct)}%)
+                                      </span>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-[3px] bg-amber-400" />
+                                        Medium: <strong>{proj.medium}</strong> ({Math.round(mediumPct)}%)
+                                      </span>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-[3px] bg-slate-400" />
+                                        Low: <strong>{proj.low}</strong> ({Math.round(lowPct)}%)
+                                      </span>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+
+                              {/* Right: Total Open Bugs */}
+                              <div
+                                data-testid="project-defect-total"
+                                className="md:w-20 shrink-0 flex items-baseline md:justify-end gap-1 whitespace-nowrap"
+                              >
+                                <span className="text-sm sm:text-base font-bold tracking-tight text-foreground tabular-nums">
+                                  {proj.total}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {proj.total === 1 ? 'bug' : 'bugs'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {metrics.zeroDefectProjectsCount > 0 && (
+                          <div className="pt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                            <span>
+                              {metrics.zeroDefectProjectsCount} active{' '}
+                              {metrics.zeroDefectProjectsCount === 1 ? 'project has' : 'projects have'} zero open bugs.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </TooltipProvider>
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground text-xs">
+                      <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+                      No projects currently have open defect backlogs.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* TAB 3: GOVERNANCE & RAID (Retained & Enhanced) */}

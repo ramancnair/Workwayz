@@ -60,7 +60,7 @@ npm run test:e2e:install
 |---|---|---|---|
 | **TC-PORT-001** | My Projects catalog & Leave Tracker navigation | Project list and Leave Tracker sidebar link under My Projects | ✅ Automated |
 | **TC-PORT-002** | Project Home overview loads KPIs | Portfolio initiative summary cards visible | ✅ Automated |
-| **TC-PORT-003** | Portfolio Executive Dashboard | Budget burn rate and delivery velocity charts load | ✅ Automated |
+| **TC-PORT-003** | Portfolio Executive Dashboard | Executive KPIs and unified Open Defects by Project stacked severity bars load | ✅ Automated |
 | **TC-PORT-004** | WayFinder AI assistant dashboard | AI agent widgets and recommendation cards render | ✅ Automated |
 | **TC-PORT-005** | Billing and Rate cards | Executive timeframe filters in header, KPI summary cards, and rate tables | ✅ Automated |
 | **TC-PORT-006** | Users roster, mandatory Joining Date & Cost gating | Member roster with role badges and mandatory Joining Date & Cost validation | ✅ Automated |
