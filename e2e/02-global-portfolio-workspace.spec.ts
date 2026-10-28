@@ -47,6 +47,25 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect(page.locator('body')).toContainText(/Billing Rate|Rate|Role|Currency|Hourly Rate/i, { timeout: 20000 });
   });
 
+  test('TC-PORT-011: Billing Rate wide table shows a docked horizontal scrollbar that scrolls the table sideways', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width: 1024, height: 640 });
+    await page.goto('/billing-rate', { waitUntil: 'domcontentloaded' });
+
+    const bar = page.getByTestId('sticky-x-bar').first();
+    const content = page.getByTestId('sticky-x-content').first();
+    await expect(bar).toBeVisible({ timeout: 20000 });
+
+    // The bar must be docked inside the visible viewport, not far below the fold.
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(640);
+
+    // Scrolling the bar scrolls the table sideways (and nothing else gained a vertical scroll).
+    await bar.evaluate((el) => { el.scrollLeft = 300; });
+    await expect.poll(() => content.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100);
+  });
+
   test('TC-PORT-006: User Directory & Team Utilization views display employee allocations', async ({ page }) => {
     await page.goto('/users', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/User List|Employees|Email|Role/i);

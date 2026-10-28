@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { StickyXScroll } from '@/components/ui/sticky-x-scroll';
 import {
   Dialog,
   DialogContent,
@@ -721,7 +722,7 @@ export default function BillingRatePage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table wrapperClassName="table-scroll-wrapper">
+              <StickyXScroll><Table wrapperClassName="overflow-visible">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[220px]">
@@ -1201,7 +1202,7 @@ export default function BillingRatePage() {
                     })
                   )}
                 </TableBody>
-              </Table>
+              </Table></StickyXScroll>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1257,7 +1258,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table wrapperClassName="table-scroll-wrapper">
+                  <StickyXScroll><Table wrapperClassName="overflow-visible">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[200px]">Access Level</TableHead>
@@ -1309,7 +1310,7 @@ export default function BillingRatePage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </Table></StickyXScroll>
                 </CardContent>
               </Card>
             </div>
@@ -1446,7 +1447,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table wrapperClassName="table-scroll-wrapper">
+                  <StickyXScroll><Table wrapperClassName="overflow-visible">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">System / Module Name</TableHead>
@@ -1526,7 +1527,7 @@ export default function BillingRatePage() {
                         })
                       )}
                     </TableBody>
-                  </Table>
+                  </Table></StickyXScroll>
                 </CardContent>
               </Card>
             </div>
@@ -1552,7 +1553,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table wrapperClassName="table-scroll-wrapper">
+                  <StickyXScroll><Table wrapperClassName="overflow-visible">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">Horizontal Capability</TableHead>
@@ -1624,7 +1625,7 @@ export default function BillingRatePage() {
                         ))
                       )}
                     </TableBody>
-                  </Table>
+                  </Table></StickyXScroll>
                 </CardContent>
               </Card>
             </div>
