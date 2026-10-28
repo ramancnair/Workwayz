@@ -75,7 +75,7 @@ export default function ArchiveSettingsPage() {
   const watchAutoDelete = form.watch('autoDeleteAfterMonths');
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);

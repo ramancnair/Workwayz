@@ -57,7 +57,7 @@ export async function setupAuthenticatedWorkspace(
 
   // Pre-seed localStorage before DOM evaluates
   await page.addInitScript((session) => {
-    localStorage.setItem('projectflow_user', JSON.stringify(session));
+    localStorage.setItem('workwayz_user', JSON.stringify(session));
     localStorage.setItem('projectflow_remember_me', 'true');
     localStorage.setItem('pf_has_admin', 'true');
     localStorage.setItem('pf_admin_setup_done', 'true');

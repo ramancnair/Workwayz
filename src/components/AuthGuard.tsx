@@ -68,11 +68,11 @@ function ResetPasswordScreen({ user, onComplete }: { user: any; onComplete: () =
         } catch (_) {}
 
         // Success! Update local storage
-        const userStr = localStorage.getItem('projectflow_user');
+        const userStr = localStorage.getItem('workwayz_user');
         if (userStr) {
           const parsed = JSON.parse(userStr);
           parsed.needsPasswordReset = false;
-          localStorage.setItem('projectflow_user', JSON.stringify(parsed));
+          localStorage.setItem('workwayz_user', JSON.stringify(parsed));
         }
         onComplete();
       } else {

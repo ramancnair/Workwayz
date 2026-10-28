@@ -96,7 +96,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     const loadUser = () => {
-      const storedUser = localStorage.getItem('projectflow_user');
+      const storedUser = localStorage.getItem('workwayz_user');
       if (storedUser) {
         try {
           setUser(JSON.parse(storedUser));
@@ -118,12 +118,12 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       unsubscribeAllListeners();
 
       // Read current session before clearing so we know which provider to terminate
-      const userStr = localStorage.getItem('projectflow_user');
+      const userStr = localStorage.getItem('workwayz_user');
       const sessionProvider = userStr ? (() => { try { return JSON.parse(userStr).authProvider; } catch { return null; } })() : null;
 
       // Always clear local session first
-      localStorage.removeItem('projectflow_user');
-      localStorage.removeItem('projectflow_last_activity');
+      localStorage.removeItem('workwayz_user');
+      localStorage.removeItem('workwayz_last_activity');
       sessionStorage.removeItem('workwayz_real_route');
       document.cookie = "workwayz_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
@@ -143,8 +143,8 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     } catch (error) {
       console.error("Error logging out:", error);
       // Even on error, ensure local session is cleared and redirect
-      localStorage.removeItem('projectflow_user');
-      localStorage.removeItem('projectflow_last_activity');
+      localStorage.removeItem('workwayz_user');
+      localStorage.removeItem('workwayz_last_activity');
       sessionStorage.removeItem('workwayz_real_route');
       document.cookie = "workwayz_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       window.location.href = '/';

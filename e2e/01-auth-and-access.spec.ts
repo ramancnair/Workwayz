@@ -81,7 +81,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     // Stale session in localStorage but NO browser session cookie (browser was closed), remember me not checked
     await page.context().clearCookies();
     await page.addInitScript(() => {
-      localStorage.setItem('projectflow_user', JSON.stringify({
+      localStorage.setItem('workwayz_user', JSON.stringify({
         uid: 'admin-test-001',
         empId: 'E100001',
         name: 'Alex Vance',
@@ -98,13 +98,13 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await page.waitForTimeout(1500);
     expect(page.url()).not.toContain('/my-projects');
-    await expect.poll(() => page.evaluate(() => localStorage.getItem('projectflow_user'))).toBeNull();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('workwayz_user'))).toBeNull();
   });
 
   test('TC-AUTH-007: Remember-me session survives browser restart and skips the login form', async ({ page }) => {
     await page.context().clearCookies();
     await page.addInitScript(() => {
-      localStorage.setItem('projectflow_user', JSON.stringify({
+      localStorage.setItem('workwayz_user', JSON.stringify({
         uid: 'admin-test-001',
         empId: 'E100001',
         name: 'Alex Vance',

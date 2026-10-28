@@ -197,7 +197,7 @@ export default function TestDataStudioPage() {
 
   useEffect(() => {
     // Authenticate admin access
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);

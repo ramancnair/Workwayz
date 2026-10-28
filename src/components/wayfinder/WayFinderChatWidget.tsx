@@ -168,7 +168,7 @@ export function WayFinderChatWidget() {
   const [currentUser, setCurrentUser] = useState<any>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('projectflow_user');
+        const stored = localStorage.getItem('workwayz_user');
         return stored ? JSON.parse(stored) : null;
       } catch {
         return null;
@@ -282,7 +282,7 @@ export function WayFinderChatWidget() {
 
   // Load user and project list
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (!storedUser) {
       setCurrentUser(null);
       return;
@@ -655,7 +655,7 @@ export function WayFinderChatWidget() {
   };
 
   if (!currentUser) {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('workwayz_user') : null;
     if (!stored) {
       return null;
     }

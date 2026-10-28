@@ -93,7 +93,7 @@ export default function WorklogPage() {
 
   const currentUser = useMemo(() => {
     if (typeof window === 'undefined') return null;
-    const userStr = localStorage.getItem('projectflow_user');
+    const userStr = localStorage.getItem('workwayz_user');
     if (!userStr) return null;
     try {
       return JSON.parse(userStr);

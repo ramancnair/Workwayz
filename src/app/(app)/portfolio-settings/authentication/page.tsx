@@ -77,7 +77,7 @@ export default function AuthenticationSettingsPage() {
 
     useEffect(() => {
         // Authenticate admin access
-        const storedUser = localStorage.getItem('projectflow_user');
+        const storedUser = localStorage.getItem('workwayz_user');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
@@ -224,7 +224,7 @@ export default function AuthenticationSettingsPage() {
             const { supabase } = await import('@/lib/supabase');
             await supabase?.auth.signOut();
         } catch(e) { }
-        localStorage.removeItem('projectflow_user');
+        localStorage.removeItem('workwayz_user');
         router.push('/');
     };
 

@@ -81,7 +81,7 @@ export function ReportIssueModal({
   useEffect(() => {
     if (open) {
       try {
-        const stored = localStorage.getItem('projectflow_user');
+        const stored = localStorage.getItem('workwayz_user');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed.email) setUserEmail(parsed.email);

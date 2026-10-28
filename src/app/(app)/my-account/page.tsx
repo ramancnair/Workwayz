@@ -93,12 +93,12 @@ export default function MyAccountPage() {
         });
 
         // Also update local storage needsPasswordReset flag if it was true
-        const storedUser = localStorage.getItem('projectflow_user');
+        const storedUser = localStorage.getItem('workwayz_user');
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           if (parsed.needsPasswordReset) {
             parsed.needsPasswordReset = false;
-            localStorage.setItem('projectflow_user', JSON.stringify(parsed));
+            localStorage.setItem('workwayz_user', JSON.stringify(parsed));
           }
         }
       } else {
@@ -112,7 +112,7 @@ export default function MyAccountPage() {
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
@@ -153,7 +153,7 @@ export default function MyAccountPage() {
                 role: data.role || parsed.role,
                 avatar: data.avatar || '',
               };
-              localStorage.setItem('projectflow_user', JSON.stringify(updated));
+              localStorage.setItem('workwayz_user', JSON.stringify(updated));
               setUser(updated);
               // Dispatch event to keep sidebars synchronized
               window.dispatchEvent(new Event('user-profile-updated'));
@@ -241,7 +241,7 @@ export default function MyAccountPage() {
         name: fullName,
       };
 
-      localStorage.setItem('projectflow_user', JSON.stringify(updatedUser));
+      localStorage.setItem('workwayz_user', JSON.stringify(updatedUser));
       setUser(updatedUser);
 
       // 3. Dispatch synchronization event to trigger sidebar reload
@@ -309,7 +309,7 @@ export default function MyAccountPage() {
 
       // 3. Update localStorage and local state
       const updatedUser = { ...user, avatar: base64String };
-      localStorage.setItem('projectflow_user', JSON.stringify(updatedUser));
+      localStorage.setItem('workwayz_user', JSON.stringify(updatedUser));
       setUser(updatedUser);
 
       // 4. Dispatch synchronization event to trigger sidebar reload

@@ -95,7 +95,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
           const isForced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('force') === 'true';
           if (!onClose && !isForced) {
-            const storedUser = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+            const storedUser = typeof window !== 'undefined' ? localStorage.getItem('workwayz_user') : null;
             if (storedUser) {
               try {
                 const user = JSON.parse(storedUser);

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   validateSession,
+  migrateLegacyStorageKeys,
   clearSession,
   USER_STORAGE_KEY,
   ACTIVITY_STORAGE_KEY,
@@ -193,6 +194,28 @@ describe('Session Validation Utilities (session.ts)', () => {
     });
 
     expect(validateSession(true).isValid).toBe(true);
+  });
+
+  it('migrateLegacyStorageKeys should move legacy projectflow_* keys to workwayz_* keys', () => {
+    mockStorage['projectflow_user'] = 'legacy-user';
+    mockStorage['projectflow_last_activity'] = '999';
+
+    migrateLegacyStorageKeys();
+
+    expect(mockStorage[USER_STORAGE_KEY]).toBe('legacy-user');
+    expect(mockStorage[ACTIVITY_STORAGE_KEY]).toBe('999');
+    expect(mockStorage['projectflow_user']).toBeUndefined();
+    expect(mockStorage['projectflow_last_activity']).toBeUndefined();
+  });
+
+  it('migrateLegacyStorageKeys should not overwrite existing workwayz_* keys', () => {
+    mockStorage['projectflow_user'] = 'legacy-user';
+    mockStorage[USER_STORAGE_KEY] = 'current-user';
+
+    migrateLegacyStorageKeys();
+
+    expect(mockStorage[USER_STORAGE_KEY]).toBe('current-user');
+    expect(mockStorage['projectflow_user']).toBeUndefined();
   });
 
   it('clearSession should remove storage keys and wipe cookie', () => {

@@ -7,7 +7,7 @@ import { hasPagePermission } from '@/lib/permissions';
 export function usePermissions() {
   const [userRole, setUserRole] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      const userStr = localStorage.getItem('projectflow_user');
+      const userStr = localStorage.getItem('workwayz_user');
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
@@ -25,7 +25,7 @@ export function usePermissions() {
 
   useEffect(() => {
     if (userRole === null) {
-      const userStr = typeof window !== 'undefined' ? localStorage.getItem('projectflow_user') : null;
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('workwayz_user') : null;
       if (userStr) {
         try {
           const user = JSON.parse(userStr);

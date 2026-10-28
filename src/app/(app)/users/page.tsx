@@ -193,7 +193,7 @@ export default function UsersPage() {
 
   // Read current user from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);

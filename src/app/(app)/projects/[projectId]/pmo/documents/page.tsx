@@ -76,7 +76,7 @@ export default function DocumentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('projectflow_user');
+    const userStr = localStorage.getItem('workwayz_user');
     if (userStr) {
       try {
         setCurrentUser(JSON.parse(userStr));

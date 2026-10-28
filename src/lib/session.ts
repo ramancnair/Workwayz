@@ -5,11 +5,39 @@
 
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
-export const USER_STORAGE_KEY = 'projectflow_user';
-export const ACTIVITY_STORAGE_KEY = 'projectflow_last_activity';
+export const USER_STORAGE_KEY = 'workwayz_user';
+export const ACTIVITY_STORAGE_KEY = 'workwayz_last_activity';
 export const SESSION_COOKIE_NAME = 'workwayz_session_active';
 /** Pre-rename cookie name; only cleaned up on logout so no stale cookie lingers. */
 const LEGACY_SESSION_COOKIE_NAME = 'projectflow_session_active';
+/** Pre-rename storage keys; migrated once so existing (remembered) logins survive the rename. */
+const LEGACY_USER_STORAGE_KEY = 'projectflow_user';
+const LEGACY_ACTIVITY_STORAGE_KEY = 'projectflow_last_activity';
+
+/**
+ * One-time migration of the legacy `projectflow_*` storage keys to the `workwayz_*` keys.
+ * Existing values are moved (never overwriting an already-present new key) and the legacy keys removed.
+ * Runs at module load so it completes before any component reads the session.
+ */
+export function migrateLegacyStorageKeys(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const pairs: Array<[string, string]> = [
+      [LEGACY_USER_STORAGE_KEY, USER_STORAGE_KEY],
+      [LEGACY_ACTIVITY_STORAGE_KEY, ACTIVITY_STORAGE_KEY],
+    ];
+    for (const [legacyKey, newKey] of pairs) {
+      const legacyValue = localStorage.getItem(legacyKey);
+      if (legacyValue === null) continue;
+      if (localStorage.getItem(newKey) === null) {
+        localStorage.setItem(newKey, legacyValue);
+      }
+      localStorage.removeItem(legacyKey);
+    }
+  } catch {}
+}
+
+migrateLegacyStorageKeys();
 
 export interface UserSession {
   name: string;

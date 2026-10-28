@@ -52,7 +52,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const [isEnabled, setIsEnabled] = useState<boolean | null>(null); // null = loading
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('projectflow_user');
+    const storedUser = localStorage.getItem('workwayz_user');
     if (!storedUser) return;
 
     try {

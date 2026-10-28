@@ -1049,7 +1049,7 @@ export async function wipeStudioBatch(
   let currentAdminId = '';
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('projectflow_user');
+      const stored = localStorage.getItem('workwayz_user');
       if (stored) {
         const parsed = JSON.parse(stored);
         currentAdminEmail = parsed.email || '';
@@ -1165,7 +1165,7 @@ export async function wipeWorkspaceTestData(
   let currentAdminId = '';
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem('projectflow_user');
+      const stored = localStorage.getItem('workwayz_user');
       if (stored) {
         const parsed = JSON.parse(stored);
         currentAdminEmail = parsed.email || '';

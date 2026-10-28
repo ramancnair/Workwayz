@@ -100,7 +100,7 @@ export default function SignupPage() {
 
         // 4. Update localStorage
         const now = Date.now();
-        localStorage.setItem('projectflow_user', JSON.stringify({
+        localStorage.setItem('workwayz_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
           empId,
@@ -110,7 +110,7 @@ export default function SignupPage() {
           issuedAt: now,
           rememberMe: false,
         }));
-        localStorage.setItem('projectflow_last_activity', now.toString());
+        localStorage.setItem('workwayz_last_activity', now.toString());
         markBrowserSessionActive();
 
       } else {
@@ -148,7 +148,7 @@ export default function SignupPage() {
 
         // 4. Update localStorage
         const now = Date.now();
-        localStorage.setItem('projectflow_user', JSON.stringify({
+        localStorage.setItem('workwayz_user', JSON.stringify({
           name: `${firstName} ${lastName}`.trim(),
           email: emailInput,
           empId,
@@ -158,7 +158,7 @@ export default function SignupPage() {
           issuedAt: now,
           rememberMe: false,
         }));
-        localStorage.setItem('projectflow_last_activity', now.toString());
+        localStorage.setItem('workwayz_last_activity', now.toString());
         markBrowserSessionActive();
       }
 

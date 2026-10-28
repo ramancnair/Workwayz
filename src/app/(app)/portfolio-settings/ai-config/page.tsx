@@ -67,7 +67,7 @@ export default function AIConfigPage() {
     };
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('projectflow_user');
+        const storedUser = localStorage.getItem('workwayz_user');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
