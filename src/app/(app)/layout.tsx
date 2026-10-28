@@ -277,7 +277,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 </Tabs>
               </TooltipProvider>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0">
+            <div className="flex-1 overflow-y-auto">
               {children}
             </div>
           </div>
