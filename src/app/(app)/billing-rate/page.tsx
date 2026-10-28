@@ -35,18 +35,8 @@ import {
   ArrowUpDown,
   Edit,
   Layers,
-  Filter,
-  Briefcase,
   ExternalLink,
   ShieldCheck,
-  Percent,
-  KeyRound,
-  Grid,
-  List,
-  Sparkles,
-  Server,
-  GitCommit,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -72,7 +62,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import { groupResourceRatesByPerson, type PersonResourceGroup } from '@/lib/billing-rate-grouping';
-import type { Project, User, AccessLevel, ImpactedSystem, Horizontal } from '@/types';
+import type { Project, User, AccessLevel } from '@/types';
 
 const SYSTEM_ACCESS_LEVELS: AccessLevel[] = [
   'Super Admin',
@@ -105,37 +95,9 @@ interface ResourceRateRow {
   offloadingDate?: string;
 }
 
-interface SpecRateItem {
-  id: string;
-  projectId: string;
-  projectName: string;
-  pricingModel: string;
-  name: string;
-  type: 'Impacted System' | 'Horizontal';
-  categoryOrWeight: string;
-  category?: 'Technology' | 'Function';
-  weightage?: number;
-  estimate?: number;
-  isEnabled?: boolean;
-  estimateOrDetails: string;
-  dailyBillingRate: number;
-}
-
-interface BenchmarkItem {
-  name: string;
-  count: number;
-  avgBilledRate: number;
-  minBilledRate: number;
-  maxBilledRate: number;
-  avgCostRate: number;
-  avgMargin: number;
-  avgMarginPercentage: number;
-}
-
 export default function BillingRatePage() {
   const { toast } = useToast();
   const [resourceRates, setResourceRates] = useState<ResourceRateRow[]>([]);
-  const [specRates, setSpecRates] = useState<SpecRateItem[]>([]);
   const [projectsList, setProjectsList] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -145,11 +107,6 @@ export default function BillingRatePage() {
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [selectedAccessLevelFilter, setSelectedAccessLevelFilter] = useState<string>('ALL');
   const [selectedModelFilter, setSelectedModelFilter] = useState<string>('ALL');
-  const [activeTab, setActiveTab] = useState<'resources' | 'benchmarks' | 'specifications'>('resources');
-
-  // Sub-tab / View state for Benchmarks & Specs
-  const [benchmarkView, setBenchmarkView] = useState<'all' | 'accessLevels' | 'projectRoles'>('all');
-  const [specView, setSpecView] = useState<'all' | 'impactedSystems' | 'horizontals'>('all');
 
   // Sorting
   const [sortField, setSortField] = useState<keyof ResourceRateRow>('billedRate');
@@ -201,15 +158,10 @@ export default function BillingRatePage() {
           });
 
           const allResourceRates: ResourceRateRow[] = [];
-          const allSpecRates: SpecRateItem[] = [];
 
           await Promise.all(
             rawProjects.map(async (project) => {
-              const [empSnap, impSnap, horizSnap] = await Promise.all([
-                getDocs(collection(db, 'projects', project.id, 'employees')),
-                getDocs(collection(db, 'projects', project.id, 'impactedSystems')),
-                getDocs(collection(db, 'projects', project.id, 'horizontals')),
-              ]);
+              const empSnap = await getDocs(collection(db, 'projects', project.id, 'employees'));
 
               // Process Project Resources
               empSnap.docs.forEach((docSnap: any) => {
@@ -250,49 +202,10 @@ export default function BillingRatePage() {
                   offloadingDate: data.offloadingDate,
                 });
               });
-
-              // Process Impacted Systems
-              impSnap.docs.forEach((d: any) => {
-                const s = d.data() as ImpactedSystem;
-                const rate = Number(s.dailyBillingRate) || 0;
-                allSpecRates.push({
-                  id: d.id,
-                  projectId: project.id,
-                  projectName: project.name,
-                  pricingModel: project.pricingModel || 'Fixed Bid',
-                  name: s.name,
-                  type: 'Impacted System',
-                  category: s.category || 'Technology',
-                  categoryOrWeight: s.category || 'Technology',
-                  estimate: s.estimate || 0,
-                  estimateOrDetails: `${s.estimate || 0} man-days`,
-                  dailyBillingRate: rate,
-                });
-              });
-
-              // Process Horizontals
-              horizSnap.docs.forEach((d: any) => {
-                const h = d.data() as Horizontal;
-                const rate = Number(h.dailyBillingRate) || 0;
-                allSpecRates.push({
-                  id: d.id,
-                  projectId: project.id,
-                  projectName: project.name,
-                  pricingModel: project.pricingModel || 'Fixed Bid',
-                  name: h.name,
-                  type: 'Horizontal',
-                  weightage: h.weightage || 0,
-                  isEnabled: h.isEnabled !== false,
-                  categoryOrWeight: `${h.weightage || 0}% weight`,
-                  estimateOrDetails: h.isEnabled !== false ? 'Active' : 'Disabled',
-                  dailyBillingRate: rate,
-                });
-              });
             })
           );
 
           setResourceRates(allResourceRates);
-          setSpecRates(allSpecRates);
         } catch (err) {
           console.error('[BillingRate] Error fetching rates:', err);
           toast({
@@ -407,90 +320,6 @@ export default function BillingRatePage() {
     setExpandedPersons({});
   };
 
-  // Helper to calculate benchmark statistics for any group
-  const calculateBenchmark = (groupItems: ResourceRateRow[], name: string): BenchmarkItem => {
-    const count = groupItems.length;
-    const billedRates = groupItems.map((i) => i.billedRate);
-    const costRates = groupItems.map((i) => i.costRate);
-    const margins = groupItems.map((i) => i.margin);
-
-    const totalBilled = billedRates.reduce((a, b) => a + b, 0);
-    const totalCost = costRates.reduce((a, b) => a + b, 0);
-    const totalMargin = margins.reduce((a, b) => a + b, 0);
-
-    const avgBilledRate = count > 0 ? totalBilled / count : 0;
-    const avgCostRate = count > 0 ? totalCost / count : 0;
-    const avgMargin = count > 0 ? totalMargin / count : 0;
-    const avgMarginPercentage = avgBilledRate > 0 ? (avgMargin / avgBilledRate) * 100 : 0;
-
-    return {
-      name,
-      count,
-      avgBilledRate,
-      minBilledRate: billedRates.length > 0 ? Math.min(...billedRates) : 0,
-      maxBilledRate: billedRates.length > 0 ? Math.max(...billedRates) : 0,
-      avgCostRate,
-      avgMargin,
-      avgMarginPercentage,
-    };
-  };
-
-  // 1. Access Level Rate Benchmarks
-  const accessLevelBenchmarks = useMemo((): BenchmarkItem[] => {
-    return SYSTEM_ACCESS_LEVELS.map((lvl) => {
-      const items = resourceRates.filter((r) => r.accessLevel === lvl);
-      return calculateBenchmark(items, lvl);
-    }).sort((a, b) => b.avgBilledRate - a.avgBilledRate);
-  }, [resourceRates]);
-
-  // 2. Project Roles Rate Benchmarks (dynamically discovers newly created roles in any project)
-  const projectRoleBenchmarks = useMemo((): BenchmarkItem[] => {
-    return availableRoles
-      .map((roleName) => {
-        const items = resourceRates.filter((r) => r.role === roleName);
-        return calculateBenchmark(items, roleName);
-      })
-      .sort((a, b) => b.avgBilledRate - a.avgBilledRate);
-  }, [resourceRates, availableRoles]);
-
-  // Impacted Systems only
-  const impactedSystemsRates = useMemo(() => {
-    return specRates
-      .filter((s) => s.type === 'Impacted System')
-      .filter((item) => {
-        if (selectedProjectFilter !== 'ALL' && item.projectId !== selectedProjectFilter) return false;
-        if (selectedModelFilter !== 'ALL' && item.pricingModel !== selectedModelFilter) return false;
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          return (
-            item.name.toLowerCase().includes(q) ||
-            item.projectName.toLowerCase().includes(q) ||
-            (item.category || '').toLowerCase().includes(q)
-          );
-        }
-        return true;
-      });
-  }, [specRates, selectedProjectFilter, selectedModelFilter, searchQuery]);
-
-  // Horizontals only
-  const horizontalsRates = useMemo(() => {
-    return specRates
-      .filter((s) => s.type === 'Horizontal')
-      .filter((item) => {
-        if (selectedProjectFilter !== 'ALL' && item.projectId !== selectedProjectFilter) return false;
-        if (selectedModelFilter !== 'ALL' && item.pricingModel !== selectedModelFilter) return false;
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          return (
-            item.name.toLowerCase().includes(q) ||
-            item.projectName.toLowerCase().includes(q) ||
-            item.categoryOrWeight.toLowerCase().includes(q)
-          );
-        }
-        return true;
-      });
-  }, [specRates, selectedProjectFilter, selectedModelFilter, searchQuery]);
-
   const handleSort = (field: keyof ResourceRateRow) => {
     if (sortField === field) {
       setSortAsc(!sortAsc);
@@ -592,11 +421,11 @@ export default function BillingRatePage() {
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader
         title="Billing Rates"
-        description="Master directory of resource daily billing rates, internal costs, profit margins, access levels & role benchmarks across all projects."
+        description="Master directory of resource daily billing rates, internal costs, profit margins, and access levels across all projects."
       />
 
       {/* Main Tabs Container */}
-      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-4">
+      <Tabs defaultValue="resources" className="space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b pb-3">
           <TabsList className="inline-flex w-auto items-center justify-start gap-1 p-1 bg-muted/80 rounded-lg shrink-0">
             <TabsTrigger value="resources" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
@@ -604,20 +433,6 @@ export default function BillingRatePage() {
               <span>Resource Rates</span>
               <Badge variant="secondary" className="ml-0.5 px-1.5 py-0 text-[10px] h-4">
                 {resourceRates.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="benchmarks" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Role Benchmarks</span>
-              <Badge variant="secondary" className="ml-0.5 px-1.5 py-0 text-[10px] h-4">
-                {accessLevelBenchmarks.filter((b) => b.count > 0).length + projectRoleBenchmarks.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="specifications" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
-              <Layers className="w-3.5 h-3.5" />
-              <span>Specifications Rates</span>
-              <Badge variant="secondary" className="ml-0.5 px-1.5 py-0 text-[10px] h-4">
-                {specRates.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -647,37 +462,33 @@ export default function BillingRatePage() {
               </SelectContent>
             </Select>
 
-            {activeTab === 'resources' && (
-              <>
-                <Select value={selectedRoleFilter} onValueChange={setSelectedRoleFilter}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs">
-                    <SelectValue placeholder="All Roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Roles</SelectItem>
-                    {availableRoles.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <Select value={selectedRoleFilter} onValueChange={setSelectedRoleFilter}>
+              <SelectTrigger className="w-[130px] h-9 text-xs">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Roles</SelectItem>
+                {availableRoles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Select value={selectedAccessLevelFilter} onValueChange={setSelectedAccessLevelFilter}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs">
-                    <SelectValue placeholder="Access Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Access Levels</SelectItem>
-                    {SYSTEM_ACCESS_LEVELS.map((lvl) => (
-                      <SelectItem key={lvl} value={lvl}>
-                        {lvl}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
+            <Select value={selectedAccessLevelFilter} onValueChange={setSelectedAccessLevelFilter}>
+              <SelectTrigger className="w-[130px] h-9 text-xs">
+                <SelectValue placeholder="Access Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Access Levels</SelectItem>
+                {SYSTEM_ACCESS_LEVELS.map((lvl) => (
+                  <SelectItem key={lvl} value={lvl}>
+                    {lvl}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Select value={selectedModelFilter} onValueChange={setSelectedModelFilter}>
               <SelectTrigger className="w-[120px] h-9 text-xs">
@@ -1207,430 +1018,6 @@ export default function BillingRatePage() {
           </Card>
         </TabsContent>
 
-        {/* Tab 2: Role & Access Level Benchmarks */}
-        <TabsContent value="benchmarks" className="space-y-6">
-          {/* Sub-view switcher */}
-          <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant={benchmarkView === 'all' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setBenchmarkView('all')}
-                className="h-8 text-xs"
-              >
-                All Benchmarks
-              </Button>
-              <Button
-                variant={benchmarkView === 'accessLevels' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setBenchmarkView('accessLevels')}
-                className="h-8 text-xs gap-1.5"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                Access Levels Rates
-              </Button>
-              <Button
-                variant={benchmarkView === 'projectRoles' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setBenchmarkView('projectRoles')}
-                className="h-8 text-xs gap-1.5"
-              >
-                <Users className="w-3.5 h-3.5" />
-                Project Roles Rates
-              </Button>
-            </div>
-          </div>
-
-          {/* Section 1: System Access Levels Rates */}
-          {(benchmarkView === 'all' || benchmarkView === 'accessLevels') && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-purple-500" />
-                    System Access Levels Rates Benchmark
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Aggregated daily billing rates, internal cost, and profit margins organized by System Access Level.
-                  </p>
-                </div>
-              </div>
-
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <StickyXScroll><Table wrapperClassName="overflow-visible">
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[200px]">Access Level</TableHead>
-                        <TableHead className="text-center">Assigned Resources</TableHead>
-                        <TableHead className="text-right font-semibold">Average Daily Rate</TableHead>
-                        <TableHead className="text-right">Min Daily Rate</TableHead>
-                        <TableHead className="text-right">Max Daily Rate</TableHead>
-                        <TableHead className="text-right">Average Cost Rate</TableHead>
-                        <TableHead className="text-right pr-6">Average Margin (%)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {accessLevelBenchmarks.map((bm) => (
-                        <TableRow key={bm.name} className="hover:bg-muted/40">
-                          <TableCell className="font-semibold text-xs">
-                            {getAccessLevelBadge(bm.name as AccessLevel)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="text-xs font-mono">
-                              {bm.count} resource{bm.count === 1 ? '' : 's'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-bold text-xs text-foreground">
-                            {bm.count > 0 ? (
-                              `$${bm.avgBilledRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/day`
-                            ) : (
-                              <span className="text-muted-foreground font-normal">N/A</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                            {bm.count > 0 ? `$${bm.minBilledRate.toFixed(2)}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                            {bm.count > 0 ? `$${bm.maxBilledRate.toFixed(2)}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                            {bm.count > 0 ? `$${bm.avgCostRate.toFixed(2)}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs pr-6">
-                            {bm.count > 0 ? (
-                              <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                ${bm.avgMargin.toFixed(2)}{' '}
-                                <span className="text-[11px] font-normal">({bm.avgMarginPercentage.toFixed(1)}%)</span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground font-normal">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table></StickyXScroll>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Section 2: Project Roles Rates (Dynamically discovers any new project role) */}
-          {(benchmarkView === 'all' || benchmarkView === 'projectRoles') && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-500" />
-                    Project Roles Rates Benchmark
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Dynamically aggregated daily billing rates for all project designations. New roles created in any project are automatically listed here.
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {projectRoleBenchmarks.length} Roles Discovered
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {isLoading ? (
-                  Array.from({ length: 6 }).map((_, idx) => (
-                    <Card key={idx} className="border shadow-sm">
-                      <CardHeader className="pb-3"><Skeleton className="h-6 w-32" /></CardHeader>
-                      <CardContent className="space-y-3"><Skeleton className="h-16 w-full" /></CardContent>
-                    </Card>
-                  ))
-                ) : projectRoleBenchmarks.length === 0 ? (
-                  <Card className="col-span-full border shadow-sm p-8 text-center text-muted-foreground">
-                    No project roles found in active projects.
-                  </Card>
-                ) : (
-                  projectRoleBenchmarks.map((bm) => (
-                    <Card key={bm.name} className="border shadow-sm hover:border-primary/40 transition-colors">
-                      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                        <div>
-                          <CardTitle className="text-base font-semibold">{bm.name}</CardTitle>
-                          <CardDescription className="text-xs">
-                            {bm.count} assigned resource{bm.count > 1 ? 's' : ''}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="outline" className="text-xs font-mono font-bold bg-primary/5 text-primary border-primary/20">
-                          Avg: ${bm.avgBilledRate.toFixed(0)}/day
-                        </Badge>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
-                          <div>
-                            <span className="text-muted-foreground text-[11px]">Min Daily Rate:</span>
-                            <div className="font-mono font-semibold text-foreground">${bm.minBilledRate.toFixed(2)}</div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground text-[11px]">Max Daily Rate:</span>
-                            <div className="font-mono font-semibold text-foreground">${bm.maxBilledRate.toFixed(2)}</div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t">
-                          <div>
-                            <span className="text-muted-foreground text-[11px]">Avg Cost Rate:</span>
-                            <div className="font-mono text-muted-foreground">${bm.avgCostRate.toFixed(2)}</div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-muted-foreground text-[11px]">Avg Margin:</span>
-                            <div className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                              ${bm.avgMargin.toFixed(2)} ({bm.avgMarginPercentage.toFixed(1)}%)
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Tab 3: Specifications Rates (Impacted Systems & Horizontals Wise) */}
-        <TabsContent value="specifications" className="space-y-6">
-          {/* Sub-view switcher */}
-          <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant={specView === 'all' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setSpecView('all')}
-                className="h-8 text-xs"
-              >
-                All Specifications ({specRates.length})
-              </Button>
-              <Button
-                variant={specView === 'impactedSystems' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setSpecView('impactedSystems')}
-                className="h-8 text-xs gap-1.5"
-              >
-                <Server className="w-3.5 h-3.5 text-cyan-600" />
-                Impacted Systems ({impactedSystemsRates.length})
-              </Button>
-              <Button
-                variant={specView === 'horizontals' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setSpecView('horizontals')}
-                className="h-8 text-xs gap-1.5"
-              >
-                <GitCommit className="w-3.5 h-3.5 text-purple-600" />
-                Horizontals ({horizontalsRates.length})
-              </Button>
-            </div>
-          </div>
-
-          {/* Section A: Impacted Systems Rates */}
-          {(specView === 'all' || specView === 'impactedSystems') && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    <Server className="w-4 h-4 text-cyan-500" />
-                    Impacted Systems Daily Rates
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Component and module-level daily billing rates configured across Technology and Functional systems.
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {impactedSystemsRates.length} Impacted Systems
-                </Badge>
-              </div>
-
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <StickyXScroll><Table wrapperClassName="overflow-visible">
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[260px]">System / Module Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead className="text-center">Pricing Model</TableHead>
-                        <TableHead className="text-center">Estimated Effort</TableHead>
-                        <TableHead className="text-right">Daily Billing Rate (USD)</TableHead>
-                        <TableHead className="text-right pr-6">Estimated Total Value</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        Array.from({ length: 4 }).map((_, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                          </TableRow>
-                        ))
-                      ) : impactedSystemsRates.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="h-28 text-center text-muted-foreground text-sm">
-                            No impacted systems billing rates configured.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        impactedSystemsRates.map((sys) => {
-                          const totalVal = (sys.estimate || 0) * sys.dailyBillingRate;
-                          return (
-                            <TableRow key={`${sys.projectId}-${sys.id}`} className="hover:bg-muted/40 transition-colors">
-                              <TableCell className="font-semibold text-xs text-foreground">
-                                {sys.name}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] font-medium',
-                                    sys.category === 'Technology'
-                                      ? 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-200'
-                                      : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-200'
-                                  )}
-                                >
-                                  {sys.category || 'Technology'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Link
-                                  href={`/projects/${sys.projectId}/project-details/specifications`}
-                                  className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors"
-                                >
-                                  <span>{sys.projectName}</span>
-                                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
-                                </Link>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {sys.pricingModel}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center font-mono text-xs">
-                                {sys.estimate || 0} man-days
-                              </TableCell>
-                              <TableCell className="text-right font-mono font-semibold text-xs text-foreground">
-                                ${sys.dailyBillingRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </TableCell>
-                              <TableCell className="text-right font-mono font-semibold text-xs text-blue-600 dark:text-blue-400 pr-6">
-                                ${totalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table></StickyXScroll>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Section B: Horizontals Rates */}
-          {(specView === 'all' || specView === 'horizontals') && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                    <GitCommit className="w-4 h-4 text-purple-500" />
-                    Horizontals Daily Rates
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Standard daily billing rates for cross-cutting horizontal capabilities (QA & Testing, Architecture, DevOps, Compliance).
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {horizontalsRates.length} Horizontals Configured
-                </Badge>
-              </div>
-
-              <Card className="border shadow-sm">
-                <CardContent className="p-0">
-                  <StickyXScroll><Table wrapperClassName="overflow-visible">
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[260px]">Horizontal Capability</TableHead>
-                        <TableHead className="text-center">Weightage (%)</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead className="text-center">Pricing Model</TableHead>
-                        <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right pr-6">Daily Billing Rate (USD)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        Array.from({ length: 4 }).map((_, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                          </TableRow>
-                        ))
-                      ) : horizontalsRates.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-28 text-center text-muted-foreground text-sm">
-                            No horizontals billing rates configured.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        horizontalsRates.map((h) => (
-                          <TableRow key={`${h.projectId}-${h.id}`} className="hover:bg-muted/40 transition-colors">
-                            <TableCell className="font-semibold text-xs text-foreground">
-                              {h.name}
-                            </TableCell>
-                            <TableCell className="text-center font-mono font-semibold text-xs text-purple-600 dark:text-purple-400">
-                              {h.weightage || 0}%
-                            </TableCell>
-                            <TableCell>
-                              <Link
-                                href={`/projects/${h.projectId}/project-details/specifications`}
-                                className="group inline-flex items-center gap-1 font-medium text-xs text-foreground hover:text-primary transition-colors"
-                              >
-                                <span>{h.projectName}</span>
-                                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
-                              </Link>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="secondary" className="text-[10px]">
-                                {h.pricingModel}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'text-[10px]',
-                                  h.isEnabled !== false
-                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200'
-                                    : 'bg-muted text-muted-foreground'
-                                )}
-                              >
-                                {h.isEnabled !== false ? 'Active' : 'Disabled'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-mono font-semibold text-xs text-foreground pr-6">
-                              ${h.dailyBillingRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table></StickyXScroll>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
       </Tabs>
 
       {/* Edit Rate Dialog */}
