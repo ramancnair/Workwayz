@@ -721,7 +721,7 @@ export default function BillingRatePage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
+              <Table wrapperClassName="table-scroll-wrapper">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[220px]">
@@ -1257,7 +1257,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table>
+                  <Table wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[200px]">Access Level</TableHead>
@@ -1446,7 +1446,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table>
+                  <Table wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">System / Module Name</TableHead>
@@ -1552,7 +1552,7 @@ export default function BillingRatePage() {
 
               <Card className="border shadow-sm">
                 <CardContent className="p-0">
-                  <Table>
+                  <Table wrapperClassName="table-scroll-wrapper">
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[260px]">Horizontal Capability</TableHead>
