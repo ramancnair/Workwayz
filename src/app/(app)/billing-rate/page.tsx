@@ -1267,7 +1267,7 @@ export default function BillingRatePage() {
                           ${rc.mediumRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           <span className="text-[10px] text-muted-foreground font-sans ml-1">/ day</span>
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm font-semibold text-emerald-400">
+                        <TableCell className="text-right font-mono text-sm font-medium">
                           ${rc.highRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           <span className="text-[10px] text-muted-foreground font-sans ml-1">/ day</span>
                         </TableCell>
