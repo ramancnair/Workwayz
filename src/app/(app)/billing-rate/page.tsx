@@ -39,6 +39,9 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
+  CreditCard,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -55,6 +58,31 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserInitials, cn, formatRateInput } from '@/lib/utils';
 import { groupResourceRatesByPerson, type PersonResourceGroup } from '@/lib/billing-rate-grouping';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  subscribeRateCards,
+  saveRateCard,
+  deleteRateCard,
+  STANDARD_TECH_ROLES,
+  STANDARD_HORIZONTAL_ROLES,
+} from '@/lib/rate-cards-service';
+import type { RateCardItem, RateCardRoleCategory } from '@/types';
 import type { Project, User, AccessLevel } from '@/types';
 
 interface ResourceRateRow {
@@ -105,6 +133,39 @@ export default function BillingRatePage() {
   const [editBilledRate, setEditBilledRate] = useState<string>('');
   const [editCostRate, setEditCostRate] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Active Tab State
+  const [activeTab, setActiveTab] = useState<'resources' | 'rate-card'>('resources');
+
+  // Rate Cards State
+  const [rateCards, setRateCards] = useState<RateCardItem[]>([]);
+  const [rateCardCategoryFilter, setRateCardCategoryFilter] = useState<'all' | 'Tech' | 'Horizontal'>('all');
+  const [rateCardSortField, setRateCardSortField] = useState<'roleName' | 'category' | 'lowRate' | 'mediumRate' | 'highRate'>('roleName');
+  const [rateCardSortAsc, setRateCardSortAsc] = useState(true);
+
+  // Rate Card Add/Edit Modal State
+  const [isRateCardModalOpen, setIsRateCardModalOpen] = useState(false);
+  const [editingRateCard, setEditingRateCard] = useState<RateCardItem | null>(null);
+  const [rcRoleName, setRcRoleName] = useState('');
+  const [rcCategory, setRcCategory] = useState<RateCardRoleCategory>('Tech');
+  const [rcLowRate, setRcLowRate] = useState('');
+  const [rcMediumRate, setRcMediumRate] = useState('');
+  const [rcHighRate, setRcHighRate] = useState('');
+  const [isRcSaving, setIsRcSaving] = useState(false);
+
+  // Rate Card Delete Confirmation State
+  const [deletingRateCard, setDeletingRateCard] = useState<RateCardItem | null>(null);
+  const [isRcDeleting, setIsRcDeleting] = useState(false);
+
+  // Real-time subscription to rate cards
+  useEffect(() => {
+    const unsub = subscribeRateCards((items) => {
+      setRateCards(items);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
 
   // Fetch all projects, global users & rates in real-time
   useEffect(() => {
@@ -365,6 +426,138 @@ export default function BillingRatePage() {
     }
   };
 
+  // Filtered and Sorted Rate Cards
+  const filteredRateCards = useMemo(() => {
+    let result = [...rateCards];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (rc) =>
+          rc.roleName.toLowerCase().includes(q) ||
+          rc.category.toLowerCase().includes(q)
+      );
+    }
+
+    if (rateCardCategoryFilter !== 'all') {
+      result = result.filter((rc) => rc.category === rateCardCategoryFilter);
+    }
+
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (rateCardSortField === 'roleName') {
+        comparison = a.roleName.localeCompare(b.roleName);
+      } else if (rateCardSortField === 'category') {
+        comparison = a.category.localeCompare(b.category);
+      } else {
+        comparison = a[rateCardSortField] - b[rateCardSortField];
+      }
+      return rateCardSortAsc ? comparison : -comparison;
+    });
+
+    return result;
+  }, [rateCards, searchQuery, rateCardCategoryFilter, rateCardSortField, rateCardSortAsc]);
+
+  const handleRateCardSort = (field: 'roleName' | 'category' | 'lowRate' | 'mediumRate' | 'highRate') => {
+    if (rateCardSortField === field) {
+      setRateCardSortAsc(!rateCardSortAsc);
+    } else {
+      setRateCardSortField(field);
+      setRateCardSortAsc(true);
+    }
+  };
+
+  const openAddRateCardModal = () => {
+    setEditingRateCard(null);
+    setRcRoleName('');
+    setRcCategory('Tech');
+    setRcLowRate('');
+    setRcMediumRate('');
+    setRcHighRate('');
+    setIsRateCardModalOpen(true);
+  };
+
+  const openEditRateCardModal = (item: RateCardItem) => {
+    setEditingRateCard(item);
+    setRcRoleName(item.roleName);
+    setRcCategory(item.category);
+    setRcLowRate(item.lowRate ? item.lowRate.toString() : '');
+    setRcMediumRate(item.mediumRate ? item.mediumRate.toString() : '');
+    setRcHighRate(item.highRate ? item.highRate.toString() : '');
+    setIsRateCardModalOpen(true);
+  };
+
+  const handleSaveRateCard = async () => {
+    if (!rcRoleName.trim()) {
+      toast({
+        title: 'Role Name Required',
+        description: 'Please enter a role name for the rate card.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsRcSaving(true);
+    try {
+      const saved = await saveRateCard({
+        id: editingRateCard?.id,
+        roleName: rcRoleName.trim(),
+        category: rcCategory,
+        lowRate: Number(rcLowRate) || 0,
+        mediumRate: Number(rcMediumRate) || 0,
+        highRate: Number(rcHighRate) || 0,
+      });
+
+      setRateCards((prev) => {
+        const idx = prev.findIndex((i) => i.id === saved.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = saved;
+          return updated;
+        }
+        return [...prev, saved];
+      });
+
+      toast({
+        title: editingRateCard ? 'Rate Card Updated' : 'Rate Card Added',
+        description: `Successfully ${editingRateCard ? 'updated' : 'added'} "${rcRoleName.trim()}".`,
+      });
+
+      setIsRateCardModalOpen(false);
+    } catch (err: any) {
+      toast({
+        title: 'Error Saving Rate Card',
+        description: err?.message || 'Failed to save rate card entry.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRcSaving(false);
+    }
+  };
+
+  const handleDeleteRateCard = async () => {
+    if (!deletingRateCard) return;
+
+    setIsRcDeleting(true);
+    try {
+      await deleteRateCard(deletingRateCard.id);
+      setRateCards((prev) => prev.filter((i) => i.id !== deletingRateCard.id));
+      toast({
+        title: 'Rate Card Entry Deleted',
+        description: `Removed "${deletingRateCard.roleName}" from the rate card.`,
+      });
+      setDeletingRateCard(null);
+    } catch (err: any) {
+      toast({
+        title: 'Error Deleting Entry',
+        description: err?.message || 'Failed to delete rate card entry.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRcDeleting(false);
+    }
+  };
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       <PageHeader
@@ -373,7 +566,7 @@ export default function BillingRatePage() {
       />
 
       {/* Main Tabs Container */}
-      <Tabs defaultValue="resources" className="space-y-4">
+      <Tabs defaultValue="resources" value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b pb-3">
           <TabsList className="inline-flex w-auto items-center justify-start gap-1 p-1 bg-muted/80 rounded-lg shrink-0">
             <TabsTrigger value="resources" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
@@ -383,6 +576,13 @@ export default function BillingRatePage() {
                 {resourceRates.length}
               </Badge>
             </TabsTrigger>
+            <TabsTrigger value="rate-card" className="gap-2 px-3 py-1.5 whitespace-nowrap text-xs font-medium shrink-0">
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Rate Card</span>
+              <Badge variant="secondary" className="ml-0.5 px-1.5 py-0 text-[10px] h-4">
+                {rateCards.length}
+              </Badge>
+            </TabsTrigger>
           </TabsList>
 
           {/* Search bar */}
@@ -390,7 +590,7 @@ export default function BillingRatePage() {
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search name, role, access level, project..."
+                placeholder={activeTab === 'rate-card' ? 'Search role name, category...' : 'Search name, role, access level, project...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-9 text-xs"
@@ -914,6 +1114,204 @@ export default function BillingRatePage() {
           </Card>
         </TabsContent>
 
+        {/* Tab 2: Rate Card */}
+        <TabsContent value="rate-card" className="space-y-4">
+          <Card className="border shadow-sm">
+            <CardHeader className="py-4 px-6 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <span>Rate Card</span>
+                    <Badge variant="outline" className="text-[10px] font-normal border-primary/30 text-primary">
+                      Sales & Client Reference
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Standard daily billing rates for technical and horizontal roles segmented by experience tier (Low, Medium, High).
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Select
+                    value={rateCardCategoryFilter}
+                    onValueChange={(val: any) => setRateCardCategoryFilter(val)}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-[140px]">
+                      <SelectValue placeholder="All Roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="Tech">Tech Roles</SelectItem>
+                      <SelectItem value="Horizontal">Horizontal Roles</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    size="sm"
+                    onClick={openAddRateCardModal}
+                    className="h-8 text-xs px-3 gap-1.5 font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Role</span>
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[280px]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRateCardSort('roleName')}
+                        className="-ml-3 h-8 text-xs font-semibold"
+                      >
+                        Role
+                        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[160px]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRateCardSort('category')}
+                        className="-ml-3 h-8 text-xs font-semibold"
+                      >
+                        Category
+                        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRateCardSort('lowRate')}
+                        className="-mr-3 h-8 text-xs font-semibold"
+                      >
+                        Low Experience
+                        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                      <div className="text-[10px] font-normal text-muted-foreground">Junior (0-3 yrs)</div>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRateCardSort('mediumRate')}
+                        className="-mr-3 h-8 text-xs font-semibold"
+                      >
+                        Medium Experience
+                        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                      <div className="text-[10px] font-normal text-muted-foreground">Mid-Level (4-7 yrs)</div>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRateCardSort('highRate')}
+                        className="-mr-3 h-8 text-xs font-semibold"
+                      >
+                        High Experience
+                        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                      <div className="text-[10px] font-normal text-muted-foreground">Senior / Lead (8+ yrs)</div>
+                    </TableHead>
+                    <TableHead className="w-[100px] text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRateCards.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-60 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2.5 text-muted-foreground py-8">
+                          <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground/80">
+                            <CreditCard className="w-6 h-6" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              {searchQuery || rateCardCategoryFilter !== 'all' ? 'No matching roles' : 'Rate card is currently empty'}
+                            </p>
+                            <p className="text-xs max-w-md text-muted-foreground">
+                              {searchQuery || rateCardCategoryFilter !== 'all'
+                                ? 'Try clearing your search or category filter to view all roles.'
+                                : 'No rate card roles configured yet. Add standard tech and horizontal roles with Low, Medium, and High experience rates as a reference for sales and client billing.'}
+                            </p>
+                          </div>
+                          {(!searchQuery && rateCardCategoryFilter === 'all') && (
+                            <Button
+                              size="sm"
+                              onClick={openAddRateCardModal}
+                              className="mt-2 text-xs h-8 gap-1.5"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Add First Role
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRateCards.map((rc) => (
+                      <TableRow key={rc.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium text-foreground">
+                          {rc.roleName}
+                        </TableCell>
+                        <TableCell>
+                          {rc.category === 'Tech' ? (
+                            <Badge className="bg-blue-500/15 text-blue-400 border-blue-800/50 text-[10px] whitespace-nowrap">
+                              Tech Role
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-purple-500/15 text-purple-400 border-purple-800/50 text-[10px] whitespace-nowrap">
+                              Horizontal Role
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          ${rc.lowRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <span className="text-[10px] text-muted-foreground font-sans ml-1">/ day</span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm font-medium">
+                          ${rc.mediumRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <span className="text-[10px] text-muted-foreground font-sans ml-1">/ day</span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm font-semibold text-emerald-400">
+                          ${rc.highRate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <span className="text-[10px] text-muted-foreground font-sans ml-1">/ day</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditRateCardModal(rc)}
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                              title="Edit Role Rate"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingRateCard(rc)}
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              title="Delete Role Rate"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
       </Tabs>
 
       {/* Edit Rate Dialog */}
@@ -1007,6 +1405,188 @@ export default function BillingRatePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rate Card Add/Edit Dialog */}
+      <Dialog open={isRateCardModalOpen} onOpenChange={setIsRateCardModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingRateCard ? 'Edit Rate Card Entry' : 'Add Rate Card Entry'}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Configure standard client billing daily rates across experience tiers (Low, Medium, High).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Category Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Role Category</Label>
+              <Select
+                value={rcCategory}
+                onValueChange={(val: any) => setRcCategory(val)}
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tech">Tech Role (Engineering, Architecture, DevOps)</SelectItem>
+                  <SelectItem value="Horizontal">Horizontal Role (PM, BA, QA, Design, Compliance)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Role Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="rcRoleName" className="text-xs font-semibold">
+                Role Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="rcRoleName"
+                placeholder={rcCategory === 'Tech' ? 'e.g., Software Engineer, Solution Architect' : 'e.g., Project Management, Business Analysis'}
+                value={rcRoleName}
+                onChange={(e) => setRcRoleName(e.target.value)}
+                className="text-xs h-9"
+              />
+
+              {/* Quick Role Suggestions */}
+              <div className="pt-1">
+                <div className="text-[11px] text-muted-foreground mb-1.5">Quick Suggestions:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(rcCategory === 'Tech' ? STANDARD_TECH_ROLES : STANDARD_HORIZONTAL_ROLES)
+                    .slice(0, 7)
+                    .map((role) => (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => setRcRoleName(role)}
+                        className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                          rcRoleName === role
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/60"
+                        )}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Experience Rates Grid */}
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs font-semibold">Daily Billing Rates by Experience (USD)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Low */}
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium">Low (Junior)</span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2.5 text-xs text-muted-foreground font-mono">$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={rcLowRate}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) val = val.replace(/^0+/, '');
+                        if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) setRcLowRate(val);
+                      }}
+                      onBlur={() => setRcLowRate(formatRateInput(rcLowRate))}
+                      className="pl-6 font-mono text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Medium */}
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium">Medium (Mid)</span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2.5 text-xs text-muted-foreground font-mono">$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={rcMediumRate}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) val = val.replace(/^0+/, '');
+                        if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) setRcMediumRate(val);
+                      }}
+                      onBlur={() => setRcMediumRate(formatRateInput(rcMediumRate))}
+                      className="pl-6 font-mono text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* High */}
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium">High (Senior)</span>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2.5 text-xs text-muted-foreground font-mono">$</span>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={rcHighRate}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && /^0[0-9]/.test(val)) val = val.replace(/^0+/, '');
+                        if (/^(0|[1-9]\d{0,7})?(\.\d{0,2})?$/.test(val)) setRcHighRate(val);
+                      }}
+                      onBlur={() => setRcHighRate(formatRateInput(rcHighRate))}
+                      className="pl-6 font-mono text-xs h-9"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsRateCardModalOpen(false)}
+              disabled={isRcSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveRateCard}
+              disabled={isRcSaving}
+            >
+              {isRcSaving ? 'Saving...' : editingRateCard ? 'Save Changes' : 'Add Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rate Card Delete Confirmation Alert Dialog */}
+      <AlertDialog open={!!deletingRateCard} onOpenChange={(open) => !open && setDeletingRateCard(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Rate Card Entry?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Are you sure you want to remove &quot;{deletingRateCard?.roleName}&quot; ({deletingRateCard?.category} Role) from the rate card? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRcDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRateCard}
+              disabled={isRcDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isRcDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

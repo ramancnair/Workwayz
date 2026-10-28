@@ -686,3 +686,19 @@ export type ArchiveSettings = {
   customDeleteMonths?: number;
   customDeleteYears?: number;
 };
+
+
+export type RateCardRoleCategory = 'Tech' | 'Horizontal';
+
+export interface RateCardItem {
+  id: string;
+  roleName: string;
+  category: RateCardRoleCategory;
+  lowRate: number;      // Low experience daily billing rate
+  mediumRate: number;   // Medium experience daily billing rate
+  highRate: number;     // High experience daily billing rate
+  currency?: string;    // e.g. 'USD'
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

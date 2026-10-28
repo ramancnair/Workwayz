@@ -66,6 +66,73 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
     await expect.poll(() => content.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100);
   });
 
+  test('TC-PORT-012: Rate Card tab displays empty table initially, allows adding, editing, and deleting role benchmark rates', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/billing-rate', { waitUntil: 'domcontentloaded' });
+
+    // Verify Rate Card tab trigger exists and click it
+    const rateCardTab = page.getByRole('tab', { name: /Rate Card/i });
+    await expect(rateCardTab).toBeVisible({ timeout: 15000 });
+    await rateCardTab.click();
+
+    // Verify initially empty state and experience tier columns
+    await expect(page.locator('body')).toContainText(/Rate Card/i);
+    await expect(page.locator('body')).toContainText(/Low Experience/i);
+    await expect(page.locator('body')).toContainText(/Medium Experience/i);
+    await expect(page.locator('body')).toContainText(/High Experience/i);
+
+    // Click Add Role button
+    const addBtn = page.getByRole('button', { name: /Add Role|Add First Role/i }).first();
+    await expect(addBtn).toBeVisible();
+    await addBtn.click();
+
+    // Fill the Add Rate Card dialog
+    await expect(page.locator('body')).toContainText(/Add Rate Card Entry/i);
+    const roleInput = page.locator('#rcRoleName');
+    await roleInput.fill('Solution Architect');
+
+    // Fill low, medium, high rates
+    const rateInputs = page.locator('input[placeholder="0.00"]');
+    await rateInputs.nth(0).fill('1000');
+    await rateInputs.nth(1).fill('1500');
+    await rateInputs.nth(2).fill('2200');
+
+    // Save
+    const saveBtn = page.getByRole('button', { name: /Add Role|Save/i }).last();
+    await saveBtn.click();
+
+    // Verify row appears in the table
+    await expect(page.locator('body')).toContainText('Solution Architect', { timeout: 10000 });
+    await expect(page.locator('body')).toContainText('1,000.00');
+    await expect(page.locator('body')).toContainText('1,500.00');
+    await expect(page.locator('body')).toContainText('2,200.00');
+
+    // Edit the row
+    const editBtn = page.getByTitle('Edit Role Rate').first();
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
+
+    await expect(page.locator('body')).toContainText(/Edit Rate Card Entry/i);
+    const editHighRate = page.locator('input[placeholder="0.00"]').nth(2);
+    await editHighRate.fill('2500');
+    const updateBtn = page.getByRole('button', { name: /Save Changes/i });
+    await updateBtn.click();
+
+    await expect(page.locator('body')).toContainText('2,500.00', { timeout: 10000 });
+
+    // Delete the row
+    const deleteBtn = page.getByTitle('Delete Role Rate').first();
+    await expect(deleteBtn).toBeVisible();
+    await deleteBtn.click();
+
+    await expect(page.locator('body')).toContainText(/Delete Rate Card Entry\?/i);
+    const confirmDeleteBtn = page.getByRole('button', { name: /^Delete$/i });
+    await confirmDeleteBtn.click();
+
+    // Verify returns to empty state
+    await expect(page.locator('body')).toContainText(/Rate card is currently empty/i, { timeout: 10000 });
+  });
+
   test('TC-PORT-006: User Directory & Team Utilization views display employee allocations', async ({ page }) => {
     await page.goto('/users', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/User List|Employees|Email|Role/i);

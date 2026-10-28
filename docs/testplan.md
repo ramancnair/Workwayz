@@ -69,6 +69,7 @@ npm run test:e2e:install
 | **TC-PORT-009** | Portfolio administration & trash recovery | Archive and soft-delete recovery workflows | ✅ Automated |
 | **TC-PORT-010** | Browser back button state preservation | Restores active Billing tab and sidebar sub-navigation after navigating to project PMO | ✅ Automated |
 | **TC-PORT-011** | Billing Rate docked horizontal scrollbar | Wide tables show a horizontal scrollbar docked inside the viewport that scrolls the table sideways | ✅ Automated |
+| **TC-PORT-012** | Billing Rate Card reference tab | Displays standard tech & horizontal roles, empty initially, supports adding, editing, and deleting benchmark rates by experience tier | ✅ Automated |
 
 ### Pillar 3: Project Detail Hub (`e2e/03-project-details-and-estimations.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |
