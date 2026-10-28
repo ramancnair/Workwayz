@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { signInWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, query, where, getDocs, setRuntimeDbProvider } from '@/lib/db-provider';
 import { WorkwayzBackground } from './WorkwayzBackground';
-import { validateSession, USER_STORAGE_KEY, ACTIVITY_STORAGE_KEY } from '@/lib/session';
+import { validateSession, markBrowserSessionActive, USER_STORAGE_KEY, ACTIVITY_STORAGE_KEY } from '@/lib/session';
 
 export function WorkwayzLoginCard() {
   const router = useRouter();
@@ -25,6 +25,8 @@ export function WorkwayzLoginCard() {
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState('');
   const [setupNotice, setSetupNotice] = useState(false);
+  // Set once the user starts typing so a late session check never yanks them off the form.
+  const userInteractedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -43,7 +45,7 @@ export function WorkwayzLoginCard() {
   useEffect(() => {
     try {
       const { isValid } = validateSession(true);
-      if (isValid) {
+      if (isValid && !userInteractedRef.current) {
         const savedRoute = typeof window !== 'undefined' ? sessionStorage.getItem('workwayz_real_route') : null;
         const targetRoute = savedRoute && savedRoute !== '/' && savedRoute !== '/login' ? savedRoute : '/my-projects';
         router.replace(targetRoute);
@@ -136,7 +138,7 @@ export function WorkwayzLoginCard() {
         localStorage.setItem(ACTIVITY_STORAGE_KEY, loginTimestamp.toString());
 
         if (!rememberMe) {
-          document.cookie = 'projectflow_session_active=true; path=/';
+          markBrowserSessionActive();
         }
       } else {
         // Firebase Flow
@@ -188,7 +190,7 @@ export function WorkwayzLoginCard() {
         localStorage.setItem(ACTIVITY_STORAGE_KEY, loginTimestamp.toString());
 
         if (!rememberMe) {
-          document.cookie = 'projectflow_session_active=true; path=/';
+          markBrowserSessionActive();
         }
       }
 
@@ -275,7 +277,10 @@ export function WorkwayzLoginCard() {
               type="email"
               placeholder="m@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                userInteractedRef.current = true;
+                setEmail(e.target.value);
+              }}
               required
               className="bg-[#080f1a] border-slate-700/80 text-white placeholder:text-slate-500 h-11 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />
@@ -289,6 +294,9 @@ export function WorkwayzLoginCard() {
             <Input
               id="password"
               type="password"
+              onChange={() => {
+                userInteractedRef.current = true;
+              }}
               required
               className="bg-[#080f1a] border-slate-700/80 text-white h-11 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />

@@ -1,5 +1,6 @@
 'use client';
 
+import { markBrowserSessionActive } from '@/lib/session';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -107,9 +108,10 @@ export default function SignupPage() {
           uid: user.id,
           authProvider: 'supabase',
           issuedAt: now,
-          rememberMe: true,
+          rememberMe: false,
         }));
         localStorage.setItem('projectflow_last_activity', now.toString());
+        markBrowserSessionActive();
 
       } else {
         if (!auth || !db) {
@@ -154,9 +156,10 @@ export default function SignupPage() {
           uid: user.uid,
           authProvider: 'firebase',
           issuedAt: now,
-          rememberMe: true,
+          rememberMe: false,
         }));
         localStorage.setItem('projectflow_last_activity', now.toString());
+        markBrowserSessionActive();
       }
 
       toast({

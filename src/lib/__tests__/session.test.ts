@@ -89,6 +89,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should reject session when rememberMe is false and last activity exceeded 2 hours', () => {
+    (document as any).cookie = 'projectflow_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -105,6 +106,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should NOT reject fresh login even if rememberMe is false and last activity was missing or old', () => {
+    (document as any).cookie = 'projectflow_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -121,6 +123,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should refresh stale activity timestamp when session was issued recently (< 2h ago)', () => {
+    (document as any).cookie = 'projectflow_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -136,6 +139,60 @@ describe('Session Validation Utilities (session.ts)', () => {
     // Activity should have been updated to approximately now
     const updatedActivity = parseInt(mockStorage[ACTIVITY_STORAGE_KEY], 10);
     expect(updatedActivity).toBeGreaterThanOrEqual(now - 1000);
+  });
+
+  it('should reject a non-remembered session once the browser session cookie is gone (browser closed)', () => {
+    const now = Date.now();
+    mockStorage[USER_STORAGE_KEY] = JSON.stringify({
+      name: 'Raman',
+      email: 'ramanreadsmail@gmail.com',
+      uid: 'user-uid-123',
+      issuedAt: now - 5 * 60 * 1000, // 5 minutes ago, well inside TTL and inactivity window
+      rememberMe: false,
+    });
+    mockStorage[ACTIVITY_STORAGE_KEY] = now.toString();
+
+    const result = validateSession(true);
+    expect(result.isValid).toBe(false);
+    expect(result.reason).toBe('Browser session ended');
+    expect(mockStorage[USER_STORAGE_KEY]).toBeUndefined();
+  });
+
+  it('should treat a session without a rememberMe flag as non-remembered', () => {
+    const now = Date.now();
+    mockStorage[USER_STORAGE_KEY] = JSON.stringify({
+      name: 'Raman',
+      email: 'ramanreadsmail@gmail.com',
+      uid: 'user-uid-123',
+      issuedAt: now - 1000,
+    });
+
+    expect(validateSession(true).isValid).toBe(false);
+  });
+
+  it('should accept a non-remembered session while the browser session cookie exists', () => {
+    (document as any).cookie = 'projectflow_session_active=true';
+    mockStorage[USER_STORAGE_KEY] = JSON.stringify({
+      name: 'Raman',
+      email: 'ramanreadsmail@gmail.com',
+      uid: 'user-uid-123',
+      issuedAt: Date.now() - 1000,
+      rememberMe: false,
+    });
+
+    expect(validateSession(true).isValid).toBe(true);
+  });
+
+  it('should keep a remembered session valid without the browser session cookie', () => {
+    mockStorage[USER_STORAGE_KEY] = JSON.stringify({
+      name: 'Raman',
+      email: 'ramanreadsmail@gmail.com',
+      uid: 'user-uid-123',
+      issuedAt: Date.now() - 60 * 60 * 1000,
+      rememberMe: true,
+    });
+
+    expect(validateSession(true).isValid).toBe(true);
   });
 
   it('clearSession should remove storage keys and wipe cookie', () => {

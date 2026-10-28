@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { INACTIVITY_TIMEOUT_MS, ACTIVITY_STORAGE_KEY, USER_STORAGE_KEY, clearSession } from '@/lib/session';
+import { INACTIVITY_TIMEOUT_MS, ACTIVITY_STORAGE_KEY, USER_STORAGE_KEY, clearSession, isRememberedSession } from '@/lib/session';
 
 export function SessionManager() {
   const router = useRouter();
@@ -59,13 +59,13 @@ export function SessionManager() {
 
     try {
       const session = JSON.parse(userStr);
-      isRememberMe = session.rememberMe !== false;
+      isRememberMe = isRememberedSession(session);
       issuedAt = session.issuedAt || 0;
     } catch {
       // Ignore parse errors, AuthGuard handles invalid sessions
     }
 
-    // Only apply the 2-hour inactivity timeout if rememberMe is false
+    // Only apply the 2-hour inactivity timeout if rememberMe is not set
     if (isRememberMe) {
       return;
     }

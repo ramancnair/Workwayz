@@ -76,4 +76,48 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
       timeout: 15000,
     }).toBe(true);
   });
+
+  test('TC-AUTH-006: Non-remembered session does not auto-login after browser restart', async ({ page }) => {
+    // Stale session in localStorage but NO browser session cookie (browser was closed), remember me not checked
+    await page.context().clearCookies();
+    await page.addInitScript(() => {
+      localStorage.setItem('projectflow_user', JSON.stringify({
+        uid: 'admin-test-001',
+        empId: 'E100001',
+        name: 'Alex Vance',
+        email: 'admin@projectflow.demo',
+        accessLevel: 'Administrator',
+        issuedAt: Date.now() - 10 * 60 * 1000,
+        rememberMe: false,
+        authProvider: 'firebase',
+      }));
+    });
+
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await page.waitForTimeout(1500);
+    expect(page.url()).not.toContain('/my-projects');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('projectflow_user'))).toBeNull();
+  });
+
+  test('TC-AUTH-007: Remember-me session survives browser restart and skips the login form', async ({ page }) => {
+    await page.context().clearCookies();
+    await page.addInitScript(() => {
+      localStorage.setItem('projectflow_user', JSON.stringify({
+        uid: 'admin-test-001',
+        empId: 'E100001',
+        name: 'Alex Vance',
+        email: 'admin@projectflow.demo',
+        accessLevel: 'Administrator',
+        issuedAt: Date.now() - 10 * 60 * 1000,
+        rememberMe: true,
+        authProvider: 'firebase',
+      }));
+    });
+
+    await page.goto('/login');
+    await page.waitForURL('**/my-projects', { timeout: 15000 });
+    expect(page.url()).toContain('/my-projects');
+  });
 });

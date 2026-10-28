@@ -54,6 +54,8 @@ npm run test:e2e:install
 | **TC-AUTH-003** | AuthGuard intercepts unauthenticated visits | Direct navigation to `/my-projects` redirects to `/login` | ✅ Automated |
 | **TC-AUTH-004** | Injected administrator session bypass | `localStorage` session loads `/my-projects` immediately | ✅ Automated |
 | **TC-AUTH-005** | Role-based access control gating | Non-admin accounts restricted from `/portfolio-settings` | ✅ Automated |
+| **TC-AUTH-006** | Non-remembered session after browser restart | Stale session without browser session cookie is purged; `/login` form stays, no auto-login | ✅ Automated |
+| **TC-AUTH-007** | Remember-me session after browser restart | Session with `rememberMe: true` skips login and loads `/my-projects` | ✅ Automated |
 
 ### Pillar 2: Global Portfolio Workspace (`e2e/02-global-portfolio-workspace.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |
