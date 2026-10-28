@@ -89,7 +89,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should reject session when rememberMe is false and last activity exceeded 2 hours', () => {
-    (document as any).cookie = 'projectflow_session_active=true';
+    (document as any).cookie = 'workwayz_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -106,7 +106,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should NOT reject fresh login even if rememberMe is false and last activity was missing or old', () => {
-    (document as any).cookie = 'projectflow_session_active=true';
+    (document as any).cookie = 'workwayz_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -123,7 +123,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should refresh stale activity timestamp when session was issued recently (< 2h ago)', () => {
-    (document as any).cookie = 'projectflow_session_active=true';
+    (document as any).cookie = 'workwayz_session_active=true';
     const now = Date.now();
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
@@ -171,7 +171,7 @@ describe('Session Validation Utilities (session.ts)', () => {
   });
 
   it('should accept a non-remembered session while the browser session cookie exists', () => {
-    (document as any).cookie = 'projectflow_session_active=true';
+    (document as any).cookie = 'workwayz_session_active=true';
     mockStorage[USER_STORAGE_KEY] = JSON.stringify({
       name: 'Raman',
       email: 'ramanreadsmail@gmail.com',

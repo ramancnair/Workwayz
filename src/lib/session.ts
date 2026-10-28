@@ -7,7 +7,9 @@ export const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const INACTIVITY_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const USER_STORAGE_KEY = 'projectflow_user';
 export const ACTIVITY_STORAGE_KEY = 'projectflow_last_activity';
-export const SESSION_COOKIE_NAME = 'projectflow_session_active';
+export const SESSION_COOKIE_NAME = 'workwayz_session_active';
+/** Pre-rename cookie name; only cleaned up on logout so no stale cookie lingers. */
+const LEGACY_SESSION_COOKIE_NAME = 'projectflow_session_active';
 
 export interface UserSession {
   name: string;
@@ -153,5 +155,6 @@ export function clearSession(): void {
     localStorage.removeItem(ACTIVITY_STORAGE_KEY);
     sessionStorage.removeItem('workwayz_real_route');
     document.cookie = `${SESSION_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    document.cookie = `${LEGACY_SESSION_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   } catch {}
 }

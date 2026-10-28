@@ -48,7 +48,7 @@ export async function setupAuthenticatedWorkspace(
   // Set auth cookie
   await page.context().addCookies([
     {
-      name: 'projectflow_session_active',
+      name: 'workwayz_session_active',
       value: 'true',
       domain: 'localhost',
       path: '/',
@@ -61,7 +61,7 @@ export async function setupAuthenticatedWorkspace(
     localStorage.setItem('projectflow_remember_me', 'true');
     localStorage.setItem('pf_has_admin', 'true');
     localStorage.setItem('pf_admin_setup_done', 'true');
-    sessionStorage.setItem('projectflow_session_active', 'true');
+    sessionStorage.setItem('workwayz_session_active', 'true');
   }, sessionPayload);
 
   // Navigate to target URL

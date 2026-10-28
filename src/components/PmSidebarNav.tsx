@@ -151,7 +151,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       localStorage.removeItem('projectflow_user');
       localStorage.removeItem('projectflow_last_activity');
       sessionStorage.removeItem('workwayz_real_route');
-      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "workwayz_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
       if (sessionProvider === 'supabase') {
         try {
@@ -170,7 +170,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       localStorage.removeItem('projectflow_user');
       localStorage.removeItem('projectflow_last_activity');
       sessionStorage.removeItem('workwayz_real_route');
-      document.cookie = "projectflow_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "workwayz_session_active=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       window.location.href = '/';
     }
   };
