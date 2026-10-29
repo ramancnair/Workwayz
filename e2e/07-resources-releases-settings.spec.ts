@@ -12,10 +12,12 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     await expect(page.locator('body')).toContainText(/Resources|Allocation|Role|Member/i);
   });
 
-  test('TC-REL-001: Release Planning renders release timelines if project exists', async ({ page }) => {
+  test('TC-REL-001: Release Planning renders release timelines and sprint alignment switch', async ({ page }) => {
     const projectId = await getOrNavigateToProject(page);
     await page.goto(`/projects/${projectId}/releases/project-releases`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Release|Milestones|Target Date|Status/i);
+    await expect(page.getByLabel(/Show sprints aligned to release/i)).toBeVisible();
+    await page.getByLabel(/Show sprints aligned to release/i).click();
   });
 
   test('TC-ADM-001: User Profile and Messages views render personal details and single-column message list', async ({ page }) => {

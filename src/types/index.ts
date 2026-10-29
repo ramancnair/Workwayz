@@ -270,11 +270,13 @@ export type SprintStatus = 'Yet to Start' | 'Current' | 'Completed' | 'Cancelled
 
 export type Sprint = {
   id: string;
+  sprintId?: string;
   title: string;
   isCurrent: boolean; // DEPRECATED: Use status instead
   status?: SprintStatus;
   startDate?: string; // ISO String
   endDate?: string; // ISO String
+  releaseId?: string; // Aligned release ID
 };
 
 export type TestCaseStatus = 'Not Run' | 'Passed' | 'Failed' | 'Blocked' | 'Skipped';

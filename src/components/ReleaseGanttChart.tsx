@@ -1,10 +1,8 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
-import { type Release } from '@/types';
+import { type Release, type Sprint } from '@/types';
 import {
-  eachDayOfInterval,
   format,
   differenceInDays,
   parseISO,
@@ -12,8 +10,9 @@ import {
   endOfWeek,
   addDays,
 } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { CheckCircle, ChevronRight, Gem } from 'lucide-react';
+import { cn, getSprintDisplayId } from '@/lib/utils';
+import { CheckCircle, ChevronRight, Gem, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const COLORS = [
   '#6366F1', // Indigo
@@ -31,7 +30,15 @@ const useToday = () => {
     return todayRef;
 };
 
-export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] }) {
+export function ReleaseGanttChart({ 
+    releases: allItems,
+    sprints = [],
+    showSprints = false,
+}: { 
+    releases: Release[];
+    sprints?: Sprint[];
+    showSprints?: boolean;
+}) {
     const today = useToday();
     const [expandedReleases, setExpandedReleases] = useState<string[]>([]);
 
@@ -40,7 +47,14 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         const stages = allItems.filter(item => item.itemType === 'Stage' && item.startDate && item.endDate && item.parentReleaseId);
         const milestones = allItems.filter(item => item.itemType === 'Milestone' && item.milestoneDate && item.parentReleaseId);
         
-        const allDatedItems = [...releases, ...stages, ...milestones.map(m => ({...m, startDate: m.milestoneDate, endDate: m.milestoneDate}))];
+        const validSprints = (showSprints ? sprints : []).filter(s => s.startDate && s.endDate);
+
+        const allDatedItems = [
+            ...releases,
+            ...stages,
+            ...milestones.map(m => ({...m, startDate: m.milestoneDate, endDate: m.milestoneDate})),
+            ...(showSprints ? validSprints : []),
+        ];
         
         if (allDatedItems.length === 0) {
             return { chartData: [], dateInfo: null };
@@ -86,15 +100,33 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
 
         const todayOffset = differenceInDays(today, chartStartDate);
 
-        const releaseGroups = releases.map(release => ({
-            ...release,
-            stages: stages
-                .filter(s => s.parentReleaseId === release.id)
-                .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
-            milestones: milestones
-                .filter(m => m.parentReleaseId === release.id)
-                .sort((a, b) => parseISO(a.milestoneDate!).getTime() - parseISO(b.milestoneDate!).getTime()),
-        })).sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
+        const releaseGroups = releases.map(release => {
+            const rStart = parseISO(release.startDate!).getTime();
+            const rEnd = parseISO(release.endDate!).getTime();
+
+            const alignedSprints = showSprints
+                ? sprints.filter(s => {
+                    if (!s.startDate || !s.endDate) return false;
+                    // Explicit releaseId alignment
+                    if (s.releaseId) return s.releaseId === release.id;
+                    // Fallback date containment/overlap alignment
+                    const sStart = parseISO(s.startDate).getTime();
+                    const sEnd = parseISO(s.endDate).getTime();
+                    return (sStart >= rStart && sEnd <= rEnd) || (sStart <= rEnd && sEnd >= rStart);
+                }).sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime())
+                : [];
+
+            return {
+                ...release,
+                stages: stages
+                    .filter(s => s.parentReleaseId === release.id)
+                    .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
+                milestones: milestones
+                    .filter(m => m.parentReleaseId === release.id)
+                    .sort((a, b) => parseISO(a.milestoneDate!).getTime() - parseISO(b.milestoneDate!).getTime()),
+                sprints: alignedSprints,
+            };
+        }).sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
         
         return {
             chartData: releaseGroups,
@@ -108,7 +140,7 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                 isTodayVisible: today >= chartStartDate && today <= chartEndDate,
             },
         };
-    }, [allItems, today]);
+    }, [allItems, sprints, showSprints, today]);
 
     const toggleRelease = (releaseId: string) => {
         setExpandedReleases(prev => 
@@ -117,7 +149,6 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                 : [...prev, releaseId]
         );
     };
-
 
     if (!dateInfo) {
         return <p className="text-muted-foreground text-center py-8">No releases with dates found to display in the timeline.</p>;
@@ -189,6 +220,23 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                         <span>{milestone.name}</span>
                                         </div>
                                     ))}
+                                    {showSprints && release.sprints.map(sprint => (
+                                        <div 
+                                            key={sprint.id} 
+                                            className="h-8 flex items-center text-xs pl-4 gap-1.5"
+                                            title={`Sprint: ${sprint.title} (${sprint.status || 'Planned'})`}
+                                        >
+                                            {sprint.status === 'Completed' ? (
+                                                <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                            ) : (
+                                                <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                            )}
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-amber-500/50 text-amber-400 bg-amber-500/10 shrink-0 font-mono">
+                                                {getSprintDisplayId(sprint)}
+                                            </Badge>
+                                            <span className="truncate">{sprint.title}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -251,6 +299,21 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
                                                  </div>
                                             </div>
                                         ))}
+                                        {showSprints && release.sprints.map((sprint) => (
+                                            <div key={sprint.id} className="relative h-8 flex items-center">
+                                                <div 
+                                                    className="absolute h-6 top-1 rounded-md flex items-center px-2 text-white font-semibold text-xs bg-amber-600/90 hover:bg-amber-500 border border-amber-400/50 shadow-sm transition-colors"
+                                                    style={{
+                                                        left: `${getOffset(sprint.startDate!)}%`,
+                                                        width: `${getWidth(sprint.startDate!, sprint.endDate!)}%`,
+                                                    }}
+                                                    title={`${getSprintDisplayId(sprint)}: ${sprint.title} (${sprint.status || 'Planned'}) - ${format(parseISO(sprint.startDate!), 'MMM d')} to ${format(parseISO(sprint.endDate!), 'MMM d')}`}
+                                                >
+                                                    <span className="truncate font-mono mr-1">[{getSprintDisplayId(sprint)}]</span>
+                                                    <span className="truncate">{sprint.title}</span>
+                                                </div>
+                                            </div>
+                                        ))}
                                         </div>
                                     )}
                                 </div>
@@ -262,4 +325,3 @@ export function ReleaseGanttChart({ releases: allItems }: { releases: Release[] 
         </div>
     );
 }
-

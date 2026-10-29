@@ -66,6 +66,7 @@ const sprintSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   status: z.enum(['Yet to Start', 'Current', 'Completed', 'Cancelled']).optional(),
+  releaseId: z.string().optional(),
 });
 
 const workItemIcons: Record<WorkItemType, React.ElementType> = {
@@ -719,6 +720,7 @@ export default function GroomingPage() {
             startDate: '',
             endDate: '',
             status: 'Yet to Start',
+            releaseId: 'none',
         },
     });
     
@@ -794,6 +796,7 @@ export default function GroomingPage() {
                     startDate: editingSprint.startDate ? format(parseISO(editingSprint.startDate), 'yyyy-MM-dd') : '',
                     endDate: editingSprint.endDate ? format(parseISO(editingSprint.endDate), 'yyyy-MM-dd') : '',
                     status: editingSprint.status || 'Yet to Start',
+                    releaseId: editingSprint.releaseId || 'none',
                 });
             } else {
                 sprintForm.reset({
@@ -801,6 +804,7 @@ export default function GroomingPage() {
                     startDate: '',
                     endDate: '',
                     status: 'Yet to Start',
+                    releaseId: 'none',
                 });
             }
         }
@@ -972,6 +976,7 @@ export default function GroomingPage() {
             startDate: values.startDate ? new Date(values.startDate) : undefined,
             endDate: values.endDate ? new Date(values.endDate) : undefined,
             status: values.status as SprintStatus | undefined,
+            releaseId: values.releaseId && values.releaseId !== 'none' ? values.releaseId : null,
         };
         const success = editingSprint
             ? await updateSprint(editingSprint.id, payload)
@@ -1289,6 +1294,27 @@ export default function GroomingPage() {
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                     {sprintStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={sprintForm.control}
+                            name="releaseId"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Aligned Release (Optional)</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a release" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="none">None (Unassigned)</SelectItem>
+                                    {releases.map(r => (
+                                        <SelectItem key={r.id} value={r.id}>
+                                            [{r.releaseId}] {r.name}
+                                        </SelectItem>
+                                    ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

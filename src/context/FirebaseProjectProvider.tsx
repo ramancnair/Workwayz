@@ -124,7 +124,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/project-details/fp-pm-dash': ['stories', 'epics', 'sprints', 'employees', 'allUsers', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'releases', 'paymentMilestones', 'worklogs', 'impactedSystems', 'documents', 'weeklyOffDays', 'holidays', 'projectSettings', 'fixedCosts'],
   '/project-details/specifications': ['environments', 'impactedSystems', 'horizontals'],
   '/initial-estimation/specifications': ['initialImpactedSystems', 'initialHorizontals'],
-  '/releases/project-releases': ['releases'],
+  '/releases/project-releases': ['releases', 'sprints'],
   '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
   '/resources/resource-workload': ['employees', 'worklogs', 'stories', 'holidays', 'weeklyOffDays'],
   '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays', 'weeklyOffDays'],
@@ -1176,7 +1176,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   };
 
   // Sprint Actions
-  const addSprint = async (sprint: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
+  const addSprint = async (sprint: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus, releaseId?: string }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const isDuplicate = sprints.some(s => s.title.trim().toLowerCase() === sprint.title.trim().toLowerCase());
@@ -1189,6 +1189,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       const payload: any = { sprintId, title: sprint.title, status: sprint.status || 'Yet to Start', isCurrent: sprint.status === 'Current' };
       if (sprint.startDate) payload.startDate = Timestamp.fromDate(sprint.startDate);
       if (sprint.endDate) payload.endDate = Timestamp.fromDate(sprint.endDate);
+      if (sprint.releaseId !== undefined) payload.releaseId = sprint.releaseId || null;
 
       const batch = writeBatch(db);
 
@@ -1213,7 +1214,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     }
   };
 
-  const updateSprint = async (sprintId: string, data: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus }): Promise<boolean> => {
+  const updateSprint = async (sprintId: string, data: { sprintId?: string, title: string, startDate?: Date, endDate?: Date, status?: SprintStatus, releaseId?: string | null }): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
       const isDuplicate = sprints.some(s => s.id !== sprintId && s.title.trim().toLowerCase() === data.title.trim().toLowerCase());
@@ -1226,6 +1227,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       if (data.sprintId) payload.sprintId = data.sprintId;
       payload.startDate = data.startDate ? Timestamp.fromDate(data.startDate) : null;
       payload.endDate = data.endDate ? Timestamp.fromDate(data.endDate) : null;
+      if (data.releaseId !== undefined) payload.releaseId = data.releaseId || null;
 
       const batch = writeBatch(db);
       const sprintRef = doc(db, 'projects', projectId, 'sprints', sprintId);

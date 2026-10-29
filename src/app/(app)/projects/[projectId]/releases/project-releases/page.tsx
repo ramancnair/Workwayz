@@ -37,8 +37,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle } from 'lucide-react';
-import { type Release, type ReleaseItemType } from '@/types';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, X, CheckCircle, Zap } from 'lucide-react';
+import { type Release, type ReleaseItemType, type Sprint } from '@/types';
+import { Label } from '@/components/ui/label';
+import { getSprintDisplayId } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -78,13 +80,17 @@ function SortableHeader({
 }
 
 export default function ReleasesPage() {
-  const { project, releasesAndMilestones, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone } = useProject();
+  const { project, releasesAndMilestones, sprints, addReleaseOrMilestone, updateReleaseOrMilestone, deleteReleaseOrMilestone, updateSprint } = useProject();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Release | null>(null);
   const [deletingItem, setDeletingItem] = useState<Release | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ReleaseItemType>('Release');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [showSprints, setShowSprints] = useState(false);
+  const [editingSprintRelease, setEditingSprintRelease] = useState<Sprint | null>(null);
+  const [selectedSprintReleaseId, setSelectedSprintReleaseId] = useState<string>('none');
 
   const [filters, setFilters] = useState({ search: '', itemType: 'all', parentReleaseId: 'all' });
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
@@ -244,7 +250,43 @@ export default function ReleasesPage() {
   };
 
   const filteredAndSortedItems = useMemo(() => {
-    let filtered = [...releasesAndMilestones];
+    let itemsToProcess: Array<Release & { originalSprint?: Sprint }> = [...releasesAndMilestones];
+
+    if (showSprints) {
+      sprints.forEach((sprint) => {
+        let parentReleaseId = sprint.releaseId;
+        if (!parentReleaseId && sprint.startDate && sprint.endDate) {
+          const sStart = parseISO(sprint.startDate).getTime();
+          const sEnd = parseISO(sprint.endDate).getTime();
+          const matched = releases.find((r) => {
+            if (!r.startDate || !r.endDate) return false;
+            const rStart = parseISO(r.startDate).getTime();
+            const rEnd = parseISO(r.endDate).getTime();
+            return (sStart >= rStart && sEnd <= rEnd) || (sStart <= rEnd && sEnd >= rStart);
+          });
+          if (matched) {
+            parentReleaseId = matched.id;
+          }
+        }
+
+        if (parentReleaseId) {
+          itemsToProcess.push({
+            id: sprint.id,
+            releaseId: getSprintDisplayId(sprint),
+            name: sprint.title,
+            description: `Sprint (${sprint.status || 'Planned'})`,
+            itemType: 'Sprint' as any,
+            parentReleaseId,
+            startDate: sprint.startDate,
+            endDate: sprint.endDate,
+            isCompleted: sprint.status === 'Completed',
+            originalSprint: sprint,
+          });
+        }
+      });
+    }
+
+    let filtered = itemsToProcess;
     const searchTerm = filters.search.toLowerCase();
 
     if (searchTerm) {
@@ -295,7 +337,7 @@ export default function ReleasesPage() {
     }
 
     return filtered;
-  }, [releasesAndMilestones, filters, sorting, getParentReleaseName]);
+  }, [releasesAndMilestones, showSprints, sprints, releases, filters, sorting, getParentReleaseName]);
 
   const handleDialogOpen = (item: Release | null, type: ReleaseItemType) => {
     setEditingItem(item);
@@ -360,11 +402,25 @@ export default function ReleasesPage() {
         </PageHeader>
         
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle>Release Timeline</CardTitle>
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="show-sprints-switch"
+                        checked={showSprints}
+                        onCheckedChange={setShowSprints}
+                    />
+                    <Label htmlFor="show-sprints-switch" className="text-sm font-medium cursor-pointer select-none">
+                        Show sprints aligned to release
+                    </Label>
+                </div>
             </CardHeader>
             <CardContent>
-                <ReleaseGanttChart releases={releasesAndMilestones} />
+                <ReleaseGanttChart
+                    releases={releasesAndMilestones}
+                    sprints={sprints}
+                    showSprints={showSprints}
+                />
             </CardContent>
         </Card>
 
@@ -384,6 +440,7 @@ export default function ReleasesPage() {
                         <SelectItem value="Release">Release</SelectItem>
                         <SelectItem value="Stage">Stage</SelectItem>
                         <SelectItem value="Milestone">Milestone</SelectItem>
+                        {showSprints && <SelectItem value="Sprint">Sprint</SelectItem>}
                     </SelectContent>
                 </Select>
                  <Select value={filters.parentReleaseId} onValueChange={(v) => handleFilterChange('parentReleaseId', v)}>
@@ -411,45 +468,90 @@ export default function ReleasesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAndSortedItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <Badge variant={item.itemType === 'Release' ? 'default' : (item.itemType === 'Stage' ? 'secondary' : 'outline')}>
+              {filteredAndSortedItems.map((item) => {
+                const isSprint = (item.itemType as string) === 'Sprint';
+                return (
+                  <TableRow key={item.id} className={cn(isSprint && "bg-amber-500/[0.03] hover:bg-amber-500/[0.08]")}>
+                    <TableCell className="font-medium">
+                      <Badge
+                        variant={
+                          item.itemType === 'Release'
+                            ? 'default'
+                            : item.itemType === 'Stage'
+                            ? 'secondary'
+                            : isSprint
+                            ? 'outline'
+                            : 'outline'
+                        }
+                        className={cn(
+                          isSprint && "border-amber-500/50 text-amber-400 bg-amber-500/10 font-mono"
+                        )}
+                      >
                         {item.releaseId}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.name}
-                  </TableCell>
-                  <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
-                  <TableCell>
-                    {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
-                        ? format(new Date(item.milestoneDate), 'PPP')
-                        : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
-                  </TableCell>
-                  <TableCell>
-                    {item.itemType === 'Milestone'
-                        ? 'N/A'
-                        : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                        checked={item.isCompleted}
-                        onCheckedChange={(checked) => updateReleaseOrMilestone(item.id, { isCompleted: checked })}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {isSprint && <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                        <span className={cn(isSprint && "font-medium text-amber-200")}>{item.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone' || isSprint) ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
+                          ? format(new Date(item.milestoneDate), 'PPP')
+                          : (item.startDate && !isNaN(new Date(item.startDate).getTime()) ? format(new Date(item.startDate), 'PPP') : 'N/A')}
+                    </TableCell>
+                    <TableCell>
+                      {item.itemType === 'Milestone'
+                          ? 'N/A'
+                          : (item.endDate && !isNaN(new Date(item.endDate).getTime()) ? format(new Date(item.endDate), 'PPP') : 'N/A')}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                          checked={item.isCompleted}
+                          onCheckedChange={async (checked) => {
+                            if (isSprint) {
+                              await updateSprint(item.id, {
+                                title: item.name,
+                                status: checked ? 'Completed' : 'Yet to Start',
+                              });
+                              toast({ title: 'Success', description: `Sprint ${item.name} marked as ${checked ? 'Completed' : 'active'}.` });
+                            } else {
+                              await updateReleaseOrMilestone(item.id, { isCompleted: checked });
+                            }
+                          }}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {isSprint ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Align Release"
+                            onClick={() => {
+                              setEditingSprintRelease((item as any).originalSprint);
+                              setSelectedSprintReleaseId(item.parentReleaseId || 'none');
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(item, item.itemType)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeletingItem(item)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </Card>
@@ -591,6 +693,58 @@ export default function ReleasesPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingSprintRelease} onOpenChange={(open) => !open && setEditingSprintRelease(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Align Sprint to Release</DialogTitle>
+            <DialogDescription>
+              Assign <strong>{editingSprintRelease?.title}</strong> to a specific project release.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sprint-release-select">Parent Release</Label>
+              <Select
+                value={selectedSprintReleaseId}
+                onValueChange={setSelectedSprintReleaseId}
+              >
+                <SelectTrigger id="sprint-release-select">
+                  <SelectValue placeholder="Select a release" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Auto-align by dates / None</SelectItem>
+                  {releases.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      [{r.releaseId}] {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSprintRelease(null)}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                if (!editingSprintRelease) return;
+                const success = await updateSprint(editingSprintRelease.id, {
+                  title: editingSprintRelease.title,
+                  releaseId: selectedSprintReleaseId === 'none' ? null : selectedSprintReleaseId,
+                });
+                if (success) {
+                  toast({ title: 'Success', description: 'Sprint release alignment updated.' });
+                  setEditingSprintRelease(null);
+                } else {
+                  toast({ variant: 'destructive', title: 'Error', description: 'Failed to update sprint alignment.' });
+                }
+              }}
+            >
+              Save Alignment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       
