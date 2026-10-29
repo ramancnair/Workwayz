@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Circle } from 'lucide-react';
+import { Edit, Circle, CheckCircle2, AlertCircle } from 'lucide-react';
 
 
 const ragStatuses = ['Green', 'Amber', 'Red'] as const;
@@ -86,6 +86,21 @@ export default function ProjectSynopsisPage() {
             });
         }
     }, [project, form, isDialogOpen]);
+
+    const permitToBuildApproved = !!project?.pmoApproval?.permitToBuild?.approved;
+    const permitToBuildAt = project?.pmoApproval?.permitToBuild?.approvedAt;
+
+    const permitToDeployApproved = !!project?.pmoApproval?.permitToDeploy?.approved;
+    const permitToDeployAt = project?.pmoApproval?.permitToDeploy?.approvedAt;
+
+    const formatApprovedDate = (dateStr?: string) => {
+        if (!dateStr) return null;
+        try {
+            return format(new Date(dateStr), 'PPP');
+        } catch {
+            return null;
+        }
+    };
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
@@ -195,6 +210,64 @@ export default function ProjectSynopsisPage() {
                             </CardContent>
                         </Card>
                     )}
+
+                    <Card data-testid="pmo-status-card">
+                        <CardHeader>
+                            <CardTitle>PMO</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <DetailCard 
+                                title="Permit to Build" 
+                                value={
+                                    <div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {permitToBuildApproved ? (
+                                                <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 w-fit">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    Approved
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 w-fit">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    Pending
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        {permitToBuildApproved && permitToBuildAt && (
+                                            <p className="text-xs text-muted-foreground font-normal mt-1">
+                                                {formatApprovedDate(permitToBuildAt)}
+                                            </p>
+                                        )}
+                                    </div>
+                                }
+                            />
+                            <DetailCard 
+                                title="Permit to Deploy" 
+                                value={
+                                    <div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {permitToDeployApproved ? (
+                                                <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 w-fit">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    Approved
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5 w-fit">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    Pending
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        {permitToDeployApproved && permitToDeployAt && (
+                                            <p className="text-xs text-muted-foreground font-normal mt-1">
+                                                {formatApprovedDate(permitToDeployAt)}
+                                            </p>
+                                        )}
+                                    </div>
+                                }
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
                 
                 <DialogContent className="sm:max-w-3xl">
