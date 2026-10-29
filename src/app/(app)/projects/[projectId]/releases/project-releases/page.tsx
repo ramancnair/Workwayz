@@ -254,22 +254,9 @@ export default function ReleasesPage() {
 
     if (showSprints) {
       sprints.forEach((sprint) => {
-        let parentReleaseId = sprint.releaseId;
-        if (!parentReleaseId && sprint.startDate && sprint.endDate) {
-          const sStart = parseISO(sprint.startDate).getTime();
-          const sEnd = parseISO(sprint.endDate).getTime();
-          const matched = releases.find((r) => {
-            if (!r.startDate || !r.endDate) return false;
-            const rStart = parseISO(r.startDate).getTime();
-            const rEnd = parseISO(r.endDate).getTime();
-            return (sStart >= rStart && sEnd <= rEnd) || (sStart <= rEnd && sEnd >= rStart);
-          });
-          if (matched) {
-            parentReleaseId = matched.id;
-          }
-        }
-
-        if (parentReleaseId) {
+        const parentReleaseId = sprint.releaseId;
+        // Strict explicit alignment only: sprint must have a releaseId matching an existing release
+        if (parentReleaseId && releases.some(r => r.id === parentReleaseId)) {
           itemsToProcess.push({
             id: sprint.id,
             releaseId: getSprintDisplayId(sprint),

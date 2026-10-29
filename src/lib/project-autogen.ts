@@ -367,6 +367,8 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     });
   });
 
+  const releaseRef = doc(col('releases'));
+
   // ── 8. Sprints (Sprint 1 Completed, Sprint 2 Current/Active, Sprint 3 Planned) ─────────────
   const sprintDefs = [
     { title: 'Sprint 1', start: sprint1Start, end: sprint1End },
@@ -401,6 +403,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       status,
       startDate: Timestamp.fromDate(s.start),
       endDate: Timestamp.fromDate(s.end),
+      releaseId: releaseRef.id,
     });
 
     sprintRefs.push({
@@ -491,7 +494,6 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   };
 
   const storyRefObjs: { id: string; storyId: string; sprintId: string }[] = [];
-  const releaseRef = doc(col('releases'));
 
   // 10a. Stories & Subtasks
   storyTitles.forEach((title, i) => {

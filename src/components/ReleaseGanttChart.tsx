@@ -107,12 +107,8 @@ export function ReleaseGanttChart({
             const alignedSprints = showSprints
                 ? sprints.filter(s => {
                     if (!s.startDate || !s.endDate) return false;
-                    // Explicit releaseId alignment
-                    if (s.releaseId) return s.releaseId === release.id;
-                    // Fallback date containment/overlap alignment
-                    const sStart = parseISO(s.startDate).getTime();
-                    const sEnd = parseISO(s.endDate).getTime();
-                    return (sStart >= rStart && sEnd <= rEnd) || (sStart <= rEnd && sEnd >= rStart);
+                    // Strict explicit releaseId alignment only
+                    return s.releaseId === release.id;
                 }).sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime())
                 : [];
 
