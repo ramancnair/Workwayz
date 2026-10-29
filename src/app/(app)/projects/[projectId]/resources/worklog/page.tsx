@@ -224,11 +224,15 @@ export default function WorklogPage() {
   }, [weekDays, dailyHoursMap]);
 
   const weeklyRequiredHours = useMemo(() => {
-    const offDays = weeklyOffDays || [];
+    const offDays = weeklyOffDays || [0, 6];
     const hList = holidays || [];
     const workingDaysCount = weekDays.filter((day) => {
+      const dateString = format(day, 'yyyy-MM-dd');
       const isWeekend = offDays.includes(day.getDay());
-      const isHoliday = hList.some((h) => isSameDay(new Date(h.date), day));
+      const isHoliday = hList.some((h) => {
+        const hKey = normalizeDateKey(h.date);
+        return (hKey && hKey === dateString) || (h.date && isSameDay(new Date(h.date), day));
+      });
       return !isWeekend && !isHoliday;
     }).length;
     return workingDaysCount * 8;
@@ -575,18 +579,45 @@ export default function WorklogPage() {
                 {weekDays.map((day) => {
                   const dateKey = format(day, 'yyyy-MM-dd');
                   const hours = dailyHoursMap[dateKey] || 0;
+                  const holiday = (holidays || []).find((h) => {
+                    const hKey = normalizeDateKey(h.date);
+                    return (hKey && hKey === dateKey) || (h.date && isSameDay(new Date(h.date), day));
+                  });
+                  const isSelected = isSameDay(day, selectedDate);
+
                   return (
                     <Button
                       key={day.toISOString()}
-                      variant={isSameDay(day, selectedDate) ? 'default' : 'outline'}
+                      variant={isSelected ? 'default' : 'outline'}
                       onClick={() => setSelectedDate(day)}
-                      className="flex flex-col h-auto p-2"
+                      title={holiday ? `${holiday.description || 'Public Holiday'} (Holiday)` : undefined}
+                      className={cn(
+                        "flex flex-col h-auto p-2 relative transition-all",
+                        holiday && !isSelected && "border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-500",
+                        holiday && isSelected && "ring-2 ring-amber-400 border-amber-400 bg-amber-600 text-white hover:bg-amber-700 shadow-md"
+                      )}
                     >
-                      <span className="text-xs">{format(day, 'EEE')}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs">{format(day, 'EEE')}</span>
+                        {holiday && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        )}
+                      </div>
                       <span className="text-lg font-bold">{format(day, 'd')}</span>
-                      <span className="text-xs text-muted-foreground font-semibold">
+                      <span className={cn(
+                        "text-xs font-semibold",
+                        holiday ? (isSelected ? "text-amber-100" : "text-amber-400") : "text-muted-foreground"
+                      )}>
                         {hours.toFixed(1)}h
                       </span>
+                      {holiday && (
+                        <span className={cn(
+                          "text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded mt-0.5 leading-none",
+                          isSelected ? "bg-amber-950/70 text-amber-200" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        )}>
+                          Holiday
+                        </span>
+                      )}
                     </Button>
                   );
                 })}
@@ -711,7 +742,7 @@ export default function WorklogPage() {
                   </div>
                   <div className="flex items-center gap-6 text-right">
                     <div>
-                      <span className="text-xs text-muted-foreground block">Weekly Required Hours</span>
+                      <span className="text-xs text-muted-foreground block">Hours required for this week</span>
                       <span className="text-base font-bold text-foreground">
                         {weeklyRequiredHours.toFixed(1)} hrs
                       </span>
