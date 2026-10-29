@@ -92,7 +92,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const showOnlyMyProjects = isEnabled === false;
 
   const getTabValue = () => {
-    if (effectivePath.startsWith('/my-projects') || effectivePath.startsWith('/holidays/leave-tracker') || effectivePath.startsWith('/messages')) return 'my-projects';
+    if (effectivePath.startsWith('/my-projects') || effectivePath.startsWith('/worklog') || effectivePath.startsWith('/holidays/leave-tracker') || effectivePath.startsWith('/messages')) return 'my-projects';
     if (effectivePath.startsWith('/project-home')) return 'projects';
     if (effectivePath.startsWith('/portfolio-dashboard')) return 'projects';
     if (effectivePath.startsWith('/fp-portfolio-dash') || effectivePath.startsWith('/fp-dashboard')) return 'projects';

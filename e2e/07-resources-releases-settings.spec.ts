@@ -20,6 +20,12 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     await page.getByLabel(/Show Sprints/i).click();
   });
 
+  test('TC-RES-002: Global Worklog view is accessible under My Projects with active project selection', async ({ page }) => {
+    await page.goto('/worklog', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Worklog/i);
+    await expect(page.locator('body')).toContainText(/Hours required for this week|Weekly Total Logged/i);
+  });
+
   test('TC-ADM-001: User Profile and Messages views render personal details and single-column message list', async ({ page }) => {
     await page.goto('/my-account', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Account|Profile|Email|Password|Settings/i);

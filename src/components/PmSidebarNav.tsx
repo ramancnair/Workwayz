@@ -194,6 +194,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'my-projects'
     },
     {
+      id: 'worklog',
+      href: '/worklog',
+      label: 'Worklog',
+      icon: ClipboardList,
+      group: 'my-projects'
+    },
+    {
       id: 'leave-tracker',
       href: `/holidays/leave-tracker`,
       label: "Leave Tracker",
@@ -378,7 +385,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const activeGroup = getGroupForTab(activeTab);
   const menuItems = allMenuItems
     .filter(item => item.group === activeGroup)
-    .filter(item => item.label === 'My Projects' || item.label === 'Account Settings' || item.label === 'Messages' || hasAccess(item.label));
+    .filter(item => item.label === 'My Projects' || item.label === 'Worklog' || item.label === 'Leave Tracker' || item.label === 'Account Settings' || item.label === 'Messages' || hasAccess(item.label));
 
   const isItemActive = (href: string) => {
     if (!href || href === '#') return false;

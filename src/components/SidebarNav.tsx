@@ -275,11 +275,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Project Resources",
       icon: Users,
     },
-    {
-      href: `${basePath}/resources/worklog`,
-      label: "Worklog",
-      icon: ClipboardList,
-    },
+
     {
       href: `${basePath}/resources/resource-workload`,
       label: "Resource Workload",

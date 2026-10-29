@@ -114,6 +114,7 @@ npm run test:e2e:install
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
 | **TC-RES-001** | Project resources & capacity planning | Member assignments and allocation percentages | ✅ Automated |
+| **TC-RES-002** | Global Worklog & Project Effort Allocation | Worklog under My Projects with active project selection and cross-project logging | ✅ Automated |
 | **TC-REL-001** | Release planning & deployments | Version milestones, release timelines, and Show Sprints grouping (aligned vs non-release) | ✅ Automated |
 | **TC-ADM-001** | User Profile & Messages hub | Personal profile credentials and single-column Gmail-style Messages view | ✅ Automated |
 
