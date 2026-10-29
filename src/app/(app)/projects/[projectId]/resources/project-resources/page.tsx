@@ -49,7 +49,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Popover,
@@ -365,44 +365,71 @@ function ResourceDialog({
               name="capabilities"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Capability</FormLabel>
+                  <FormLabel>Capabilities</FormLabel>
                   <Card>
                     <CardContent className="p-4 space-y-4 max-h-48 overflow-y-auto">
-                      <RadioGroup
-                        value={field.value?.[0] || "none"}
-                        onValueChange={(val) => {
-                          field.onChange(val === "none" ? [] : [val]);
-                        }}
-                      >
-                        <div className="flex flex-row items-center space-x-3 space-y-0 pb-2 border-b border-border mb-3">
-                          <RadioGroupItem value="none" id="capability-none" />
-                          <Label htmlFor="capability-none" className="font-normal text-muted-foreground cursor-pointer">None / Unassigned</Label>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
+                        <div className="space-y-2">
+                          {impactedSystems.map((system) => {
+                            const isChecked = Boolean(
+                              field.value?.some((id) => id === system.id || id === system.name)
+                            );
+                            return (
+                              <div key={system.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                <Checkbox
+                                  id={`cap-sys-${system.id}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    const next = checked
+                                      ? [...current.filter((id) => id !== system.id && id !== system.name), system.id]
+                                      : current.filter((id) => id !== system.id && id !== system.name);
+                                    field.onChange(next);
+                                  }}
+                                />
+                                <Label htmlFor={`cap-sys-${system.id}`} className="font-normal cursor-pointer">
+                                  {system.name}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                          {impactedSystems.length === 0 && (
+                            <p className="text-xs text-muted-foreground">No impacted systems configured.</p>
+                          )}
                         </div>
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
-                            <div className="space-y-2">
-                              {impactedSystems.map((system) => (
-                                <div key={system.id} className="flex flex-row items-center space-x-3 space-y-0">
-                                  <RadioGroupItem value={system.id} id={system.id} />
-                                  <Label htmlFor={system.id} className="font-normal cursor-pointer">{system.name}</Label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
-                            <div className="space-y-2">
-                              {horizontals.map((horizontal) => (
-                                <div key={horizontal.id} className="flex flex-row items-center space-x-3 space-y-0">
-                                  <RadioGroupItem value={horizontal.id} id={horizontal.id} />
-                                  <Label htmlFor={horizontal.id} className="font-normal cursor-pointer">{horizontal.name}</Label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
+                        <div className="space-y-2">
+                          {horizontals.map((horizontal) => {
+                            const isChecked = Boolean(
+                              field.value?.some((id) => id === horizontal.id || id === horizontal.name)
+                            );
+                            return (
+                              <div key={horizontal.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                <Checkbox
+                                  id={`cap-horiz-${horizontal.id}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    const next = checked
+                                      ? [...current.filter((id) => id !== horizontal.id && id !== horizontal.name), horizontal.id]
+                                      : current.filter((id) => id !== horizontal.id && id !== horizontal.name);
+                                    field.onChange(next);
+                                  }}
+                                />
+                                <Label htmlFor={`cap-horiz-${horizontal.id}`} className="font-normal cursor-pointer">
+                                  {horizontal.name}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                          {horizontals.length === 0 && (
+                            <p className="text-xs text-muted-foreground">No horizontals configured.</p>
+                          )}
                         </div>
-                      </RadioGroup>
+                      </div>
                     </CardContent>
                   </Card>
                   <FormMessage />
@@ -563,7 +590,7 @@ function CapacityPlanning() {
     if (!periodStart || !periodEnd) return [];
 
     return impactedSystems.map(system => {
-      const resourcesForSystem = employees.filter(emp => emp.capabilities?.includes(system.id));
+      const resourcesForSystem = employees.filter(emp => emp.capabilities?.some(c => c === system.id || c === system.name));
 
       let totalCapacityHours = 0;
       resourcesForSystem.forEach(emp => {
@@ -786,7 +813,7 @@ export default function ResourcesPage() {
                       <div className="flex flex-wrap gap-1">
                         {user.capabilities && user.capabilities.length > 0
                           ? user.capabilities.map(capId => {
-                            const capability = allCapabilities.find(s => s.id === capId);
+                            const capability = allCapabilities.find(s => s.id === capId || s.name === capId);
                             return capability ? <Badge key={capId} variant="secondary">{capability.name}</Badge> : null;
                           })
                           : 'N/A'
