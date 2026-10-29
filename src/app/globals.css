@@ -2,7 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
 body {
+  height: 100%;
   font-family: var(--font-body-family), sans-serif;
 }
 

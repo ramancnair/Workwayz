@@ -208,8 +208,8 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
     return (
       <>
-        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4 overflow-hidden shrink-0">
-          <div className="overflow-x-auto max-w-full py-1 -my-1 shrink-0">
+        <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center justify-between gap-4 overflow-hidden shrink-0 z-10">
+          <div className="overflow-x-auto max-w-full py-1 -my-1 min-w-0 flex-1">
             <TooltipProvider delayDuration={150}>
               <Tabs value={activeTab} onValueChange={onTabChange} className="w-auto">
                 <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 flex whitespace-nowrap w-max">
@@ -333,7 +333,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
             <p className="text-xs text-muted-foreground font-mono">{project?.id}</p>
           </div>
         </div>
-        <div className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
           {isAllowed ? children : <div className="flex h-full w-full items-center justify-center text-muted-foreground">Redirecting...</div>}
         </div>
       </>
@@ -342,12 +342,12 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
 
   return (
-    <SidebarProvider open={open} onOpenChange={setOpen}>
+    <SidebarProvider open={open} onOpenChange={setOpen} className="h-screen max-h-screen overflow-hidden w-full max-w-full">
       <Sidebar collapsible="icon">
         <SidebarNav projectId={projectId} />
       </Sidebar>
-      <SidebarInset>
-        <div className="h-screen flex flex-col overflow-hidden">
+      <SidebarInset className="min-w-0 h-screen max-h-screen overflow-hidden flex flex-col">
+        <div className="h-full max-h-full flex flex-col overflow-hidden min-h-0 flex-1">
           {renderContent()}
         </div>
       </SidebarInset>

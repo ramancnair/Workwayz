@@ -176,12 +176,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
   return (
     <AuthGuard>
       <SessionManager />
-      <SidebarProvider open={open} onOpenChange={setOpen}>
+      <SidebarProvider open={open} onOpenChange={setOpen} className="h-screen max-h-screen overflow-hidden w-full max-w-full">
         <Sidebar collapsible="icon">
           <PmSidebarNav activeTab={activeTab as any} />
         </Sidebar>
-        <SidebarInset className="min-w-0">
-          <div className="h-screen flex flex-col overflow-hidden">
+        <SidebarInset className="min-w-0 h-screen max-h-screen overflow-hidden flex flex-col">
+          <div className="h-full max-h-full flex flex-col overflow-hidden min-h-0 flex-1">
             <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
               <TooltipProvider delayDuration={150}>
                 <Tabs value={activeTab} onValueChange={onTabChange}>
@@ -277,7 +277,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                 </Tabs>
               </TooltipProvider>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
               {children}
             </div>
           </div>
