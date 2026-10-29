@@ -56,7 +56,7 @@ import {
 } from 'lucide-react';
 import { db, collection, getDocs } from '@/lib/db-provider';
 import type { Portfolio } from '@/types';
-import type { WayFinderQueryResponse as FpQueryResponse, WayFinderKpiCard as FpKpiCard } from '@/types/wayfinder-dashboard';
+import type { WayFinderQueryResponse as FpQueryResponse } from '@/types/wayfinder-dashboard';
 import { executeWayFinderQuery as executeFpQuery } from '@/lib/wayfinder-query-engine';
 import { cn } from '@/lib/utils';
 import { WayFinderModelSelector } from '@/components/wayfinder/WayFinderModelSelector';
@@ -683,90 +683,26 @@ export default function FpDashboardPage() {
                 </span>
                 <span>•</span>
                 <span>{new Date(response.audit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopySummary}
+                  className="h-7 px-2.5 text-xs gap-1.5 border-border shrink-0 ml-2"
+                >
+                  {copiedSummary ? (
+                    <>
+                      <Check className="h-3 w-3 text-emerald-400" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      Copy Summary
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-
-            {/* Executive Summary Takeaways */}
-            <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-sm">
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Info className="h-4 w-4 text-primary" />
-                    Executive Takeaways: {response.title}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Synthesized findings strictly based on database metrics
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopySummary}
-                    className="h-8 px-3 text-xs gap-1.5 border-border"
-                  >
-                    {copiedSummary ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-400" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy Summary
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-1.5 text-sm text-foreground/90">
-                  {response.executiveSummary.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-primary font-bold mt-0.5">•</span>
-                      <span>{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* KPI Cards Grid */}
-            {response.kpis && response.kpis.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {response.kpis.map((kpi: FpKpiCard) => {
-                  const borderCol =
-                    kpi.status === 'positive'
-                      ? 'border-emerald-500/30'
-                      : kpi.status === 'warning'
-                        ? 'border-amber-500/30'
-                        : kpi.status === 'negative'
-                          ? 'border-rose-500/30'
-                          : 'border-border/60';
-
-                  const textCol =
-                    kpi.status === 'positive'
-                      ? 'text-emerald-400'
-                      : kpi.status === 'warning'
-                        ? 'text-amber-400'
-                        : kpi.status === 'negative'
-                          ? 'text-rose-400'
-                          : 'text-foreground';
-
-                  return (
-                    <Card key={kpi.id} className={cn('bg-card/60 backdrop-blur-sm border shadow-sm', borderCol)}>
-                      <CardContent className="p-4 space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">{kpi.label}</div>
-                        <div className={cn('text-2xl font-bold tracking-tight', textCol)}>
-                          {kpi.value}
-                        </div>
-                        {kpi.subtext && <div className="text-[11px] text-muted-foreground">{kpi.subtext}</div>}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
 
             {/* View Switcher & Action Bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">

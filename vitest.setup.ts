@@ -9,6 +9,32 @@ try {
   }
 } catch (_) {}
 
+// Ensure global localStorage exists and works reliably across Node versions
+if (typeof globalThis.localStorage === 'undefined' || !globalThis.localStorage?.clear) {
+  let store: Record<string, string> = {};
+  const mockStorage = {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = String(value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: mockStorage,
+    writable: true,
+    configurable: true,
+  });
+}
+
 // Mock window.matchMedia
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'matchMedia', {
