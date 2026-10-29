@@ -170,12 +170,19 @@ function ResourceDialog({
       const projEndStr = project?.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '';
 
       if (editingUser) {
+        let initialOnboarding = editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : (projStartStr || todayStr);
+        let initialOffloading = editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : (projEndStr || todayStr);
+
+        if (projStartStr && initialOnboarding < projStartStr) initialOnboarding = projStartStr;
+        if (projEndStr && initialOffloading > projEndStr) initialOffloading = projEndStr;
+        if (initialOffloading < initialOnboarding) initialOffloading = initialOnboarding;
+
         form.reset({
           employeeId: editingUser.id,
           role: editingUser.role,
           availability: editingUser.availability ?? 100,
-          onboardingDate: editingUser.onboardingDate ? format(new Date(editingUser.onboardingDate), 'yyyy-MM-dd') : (projStartStr || todayStr),
-          offloadingDate: editingUser.offloadingDate ? format(new Date(editingUser.offloadingDate), 'yyyy-MM-dd') : (projEndStr || todayStr),
+          onboardingDate: initialOnboarding,
+          offloadingDate: initialOffloading,
           clientEmpId: editingUser.clientEmpId || '',
           clientEmail: editingUser.clientEmail || '',
           capabilities: editingUser.capabilities || [],

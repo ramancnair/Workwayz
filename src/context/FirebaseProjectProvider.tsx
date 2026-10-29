@@ -536,8 +536,36 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         });
         normBatch.commit().catch(err => console.error('[AutoRepair] Failed to normalize capabilities:', err));
       }
+
+      // Clamp any employee dates that exceed the project start or end date
+      const projStartStr = project?.startDate ? new Date(project.startDate).toISOString().slice(0, 10) : null;
+      const projEndStr = project?.endDate ? new Date(project.endDate).toISOString().slice(0, 10) : null;
+      const invalidDateEmps = employees.filter(e => {
+        const offStr = e.offloadingDate ? new Date(e.offloadingDate).toISOString().slice(0, 10) : null;
+        const onStr = e.onboardingDate ? new Date(e.onboardingDate).toISOString().slice(0, 10) : null;
+        return (projEndStr && offStr && offStr > projEndStr) || (projStartStr && onStr && onStr < projStartStr);
+      });
+      if (invalidDateEmps.length > 0) {
+        console.log(`[AutoRepair] Clamping dates for ${invalidDateEmps.length} employees to project window for project ${projectId}`);
+        const database = db;
+        const dateBatch = writeBatch(database);
+        invalidDateEmps.forEach(emp => {
+          const empRef = doc(database, 'projects', projectId, 'employees', emp.id);
+          const offStr = emp.offloadingDate ? new Date(emp.offloadingDate).toISOString().slice(0, 10) : null;
+          const onStr = emp.onboardingDate ? new Date(emp.onboardingDate).toISOString().slice(0, 10) : null;
+          const updateData: any = {};
+          if (projEndStr && offStr && offStr > projEndStr) {
+            updateData.offloadingDate = Timestamp.fromDate(new Date(projEndStr));
+          }
+          if (projStartStr && onStr && onStr < projStartStr) {
+            updateData.onboardingDate = Timestamp.fromDate(new Date(projStartStr));
+          }
+          dateBatch.update(empRef, updateData);
+        });
+        dateBatch.commit().catch(err => console.error('[AutoRepair] Failed to clamp employee dates:', err));
+      }
     }
-  }, [isLoading, employees, impactedSystems, projectId]);
+  }, [isLoading, employees, impactedSystems, projectId, project?.startDate, project?.endDate]);
 
 
   const updateProject = async (data: Partial<Omit<Project, 'id'>>): Promise<boolean> => {
@@ -1344,6 +1372,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
   const updateProjectUser = async (employeeId: string, data: Partial<Omit<Employee, 'id' | 'empId' | 'firstName' | 'lastName' | 'email' | 'phone'>>): Promise<boolean> => {
     if (!db || !projectId) return false;
     try {
+      let finalOnboardingStr: string | null = null;
+      let finalOffloadingStr: string | null = null;
       if (data.hasOwnProperty('onboardingDate') || data.hasOwnProperty('offloadingDate')) {
         const existingUser = employees.find(e => e.id === employeeId);
         const normalizeDateStr = (d: any): string | null => {
@@ -1358,29 +1388,28 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
           }
         };
 
-        const newOnboardingStr = data.hasOwnProperty('onboardingDate') ? normalizeDateStr(data.onboardingDate) : normalizeDateStr(existingUser?.onboardingDate);
-        const newOffloadingStr = data.hasOwnProperty('offloadingDate') ? normalizeDateStr(data.offloadingDate) : normalizeDateStr(existingUser?.offloadingDate);
+        let newOnboardingStr = data.hasOwnProperty('onboardingDate') ? normalizeDateStr(data.onboardingDate) : normalizeDateStr(existingUser?.onboardingDate);
+        let newOffloadingStr = data.hasOwnProperty('offloadingDate') ? normalizeDateStr(data.offloadingDate) : normalizeDateStr(existingUser?.offloadingDate);
         const projStartStr = normalizeDateStr(project?.startDate);
         const projEndStr = normalizeDateStr(project?.endDate);
 
-        if (newOnboardingStr && newOffloadingStr && newOffloadingStr < newOnboardingStr) {
-          console.error("Firebase Error: Offboarding date cannot be earlier than onboarding date.");
-          return false;
-        }
         if (projStartStr && newOnboardingStr && newOnboardingStr < projStartStr) {
-          console.error("Firebase Error: Onboarding date cannot be earlier than project start date.");
-          return false;
+          newOnboardingStr = projStartStr;
         }
         if (projEndStr && newOffloadingStr && newOffloadingStr > projEndStr) {
-          console.error("Firebase Error: Offboarding date cannot be later than project end date.");
-          return false;
+          newOffloadingStr = projEndStr;
         }
+        if (newOnboardingStr && newOffloadingStr && newOffloadingStr < newOnboardingStr) {
+          newOffloadingStr = newOnboardingStr;
+        }
+        finalOnboardingStr = newOnboardingStr;
+        finalOffloadingStr = newOffloadingStr;
       }
 
       const { onboardingDate, offloadingDate, ...rest } = data;
       const payload: any = { ...rest };
-      if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = onboardingDate ? Timestamp.fromDate(new Date(onboardingDate)) : null;
-      if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = offloadingDate ? Timestamp.fromDate(new Date(offloadingDate)) : null;
+      if (data.hasOwnProperty('onboardingDate')) payload.onboardingDate = finalOnboardingStr ? Timestamp.fromDate(new Date(finalOnboardingStr)) : null;
+      if (data.hasOwnProperty('offloadingDate')) payload.offloadingDate = finalOffloadingStr ? Timestamp.fromDate(new Date(finalOffloadingStr)) : null;
 
       const employeeRef = doc(db, 'projects', projectId, 'employees', employeeId);
       await updateDoc(employeeRef, sanitizeForFirestore(payload));
