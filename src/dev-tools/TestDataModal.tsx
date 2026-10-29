@@ -189,6 +189,17 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
 
   const isDeleteInProgress = isLoading && (operationType === 'delete' || /delet|wipe|purg|remov|clean/i.test(progressMsg || ''));
 
+  const refreshLog = async () => {
+    try {
+      const log = await getStudioLog();
+      setStudioLog(log);
+    } catch (err) {
+      console.warn('Failed to load studio log:', err);
+    } finally {
+      setLoadingLog(false);
+    }
+  };
+
   // Load existing portfolios and studio log
   useEffect(() => {
     if (!isOpen) return;
@@ -207,19 +218,8 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
       }
     };
 
-    const fetchStudioLog = async () => {
-      try {
-        const log = await getStudioLog();
-        setStudioLog(log);
-      } catch (err) {
-        console.warn('Failed to load studio log:', err);
-      } finally {
-        setLoadingLog(false);
-      }
-    };
-
     fetchPortfolios();
-    fetchStudioLog();
+    refreshLog();
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -367,7 +367,7 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
 
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated ${createdProjects.length} projects and ${createdUsers.length} users. Studio creation log updated. Refreshing workspace...`
+        text: `Successfully generated ${createdProjects.length} projects and ${createdUsers.length} users. Studio creation log updated.`
       });
 
       toast({
@@ -375,9 +375,7 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
         description: `Populated ${createdProjects.length} project(s) across ${portfolioIdsToUse.length} portfolio(s). Studio manifest recorded.`
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Test data generation error:', err);
       setStatusMessage({
@@ -426,7 +424,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
 
       setStatusMessage({
         type: 'success',
-        text: `Cleaned up ${deletedProjects} studio project(s), ${deletedPortfolios} portfolio(s), and ${deletedUsers} mock user(s) (including studio admins). Studio log cleared. Reloading workspace...`
+        text: `Cleaned up ${deletedProjects} studio project(s), ${deletedPortfolios} portfolio(s), and ${deletedUsers} mock user(s) (including studio admins). Studio log cleared.`
       });
 
       toast({
@@ -434,9 +432,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
         description: `Wiped ${deletedProjects} projects, ${deletedPortfolios} portfolios, and ${deletedUsers} test users. Original users and projects preserved.`
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Wipe test data error:', err);
       setStatusMessage({
@@ -503,9 +499,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
         description: `Wiped ${deletedProjects} projects, ${deletedPortfolios} portfolios, and ${deletedUsers} users from this run.`
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Wipe batch error:', err);
       setStatusMessage({

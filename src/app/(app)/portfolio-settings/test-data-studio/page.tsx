@@ -349,7 +349,7 @@ export default function TestDataStudioPage() {
 
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated ${createdProjects.length} project(s) across ${resolvedPortfolios.length} isolated portfolio(s) using ${createdUsers.length} newly provisioned test user(s). Studio creation log updated. Refreshing workspace...`,
+        text: `Successfully generated ${createdProjects.length} project(s) across ${resolvedPortfolios.length} isolated portfolio(s) using ${createdUsers.length} newly provisioned test user(s). Studio creation log updated.`,
       });
 
       toast({
@@ -357,9 +357,7 @@ export default function TestDataStudioPage() {
         description: `Populated ${createdProjects.length} project(s) across ${portfolioIdsToUse.length} new portfolio(s). Studio manifest recorded.`,
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Test data generation error:', err);
       setStatusMessage({
@@ -411,7 +409,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
 
       setStatusMessage({
         type: 'success',
-        text: `Cleaned up ${deletedProjects} studio project(s), ${deletedPortfolios} studio test portfolio(s), and ${deletedUsers} studio user(s) (including studio admins). Studio log cleared. Reloading workspace...`,
+        text: `Cleaned up ${deletedProjects} studio project(s), ${deletedPortfolios} studio test portfolio(s), and ${deletedUsers} studio user(s) (including studio admins). Studio log cleared.`,
       });
 
       toast({
@@ -419,9 +417,7 @@ All original users, pre-existing projects, and genuine portfolios will remain co
         description: `Wiped ${deletedProjects} projects, ${deletedPortfolios} portfolios, and ${deletedUsers} studio users. Original users and projects preserved.`,
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Wipe test data error:', err);
       setStatusMessage({
@@ -487,9 +483,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
         description: `Wiped ${deletedProjects} projects, ${deletedPortfolios} portfolios, and ${deletedUsers} users from this run.`,
       });
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      await refreshLog();
     } catch (err: any) {
       console.error('Wipe batch error:', err);
       setStatusMessage({

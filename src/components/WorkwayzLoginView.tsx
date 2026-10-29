@@ -25,6 +25,7 @@ export function WorkwayzLoginCard() {
   const [rememberMe, setRememberMe] = useState(false);
   const [email, setEmail] = useState('');
   const [setupNotice, setSetupNotice] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   // Set once the user starts typing so a late session check never yanks them off the form.
   const userInteractedRef = useRef(false);
 
@@ -49,8 +50,10 @@ export function WorkwayzLoginCard() {
         const savedRoute = typeof window !== 'undefined' ? sessionStorage.getItem('workwayz_real_route') : null;
         const targetRoute = savedRoute && savedRoute !== '/' && savedRoute !== '/login' ? savedRoute : '/my-projects';
         router.replace(targetRoute);
+        return;
       }
     } catch (_) {}
+    setIsCheckingSession(false);
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,6 +227,14 @@ export function WorkwayzLoginCard() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingSession) {
+    return (
+      <div className="w-full max-w-[400px] flex items-center justify-center p-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[400px]">
