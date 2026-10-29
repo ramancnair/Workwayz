@@ -223,6 +223,17 @@ export default function WorklogPage() {
     }, 0);
   }, [weekDays, dailyHoursMap]);
 
+  const weeklyRequiredHours = useMemo(() => {
+    const offDays = weeklyOffDays || [];
+    const hList = holidays || [];
+    const workingDaysCount = weekDays.filter((day) => {
+      const isWeekend = offDays.includes(day.getDay());
+      const isHoliday = hList.some((h) => isSameDay(new Date(h.date), day));
+      return !isWeekend && !isHoliday;
+    }).length;
+    return workingDaysCount * 8;
+  }, [weekDays, weeklyOffDays, holidays]);
+
   // Effect to auto-populate holidays and weekends for the displayed week
   useEffect(() => {
     if (!selectedEmployee || isLoading) return;
@@ -700,9 +711,9 @@ export default function WorklogPage() {
                   </div>
                   <div className="flex items-center gap-6 text-right">
                     <div>
-                      <span className="text-xs text-muted-foreground block">Daily Logged ({format(selectedDate, 'MMM d')})</span>
-                      <span className={cn("text-sm font-bold", currentTotalHours > 24 ? "text-destructive" : "text-foreground")}>
-                        {currentTotalHours.toFixed(1)} / 24.0 hrs
+                      <span className="text-xs text-muted-foreground block">Weekly Required Hours</span>
+                      <span className="text-base font-bold text-foreground">
+                        {weeklyRequiredHours.toFixed(1)} hrs
                       </span>
                     </div>
                     <div className="border-l pl-4 border-border/60">
