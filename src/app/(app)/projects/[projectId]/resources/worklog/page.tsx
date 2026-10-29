@@ -583,41 +583,63 @@ export default function WorklogPage() {
                     const hKey = normalizeDateKey(h.date);
                     return (hKey && hKey === dateKey) || (h.date && isSameDay(new Date(h.date), day));
                   });
+                  const isWeeklyOff = (weeklyOffDays || [0, 6]).includes(day.getDay());
                   const isSelected = isSameDay(day, selectedDate);
+
+                  const dayTitle = holiday
+                    ? `${holiday.description || 'Public Holiday'}${isWeeklyOff ? ' (Holiday & Weekly Off)' : ' (Holiday)'}`
+                    : isWeeklyOff
+                    ? 'Weekly Off'
+                    : undefined;
 
                   return (
                     <Button
                       key={day.toISOString()}
                       variant={isSelected ? 'default' : 'outline'}
                       onClick={() => setSelectedDate(day)}
-                      title={holiday ? `${holiday.description || 'Public Holiday'} (Holiday)` : undefined}
+                      title={dayTitle}
                       className={cn(
                         "flex flex-col h-auto p-2 relative transition-all",
                         holiday && !isSelected && "border-amber-500/60 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 hover:border-amber-500",
-                        holiday && isSelected && "ring-2 ring-amber-400 border-amber-400 bg-amber-600 text-white hover:bg-amber-700 shadow-md"
+                        holiday && isSelected && "ring-2 ring-amber-400 border-amber-400 bg-amber-600 text-white hover:bg-amber-700 shadow-md",
+                        !holiday && isWeeklyOff && !isSelected && "border-indigo-500/50 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/80",
+                        !holiday && isWeeklyOff && isSelected && "ring-2 ring-indigo-400 border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
                       )}
                     >
                       <div className="flex items-center gap-1">
                         <span className="text-xs">{format(day, 'EEE')}</span>
-                        {holiday && (
+                        {holiday ? (
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                        )}
+                        ) : isWeeklyOff ? (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                        ) : null}
                       </div>
                       <span className="text-lg font-bold">{format(day, 'd')}</span>
                       <span className={cn(
                         "text-xs font-semibold",
-                        holiday ? (isSelected ? "text-amber-100" : "text-amber-400") : "text-muted-foreground"
+                        holiday
+                          ? (isSelected ? "text-amber-100" : "text-amber-400")
+                          : isWeeklyOff
+                          ? (isSelected ? "text-indigo-100" : "text-indigo-400")
+                          : "text-muted-foreground"
                       )}>
                         {hours.toFixed(1)}h
                       </span>
-                      {holiday && (
+                      {holiday ? (
                         <span className={cn(
                           "text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded mt-0.5 leading-none",
                           isSelected ? "bg-amber-950/70 text-amber-200" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                         )}>
                           Holiday
                         </span>
-                      )}
+                      ) : isWeeklyOff ? (
+                        <span className={cn(
+                          "text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded mt-0.5 leading-none",
+                          isSelected ? "bg-indigo-950/70 text-indigo-200" : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                        )}>
+                          Weekly Off
+                        </span>
+                      ) : null}
                     </Button>
                   );
                 })}
