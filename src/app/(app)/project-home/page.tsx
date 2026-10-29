@@ -305,6 +305,7 @@ export default function ProjectsDashboard() {
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
 
   const [activeExpanded, setActiveExpanded] = useState<string[]>([]);
   const [archiveExpanded, setArchiveExpanded] = useState<string[]>([]);
@@ -475,6 +476,17 @@ export default function ProjectsDashboard() {
     }
   };
 
+  const getPortfolioProjectStats = useCallback((portfolioId: string) => {
+    const portfolioProjects = projects.filter(p => p.portfolioId === portfolioId && !p.isDeleted);
+    const active = portfolioProjects.filter(p => !p.isArchived).length;
+    const inactive = portfolioProjects.filter(p => !!p.isArchived).length;
+    return {
+      total: portfolioProjects.length,
+      active,
+      inactive,
+    };
+  }, [projects]);
+
   const getPortfolioProjectCount = useCallback((portfolioId: string) => {
     return projects.filter(p => p.portfolioId === portfolioId && !p.isDeleted).length;
   }, [projects]);
@@ -485,10 +497,21 @@ export default function ProjectsDashboard() {
       // Allow only empty portfolios to be deleted
       const portfolioProjects = projects.filter(p => p.portfolioId === deletingPortfolio.id && !p.isDeleted);
       if (portfolioProjects.length > 0) {
+        const activeCount = portfolioProjects.filter(p => !p.isArchived).length;
+        const inactiveCount = portfolioProjects.filter(p => !!p.isArchived).length;
+        let detail = `${portfolioProjects.length} project(s)`;
+        if (activeCount === 0 && inactiveCount > 0) {
+          detail = `${inactiveCount} inactive project${inactiveCount === 1 ? '' : 's'} (under Inactive Projects tab)`;
+        } else if (activeCount > 0 && inactiveCount > 0) {
+          detail = `${portfolioProjects.length} projects (${activeCount} active, ${inactiveCount} inactive)`;
+        } else if (activeCount > 0) {
+          detail = `${activeCount} active project${activeCount === 1 ? '' : 's'}`;
+        }
+
         toast({
           variant: 'destructive',
           title: 'Cannot Delete Portfolio',
-          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${portfolioProjects.length} project(s).`,
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${detail}.`,
         });
         setDeletingPortfolio(null);
         return;
@@ -500,10 +523,21 @@ export default function ProjectsDashboard() {
       );
       const liveProjects = projectsSnapshot.docs.filter((d: any) => !d.data()?.isDeleted);
       if (liveProjects.length > 0) {
+        const activeCount = liveProjects.filter((d: any) => !d.data()?.isArchived).length;
+        const inactiveCount = liveProjects.filter((d: any) => !!d.data()?.isArchived).length;
+        let detail = `${liveProjects.length} project(s)`;
+        if (activeCount === 0 && inactiveCount > 0) {
+          detail = `${inactiveCount} inactive project${inactiveCount === 1 ? '' : 's'} (under Inactive Projects tab)`;
+        } else if (activeCount > 0 && inactiveCount > 0) {
+          detail = `${liveProjects.length} projects (${activeCount} active, ${inactiveCount} inactive)`;
+        } else if (activeCount > 0) {
+          detail = `${activeCount} active project${activeCount === 1 ? '' : 's'}`;
+        }
+
         toast({
           variant: 'destructive',
           title: 'Cannot Delete Portfolio',
-          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${liveProjects.length} project(s).`,
+          description: `Only empty portfolios can be deleted. "${deletingPortfolio.name}" currently contains ${detail}.`,
         });
         setDeletingPortfolio(null);
         return;
@@ -865,7 +899,7 @@ export default function ProjectsDashboard() {
           />
         </Dialog>
 
-        <Tabs defaultValue="active" className="w-full">
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'archive')} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="active">Active Projects</TabsTrigger>
             <TabsTrigger value="archive">Inactive Projects</TabsTrigger>
@@ -913,7 +947,20 @@ export default function ProjectsDashboard() {
                           <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
                           <Folder className="h-5 w-5" />
                           <span className="font-semibold">{portfolio.name}</span>
-                          <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}</Badge>
+                            {(() => {
+                              const stats = getPortfolioProjectStats(portfolio.id);
+                              if (stats.inactive > 0) {
+                                return (
+                                  <Badge variant="outline" className="text-xs border-amber-500/40 text-amber-500">
+                                    {stats.inactive} inactive
+                                  </Badge>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                           {portfolio.id !== 'unassigned-portfolio' && (
                             <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <Tooltip>
@@ -946,9 +993,17 @@ export default function ProjectsDashboard() {
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {getPortfolioProjectCount(portfolio.id) > 0
-                                    ? `Cannot delete: contains ${getPortfolioProjectCount(portfolio.id)} project(s). Only empty portfolios can be deleted.`
-                                    : 'Delete empty portfolio'}
+                                  {(() => {
+                                    const stats = getPortfolioProjectStats(portfolio.id);
+                                    if (stats.total === 0) return 'Delete empty portfolio';
+                                    if (stats.active === 0 && stats.inactive > 0) {
+                                      return `Cannot delete: contains ${stats.inactive} inactive project${stats.inactive === 1 ? '' : 's'} (under Inactive Projects tab). Only empty portfolios can be deleted.`;
+                                    }
+                                    if (stats.active > 0 && stats.inactive > 0) {
+                                      return `Cannot delete: contains ${stats.total} projects (${stats.active} active, ${stats.inactive} inactive). Only empty portfolios can be deleted.`;
+                                    }
+                                    return `Cannot delete: contains ${stats.active} active project${stats.active === 1 ? '' : 's'}. Only empty portfolios can be deleted.`;
+                                  })()}
                                 </TooltipContent>
                               </Tooltip>
                             </div>
@@ -1265,29 +1320,56 @@ export default function ProjectsDashboard() {
       <AlertDialog open={!!deletingPortfolio} onOpenChange={(isOpen) => !isOpen && setDeletingPortfolio(null)}>
         <AlertDialogContent>
           {deletingPortfolio && getPortfolioProjectCount(deletingPortfolio.id) > 0 ? (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5 shrink-0" />
-                  Cannot Delete Portfolio
-                </AlertDialogTitle>
-                <AlertDialogDescription className="space-y-2 pt-1 text-sm text-muted-foreground">
-                  <span>
-                    The portfolio <strong className="text-foreground">&quot;{deletingPortfolio.name}&quot;</strong> cannot be deleted because it contains{' '}
-                    <strong className="text-foreground">
-                      {getPortfolioProjectCount(deletingPortfolio.id)}{' '}
-                      {getPortfolioProjectCount(deletingPortfolio.id) === 1 ? 'project' : 'projects'}
-                    </strong>.
-                  </span>
-                  <span className="block text-xs text-muted-foreground/90">
-                    Only empty portfolios can be deleted. Please reassign or delete all projects belonging to this portfolio before deleting it.
-                  </span>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setDeletingPortfolio(null)}>Close</AlertDialogCancel>
-              </AlertDialogFooter>
-            </>
+            (() => {
+              const stats = getPortfolioProjectStats(deletingPortfolio.id);
+              return (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-5 w-5 shrink-0" />
+                      Cannot Delete Portfolio
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2 pt-1 text-sm text-muted-foreground">
+                      <span>
+                        The portfolio <strong className="text-foreground">&quot;{deletingPortfolio.name}&quot;</strong> cannot be deleted because it contains{' '}
+                        <strong className="text-foreground">
+                          {stats.active === 0 && stats.inactive > 0
+                            ? `${stats.inactive} inactive ${stats.inactive === 1 ? 'project' : 'projects'}`
+                            : stats.active > 0 && stats.inactive > 0
+                            ? `${stats.total} projects (${stats.active} active, ${stats.inactive} inactive)`
+                            : `${stats.active} active ${stats.active === 1 ? 'project' : 'projects'}`}
+                        </strong>.
+                      </span>
+                      {stats.inactive > 0 && (
+                        <span className="block text-xs text-amber-500 font-medium">
+                          {stats.inactive === 1 ? 'An inactive project is' : `${stats.inactive} inactive projects are`} stored under the &quot;Inactive Projects&quot; tab.
+                        </span>
+                      )}
+                      <span className="block text-xs text-muted-foreground/90">
+                        Only empty portfolios can be deleted. Please reassign or delete all projects belonging to this portfolio before deleting it.
+                      </span>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-row items-center justify-end gap-2">
+                    <AlertDialogCancel onClick={() => setDeletingPortfolio(null)}>Close</AlertDialogCancel>
+                    {stats.inactive > 0 && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          const targetPortfolioId = deletingPortfolio.id;
+                          setDeletingPortfolio(null);
+                          setActiveTab('archive');
+                          setArchiveExpanded((prev) => Array.from(new Set([...prev, targetPortfolioId])));
+                        }}
+                      >
+                        View Inactive Projects
+                      </Button>
+                    )}
+                  </AlertDialogFooter>
+                </>
+              );
+            })()
           ) : (
             <>
               <AlertDialogHeader>

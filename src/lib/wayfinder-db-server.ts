@@ -1103,7 +1103,17 @@ export async function wayfinderDeletePortfolio(params: { portfolioId: string }) 
   );
   const nonDeletedProjects = projectsSnap.docs.filter((d: any) => !d.data()?.isDeleted);
   if (nonDeletedProjects.length > 0) {
-    throw new Error(`Cannot delete portfolio: ${nonDeletedProjects.length} project(s) still belong to this portfolio. Only empty portfolios can be deleted.`);
+    const activeCount = nonDeletedProjects.filter((d: any) => !d.data()?.isArchived).length;
+    const inactiveCount = nonDeletedProjects.filter((d: any) => !!d.data()?.isArchived).length;
+    let detail = `${nonDeletedProjects.length} project(s)`;
+    if (activeCount === 0 && inactiveCount > 0) {
+      detail = `${inactiveCount} inactive project${inactiveCount === 1 ? '' : 's'} (under Inactive Projects tab)`;
+    } else if (activeCount > 0 && inactiveCount > 0) {
+      detail = `${nonDeletedProjects.length} projects (${activeCount} active, ${inactiveCount} inactive)`;
+    } else if (activeCount > 0) {
+      detail = `${activeCount} active project${activeCount === 1 ? '' : 's'}`;
+    }
+    throw new Error(`Cannot delete portfolio: ${detail} still belong to this portfolio. Only empty portfolios can be deleted.`);
   }
   const portfolioRef = doc(db, 'portfolios', params.portfolioId);
   const now = new Date().toISOString();
