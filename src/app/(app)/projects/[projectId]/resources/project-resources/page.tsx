@@ -49,7 +49,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Popover,
@@ -363,78 +363,63 @@ function ResourceDialog({
             <FormField
               control={form.control}
               name="capabilities"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Capabilities</FormLabel>
-                  <Card>
-                    <CardContent className="p-4 space-y-4 max-h-48 overflow-y-auto">
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
-                        <div className="space-y-2">
-                          {impactedSystems.map((system) => {
-                            const isChecked = Boolean(
-                              field.value?.some((id) => id === system.id || id === system.name)
-                            );
-                            return (
-                              <div key={system.id} className="flex flex-row items-center space-x-3 space-y-0">
-                                <Checkbox
-                                  id={`cap-sys-${system.id}`}
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    const next = checked
-                                      ? [...current.filter((id) => id !== system.id && id !== system.name), system.id]
-                                      : current.filter((id) => id !== system.id && id !== system.name);
-                                    field.onChange(next);
-                                  }}
-                                />
-                                <Label htmlFor={`cap-sys-${system.id}`} className="font-normal cursor-pointer">
-                                  {system.name}
-                                </Label>
+              render={({ field }) => {
+                const selectedVal = (field.value && field.value.length > 0)
+                  ? ([...impactedSystems, ...horizontals].find(s => s.id === field.value[0] || s.name === field.value[0])?.id || field.value[0])
+                  : 'none';
+
+                return (
+                  <FormItem>
+                    <FormLabel>Capability</FormLabel>
+                    <Card>
+                      <CardContent className="p-4 space-y-4 max-h-48 overflow-y-auto">
+                        <RadioGroup
+                          value={selectedVal}
+                          onValueChange={(val) => {
+                            field.onChange(val === 'none' ? [] : [val]);
+                          }}
+                        >
+                          <div className="flex flex-row items-center space-x-3 space-y-0 pb-2 border-b border-border mb-3">
+                            <RadioGroupItem value="none" id="capability-none" />
+                            <Label htmlFor="capability-none" className="font-normal text-muted-foreground cursor-pointer">None / Unassigned</Label>
+                          </div>
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-sm font-medium text-muted-foreground mb-2">Impacted Systems</h4>
+                              <div className="space-y-2">
+                                {impactedSystems.map((system) => (
+                                  <div key={system.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                    <RadioGroupItem value={system.id} id={system.id} />
+                                    <Label htmlFor={system.id} className="font-normal cursor-pointer">{system.name}</Label>
+                                  </div>
+                                ))}
+                                {impactedSystems.length === 0 && (
+                                  <p className="text-xs text-muted-foreground">No impacted systems configured.</p>
+                                )}
                               </div>
-                            );
-                          })}
-                          {impactedSystems.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No impacted systems configured.</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
-                        <div className="space-y-2">
-                          {horizontals.map((horizontal) => {
-                            const isChecked = Boolean(
-                              field.value?.some((id) => id === horizontal.id || id === horizontal.name)
-                            );
-                            return (
-                              <div key={horizontal.id} className="flex flex-row items-center space-x-3 space-y-0">
-                                <Checkbox
-                                  id={`cap-horiz-${horizontal.id}`}
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    const next = checked
-                                      ? [...current.filter((id) => id !== horizontal.id && id !== horizontal.name), horizontal.id]
-                                      : current.filter((id) => id !== horizontal.id && id !== horizontal.name);
-                                    field.onChange(next);
-                                  }}
-                                />
-                                <Label htmlFor={`cap-horiz-${horizontal.id}`} className="font-normal cursor-pointer">
-                                  {horizontal.name}
-                                </Label>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-medium text-muted-foreground mb-2">Horizontals</h4>
+                              <div className="space-y-2">
+                                {horizontals.map((horizontal) => (
+                                  <div key={horizontal.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                    <RadioGroupItem value={horizontal.id} id={horizontal.id} />
+                                    <Label htmlFor={horizontal.id} className="font-normal cursor-pointer">{horizontal.name}</Label>
+                                  </div>
+                                ))}
+                                {horizontals.length === 0 && (
+                                  <p className="text-xs text-muted-foreground">No horizontals configured.</p>
+                                )}
                               </div>
-                            );
-                          })}
-                          {horizontals.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No horizontals configured.</p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <FormMessage />
-                </FormItem>
-              )}
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      </CardContent>
+                    </Card>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -794,7 +779,7 @@ export default function ResourcesPage() {
                 <TableHead>User ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Capabilities</TableHead>
+                <TableHead>Capability</TableHead>
                 <TableHead>Availability</TableHead>
                 <TableHead>Onboarding Date</TableHead>
                 <TableHead>Offboarding Date</TableHead>
@@ -811,13 +796,11 @@ export default function ResourcesPage() {
                     <TableCell>{user.role || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {user.capabilities && user.capabilities.length > 0
-                          ? user.capabilities.map(capId => {
-                            const capability = allCapabilities.find(s => s.id === capId || s.name === capId);
-                            return capability ? <Badge key={capId} variant="secondary">{capability.name}</Badge> : null;
-                          })
-                          : 'N/A'
-                        }
+                        {user.capabilities && user.capabilities.length > 0 ? (() => {
+                          const capId = user.capabilities[0];
+                          const capability = allCapabilities.find(s => s.id === capId || s.name === capId);
+                          return capability ? <Badge variant="secondary">{capability.name}</Badge> : 'N/A';
+                        })() : 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>{user.availability ? `${user.availability}%` : 'N/A'}</TableCell>

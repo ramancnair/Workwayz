@@ -492,13 +492,10 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         
         let capabilities: string[] = [];
         if (emp.role === 'Developer') {
-          // Assign 1 or 2 random system IDs
-          const numCapabilities = Math.random() > 0.5 ? 2 : 1;
           const shuffled = [...impactedSystems].sort(() => 0.5 - Math.random());
-          capabilities = shuffled.slice(0, numCapabilities).map(sys => sys.id);
+          capabilities = shuffled.slice(0, 1).map(sys => sys.id);
         } else {
-          // Architects, PMs, Testers get access to all systems
-          capabilities = impactedSystems.map(sys => sys.id);
+          capabilities = impactedSystems.length > 0 ? [impactedSystems[0].id] : [];
         }
         
         batch.update(empRef, { capabilities });
@@ -509,6 +506,19 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
       }).catch(err => {
         console.error(`[AutoRepair] Failed to populate capabilities for project ${projectId}:`, err);
       });
+    } else {
+      // Normalize any legacy employees that have more than 1 capability down to exactly 1
+      const multiCapEmps = employees.filter(e => e.capabilities && e.capabilities.length > 1);
+      if (multiCapEmps.length > 0) {
+        console.log(`[AutoRepair] Normalizing ${multiCapEmps.length} employees to single capability for project ${projectId}`);
+        const database = db;
+        const normBatch = writeBatch(database);
+        multiCapEmps.forEach(emp => {
+          const empRef = doc(database, 'projects', projectId, 'employees', emp.id);
+          normBatch.update(empRef, { capabilities: [emp.capabilities![0]] });
+        });
+        normBatch.commit().catch(err => console.error('[AutoRepair] Failed to normalize capabilities:', err));
+      }
     }
   }, [isLoading, employees, impactedSystems, projectId]);
 

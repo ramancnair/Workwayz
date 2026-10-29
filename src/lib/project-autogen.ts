@@ -316,15 +316,11 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       assignedRole === 'BA' ||
       assignedRole === 'Architect';
 
-    // Developers get 1 or 2 random system IDs
-    // Non-developers get all system IDs
+    // Exactly one capability per person for billing and capacity planning
     let capabilities: string[] = [];
-    if (assignedRole === 'Developer') {
-      const numCapabilities = Math.random() > 0.5 ? 2 : 1;
+    if (systemIdsLive.length > 0) {
       const shuffled = [...systemIdsLive].sort(() => 0.5 - Math.random());
-      capabilities = shuffled.slice(0, numCapabilities);
-    } else {
-      capabilities = [...systemIdsLive];
+      capabilities = shuffled.slice(0, 1);
     }
 
     batch.set(empRef, clean({
