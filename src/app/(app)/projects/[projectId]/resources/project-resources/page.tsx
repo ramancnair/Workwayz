@@ -181,10 +181,7 @@ function ResourceDialog({
           capabilities: editingUser.capabilities || [],
           isBcpSupport: editingUser.isBcpSupport || false,
         });
-        const user = allUsers.find(u => u.id === editingUser.id);
-        if (user) {
-          setUserInputText(`${user.firstName} ${user.lastName} (${user.empId})`);
-        }
+
       } else {
         let initialOnboarding = projStartStr || todayStr;
         if (projStartStr && projEndStr) {
@@ -269,13 +266,35 @@ function ResourceDialog({
     setEditingUser(null);
   };
 
-  const availableUsers = allUsers.filter(emp => !emp.isDeleted && emp.isEnabled !== false && !!emp.empId && emp.empId.trim() !== '' && !projectUsers.some(pe => pe.id === emp.id) && isAssignableToProject(emp));
-  const availableUserOptions = availableUsers
-    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
-    .map(emp => ({
-      value: emp.id,
-      label: `${emp.firstName} ${emp.lastName} (${emp.empId.trim()})`
-    }));
+  const availableUsers = useMemo(() => {
+    return allUsers.filter(
+      emp =>
+        !emp.isDeleted &&
+        emp.isEnabled !== false &&
+        !!emp.empId &&
+        emp.empId.trim() !== '' &&
+        (!projectUsers.some(pe => pe.id === emp.id) || (editingUser && emp.id === editingUser.id)) &&
+        (isAssignableToProject(emp) || (editingUser && emp.id === editingUser.id))
+    );
+  }, [allUsers, projectUsers, editingUser]);
+
+  const availableUserOptions = useMemo(() => {
+    const opts = availableUsers
+      .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, undefined, { numeric: true, sensitivity: 'base' }))
+      .map(emp => ({
+        value: emp.id,
+        label: `${emp.firstName} ${emp.lastName} (${emp.empId.trim()})`
+      }));
+
+    if (editingUser && !opts.some(o => o.value === editingUser.id)) {
+      opts.unshift({
+        value: editingUser.id,
+        label: `${editingUser.firstName} ${editingUser.lastName} (${editingUser.empId?.trim() || ''})`
+      });
+    }
+
+    return opts;
+  }, [availableUsers, editingUser]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setEditingUser(null); }}>
