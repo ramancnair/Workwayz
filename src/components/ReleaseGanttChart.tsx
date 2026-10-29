@@ -11,7 +11,7 @@ import {
   addDays,
 } from 'date-fns';
 import { cn, getSprintDisplayId } from '@/lib/utils';
-import { CheckCircle, ChevronRight, Gem, Zap } from 'lucide-react';
+import { CheckCircle, ChevronRight, Gem, Zap, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const COLORS = [
@@ -40,7 +40,7 @@ export function ReleaseGanttChart({
     showSprints?: boolean;
 }) {
     const today = useToday();
-    const [expandedReleases, setExpandedReleases] = useState<string[]>([]);
+    const [expandedReleases, setExpandedReleases] = useState<string[]>(['__standalone_sprints__']);
 
     const { chartData, dateInfo } = useMemo(() => {
         const releases = allItems.filter(item => item.itemType === 'Release' && item.startDate && item.endDate);
@@ -101,9 +101,6 @@ export function ReleaseGanttChart({
         const todayOffset = differenceInDays(today, chartStartDate);
 
         const releaseGroups = releases.map(release => {
-            const rStart = parseISO(release.startDate!).getTime();
-            const rEnd = parseISO(release.endDate!).getTime();
-
             const alignedSprints = showSprints
                 ? sprints.filter(s => {
                     if (!s.startDate || !s.endDate) return false;
@@ -114,6 +111,7 @@ export function ReleaseGanttChart({
 
             return {
                 ...release,
+                isStandaloneGroup: false,
                 stages: stages
                     .filter(s => s.parentReleaseId === release.id)
                     .sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime()),
@@ -123,6 +121,34 @@ export function ReleaseGanttChart({
                 sprints: alignedSprints,
             };
         }).sort((a,b) => parseISO(a.startDate!).getTime() - new Date(b.startDate!).getTime());
+
+        // Group unassigned (non-release) sprints below the releases
+        if (showSprints) {
+            const standaloneSprints = sprints.filter(s => 
+                s.startDate && s.endDate && (!s.releaseId || !releases.some(r => r.id === s.releaseId))
+            ).sort((a, b) => parseISO(a.startDate!).getTime() - parseISO(b.startDate!).getTime());
+
+            if (standaloneSprints.length > 0) {
+                const earliestDate = standaloneSprints[0].startDate!;
+                const latestDate = standaloneSprints.reduce((latest, s) => {
+                    return parseISO(s.endDate!).getTime() > parseISO(latest).getTime() ? s.endDate! : latest;
+                }, standaloneSprints[0].endDate!);
+
+                releaseGroups.push({
+                    id: '__standalone_sprints__',
+                    releaseId: 'SPRINTS',
+                    name: 'Non-Release Sprints',
+                    description: 'Sprints not aligned to any project release',
+                    itemType: 'Release',
+                    isStandaloneGroup: true,
+                    startDate: earliestDate,
+                    endDate: latestDate,
+                    stages: [],
+                    milestones: [],
+                    sprints: standaloneSprints,
+                } as any);
+            }
+        }
         
         return {
             chartData: releaseGroups,
@@ -194,12 +220,28 @@ export function ReleaseGanttChart({
                 <div className="border-r">
                    {chartData.map((release) => {
                      const isExpanded = expandedReleases.includes(release.id);
+                     const isStandalone = (release as any).isStandaloneGroup;
                      return (
                         <div key={release.id} className="border-b last:border-b-0">
-                             <div className="p-2 bg-muted/30 font-bold text-primary flex items-center gap-2 cursor-pointer hover:bg-muted" onClick={() => toggleRelease(release.id)}>
+                             <div 
+                                className={cn(
+                                    "p-2 font-bold flex items-center gap-2 cursor-pointer hover:bg-muted transition-colors",
+                                    isStandalone ? "bg-amber-500/10 text-amber-300" : "bg-muted/30 text-primary"
+                                )} 
+                                onClick={() => toggleRelease(release.id)}
+                             >
                                <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
-                               {release.isCompleted && <CheckCircle className="h-4 w-4 text-green-500"/>}
+                               {isStandalone ? (
+                                   <Layers className="h-4 w-4 text-amber-500 shrink-0" />
+                               ) : (
+                                   release.isCompleted && <CheckCircle className="h-4 w-4 text-green-500 shrink-0"/>
+                               )}
                                <span>{release.name}</span>
+                               {isStandalone && (
+                                   <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-4 border-amber-500/40 text-amber-400 bg-amber-500/10 font-normal">
+                                       {release.sprints.length} {release.sprints.length === 1 ? 'sprint' : 'sprints'}
+                                   </Badge>
+                               )}
                             </div>
                             {isExpanded && (
                                 <div className="space-y-1 p-2">
@@ -255,18 +297,31 @@ export function ReleaseGanttChart({
                      <div className="relative z-0">
                         {chartData.map((release, index) => {
                             const isExpanded = expandedReleases.includes(release.id);
+                            const isStandalone = (release as any).isStandaloneGroup;
                             return (
                                 <div key={release.id} className="relative border-b last:border-b-0 cursor-pointer" onClick={() => toggleRelease(release.id)}>
                                     <div className="h-10 relative flex items-center p-2">
-                                        <div 
-                                            className="absolute h-6 top-2 rounded-md flex items-center px-2 text-white font-semibold text-xs bg-indigo-500"
-                                            style={{
-                                                left: `${getOffset(release.startDate!)}%`,
-                                                width: `${getWidth(release.startDate!, release.endDate!)}%`,
-                                            }}
-                                        >
-                                            <span className="truncate">{release.name}</span>
-                                        </div>
+                                        {isStandalone ? (
+                                            <div 
+                                                className="absolute h-6 top-2 rounded-md flex items-center px-2 text-amber-200 font-semibold text-xs border border-dashed border-amber-500/50 bg-amber-500/10"
+                                                style={{
+                                                    left: `${getOffset(release.startDate!)}%`,
+                                                    width: `${getWidth(release.startDate!, release.endDate!)}%`,
+                                                }}
+                                            >
+                                                <span className="truncate">{release.name} ({release.sprints.length})</span>
+                                            </div>
+                                        ) : (
+                                            <div 
+                                                className="absolute h-6 top-2 rounded-md flex items-center px-2 text-white font-semibold text-xs bg-indigo-500"
+                                                style={{
+                                                    left: `${getOffset(release.startDate!)}%`,
+                                                    width: `${getWidth(release.startDate!, release.endDate!)}%`,
+                                                }}
+                                            >
+                                                <span className="truncate">{release.name}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     {isExpanded && (
                                         <div className="space-y-1 p-2">

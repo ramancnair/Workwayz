@@ -254,22 +254,21 @@ export default function ReleasesPage() {
 
     if (showSprints) {
       sprints.forEach((sprint) => {
-        const parentReleaseId = sprint.releaseId;
-        // Strict explicit alignment only: sprint must have a releaseId matching an existing release
-        if (parentReleaseId && releases.some(r => r.id === parentReleaseId)) {
-          itemsToProcess.push({
-            id: sprint.id,
-            releaseId: getSprintDisplayId(sprint),
-            name: sprint.title,
-            description: `Sprint (${sprint.status || 'Planned'})`,
-            itemType: 'Sprint' as any,
-            parentReleaseId,
-            startDate: sprint.startDate,
-            endDate: sprint.endDate,
-            isCompleted: sprint.status === 'Completed',
-            originalSprint: sprint,
-          });
-        }
+        const isAligned = sprint.releaseId && releases.some(r => r.id === sprint.releaseId);
+        const parentReleaseId = isAligned ? sprint.releaseId : undefined;
+
+        itemsToProcess.push({
+          id: sprint.id,
+          releaseId: getSprintDisplayId(sprint),
+          name: sprint.title,
+          description: `Sprint (${sprint.status || 'Planned'})`,
+          itemType: 'Sprint' as any,
+          parentReleaseId,
+          startDate: sprint.startDate,
+          endDate: sprint.endDate,
+          isCompleted: sprint.status === 'Completed',
+          originalSprint: sprint,
+        });
       });
     }
 
@@ -289,7 +288,11 @@ export default function ReleasesPage() {
     }
     
     if (filters.parentReleaseId !== 'all') {
-        filtered = filtered.filter(item => item.parentReleaseId === filters.parentReleaseId);
+        if (filters.parentReleaseId === 'none') {
+            filtered = filtered.filter(item => !item.parentReleaseId);
+        } else {
+            filtered = filtered.filter(item => item.parentReleaseId === filters.parentReleaseId);
+        }
     }
 
     if (sorting) {
@@ -398,7 +401,7 @@ export default function ReleasesPage() {
                         onCheckedChange={setShowSprints}
                     />
                     <Label htmlFor="show-sprints-switch" className="text-sm font-medium cursor-pointer select-none">
-                        Show sprints aligned to release
+                        Show Sprints
                     </Label>
                 </div>
             </CardHeader>
@@ -435,6 +438,7 @@ export default function ReleasesPage() {
                     <SelectContent>
                         <SelectItem value="all">All Parent Releases</SelectItem>
                         {releases.map(r => <SelectItem key={r.id} value={r.id}>({r.releaseId}) {r.name}</SelectItem>)}
+                        {showSprints && <SelectItem value="none">None (Non-Release)</SelectItem>}
                     </SelectContent>
                 </Select>
                  <Button variant="ghost" onClick={clearFilters}>
@@ -483,7 +487,17 @@ export default function ReleasesPage() {
                         <span className={cn(isSprint && "font-medium text-amber-200")}>{item.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{(item.itemType === 'Stage' || item.itemType === 'Milestone' || isSprint) ? getParentReleaseName(item.parentReleaseId) : 'N/A'}</TableCell>
+                    <TableCell>
+                      {isSprint ? (
+                        item.parentReleaseId ? (
+                          getParentReleaseName(item.parentReleaseId)
+                        ) : (
+                          <span className="text-muted-foreground italic text-xs">None (Non-Release)</span>
+                        )
+                      ) : (
+                        (item.itemType === 'Stage' || item.itemType === 'Milestone') ? getParentReleaseName(item.parentReleaseId) : 'N/A'
+                      )}
+                    </TableCell>
                     <TableCell>
                       {item.itemType === 'Milestone' && item.milestoneDate && !isNaN(new Date(item.milestoneDate).getTime())
                           ? format(new Date(item.milestoneDate), 'PPP')

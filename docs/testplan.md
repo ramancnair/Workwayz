@@ -114,7 +114,7 @@ npm run test:e2e:install
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
 | **TC-RES-001** | Project resources & capacity planning | Member assignments and allocation percentages | ✅ Automated |
-| **TC-REL-001** | Release planning & deployments | Version milestones, release timelines, and aligned sprint toggles | ✅ Automated |
+| **TC-REL-001** | Release planning & deployments | Version milestones, release timelines, and Show Sprints grouping (aligned vs non-release) | ✅ Automated |
 | **TC-ADM-001** | User Profile & Messages hub | Personal profile credentials and single-column Gmail-style Messages view | ✅ Automated |
 
 ### Pillar 8: Setup Wizard & Initial Configuration (`e2e/08-setup-wizard.spec.ts`)

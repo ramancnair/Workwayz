@@ -46,7 +46,7 @@ describe('ReleaseGanttChart with Sprints Alignment', () => {
       isCurrent: true,
       startDate: '2026-10-19T00:00:00.000Z',
       endDate: '2026-11-01T00:00:00.000Z',
-      // Unassigned (None): Even though dates fall inside rel-1, strict alignment must exclude it
+      // Unassigned (Non-Release sprint)
     },
     {
       id: 'sp-3',
@@ -56,7 +56,7 @@ describe('ReleaseGanttChart with Sprints Alignment', () => {
       isCurrent: false,
       startDate: '2027-05-01T00:00:00.000Z',
       endDate: '2027-05-15T00:00:00.000Z',
-      // Outside rel-1 dates and unassigned
+      // Unassigned (Non-Release sprint)
     },
   ];
 
@@ -81,9 +81,10 @@ describe('ReleaseGanttChart with Sprints Alignment', () => {
     // Sprints should NOT be visible when toggle is off
     expect(screen.queryByText('Sprint 1 - Core Foundations')).not.toBeInTheDocument();
     expect(screen.queryByText('Sprint 2 - API Integration')).not.toBeInTheDocument();
+    expect(screen.queryByText('Non-Release Sprints')).not.toBeInTheDocument();
   });
 
-  it('strictly renders ONLY explicitly aligned sprints under the parent release when showSprints is true', () => {
+  it('renders explicitly aligned sprints under release and unaligned sprints in Non-Release Sprints group', () => {
     render(
       <ReleaseGanttChart
         releases={mockReleases}
@@ -96,15 +97,17 @@ describe('ReleaseGanttChart with Sprints Alignment', () => {
     const releaseHeaders = screen.getAllByText('v1.0 Production Release');
     fireEvent.click(releaseHeaders[0]);
 
-    // Explicitly aligned sprint (sp-1) MUST be visible
+    // Explicitly aligned sprint (sp-1) MUST be visible under release
     expect(screen.getAllByText('Sprint 1 - Core Foundations').length).toBeGreaterThan(0);
     expect(screen.getAllByText('SP-1').length).toBeGreaterThan(0);
 
-    // Unassigned sprint (sp-2) MUST NOT be visible, even though its calendar dates overlap
-    expect(screen.queryByText('Sprint 2 - API Integration')).not.toBeInTheDocument();
-    expect(screen.queryByText('SP-2')).not.toBeInTheDocument();
+    // Non-Release Sprints group should exist
+    expect(screen.getAllByText('Non-Release Sprints').length).toBeGreaterThan(0);
 
-    // Unassigned distant sprint (sp-3) MUST NOT be in this release
-    expect(screen.queryByText('Sprint 3 - Next Year Planning')).not.toBeInTheDocument();
+    // The unassigned sprints (sp-2, sp-3) are rendered under the Non-Release Sprints group
+    expect(screen.getAllByText('Sprint 2 - API Integration').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('SP-2').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sprint 3 - Next Year Planning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('SP-3').length).toBeGreaterThan(0);
   });
 });

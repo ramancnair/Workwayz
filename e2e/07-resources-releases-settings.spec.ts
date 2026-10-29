@@ -16,8 +16,8 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     const projectId = await getOrNavigateToProject(page);
     await page.goto(`/projects/${projectId}/releases/project-releases`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Release|Milestones|Target Date|Status/i);
-    await expect(page.getByLabel(/Show sprints aligned to release/i)).toBeVisible();
-    await page.getByLabel(/Show sprints aligned to release/i).click();
+    await expect(page.getByLabel(/Show Sprints/i)).toBeVisible();
+    await page.getByLabel(/Show Sprints/i).click();
   });
 
   test('TC-ADM-001: User Profile and Messages views render personal details and single-column message list', async ({ page }) => {
