@@ -76,6 +76,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { usePermissions } from '@/hooks/use-permissions';
 import { z } from 'zod';
 
+const normalizeDateKey = (dateVal: any): string => {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string') {
+    if (dateVal.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(dateVal)) {
+      return dateVal.slice(0, 10);
+    }
+    try {
+      return format(parseISO(dateVal), 'yyyy-MM-dd');
+    } catch {
+      return dateVal;
+    }
+  }
+  if (dateVal instanceof Date) {
+    return format(dateVal, 'yyyy-MM-dd');
+  }
+  if (dateVal?.toDate) {
+    return dateVal.toDate().toISOString().slice(0, 10);
+  }
+  return '';
+};
+
 export default function WorklogPage() {
   const { userRole } = usePermissions();
   const isAdmin = userRole === 'Administrator' || userRole === 'Super Admin';
@@ -124,6 +145,7 @@ export default function WorklogPage() {
   const [workItemInputValues, setWorkItemInputValues] = useState<
     Record<string, string>
   >({});
+  const [optimisticDailyHours, setOptimisticDailyHours] = useState<Record<string, number>>({});
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: i,
     label: format(new Date(0, i), 'MMMM'),
@@ -177,14 +199,29 @@ export default function WorklogPage() {
 
   const dailyHoursMap = useMemo(() => {
     if (!selectedEmployee) return {};
-    return worklogs.reduce((acc, log) => {
+    const map = worklogs.reduce((acc, log) => {
       if (log.employeeId === selectedEmployee.id) {
-        const dateKey = format(parseISO(log.date), 'yyyy-MM-dd');
-        acc[dateKey] = log.totalHours;
+        const dateKey = normalizeDateKey(log.date);
+        if (dateKey) {
+          acc[dateKey] = log.totalHours;
+        }
       }
       return acc;
     }, {} as Record<string, number>);
-  }, [worklogs, selectedEmployee]);
+
+    Object.entries(optimisticDailyHours).forEach(([dateKey, hours]) => {
+      map[dateKey] = hours;
+    });
+
+    return map;
+  }, [worklogs, selectedEmployee, optimisticDailyHours]);
+
+  const weeklyTotalHours = useMemo(() => {
+    return weekDays.reduce((sum, day) => {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      return sum + (dailyHoursMap[dateKey] || 0);
+    }, 0);
+  }, [weekDays, dailyHoursMap]);
 
   // Effect to auto-populate holidays and weekends for the displayed week
   useEffect(() => {
@@ -196,7 +233,7 @@ export default function WorklogPage() {
         const existingLog = worklogs.find(
           (log) =>
             log.employeeId === selectedEmployee.id &&
-            format(parseISO(log.date), 'yyyy-MM-dd') === dateString
+            normalizeDateKey(log.date) === dateString
         );
 
         if (!existingLog) {
@@ -233,7 +270,7 @@ export default function WorklogPage() {
       const existingLog = worklogs.find(
         (log) =>
           log.employeeId === selectedEmployee.id &&
-          format(parseISO(log.date), 'yyyy-MM-dd') === dateString
+          normalizeDateKey(log.date) === dateString
       );
 
       if (existingLog && existingLog.items.length > 0) {
@@ -347,7 +384,7 @@ export default function WorklogPage() {
     }
   };
 
-  const handleAutoSave = async () => {
+  const handleSave = async (showToast = true) => {
     if (!selectedEmployee || !selectedDate) return;
     
     if (!isAdmin && currentEmployee && selectedEmployee.id !== currentEmployee.id) {
@@ -362,21 +399,21 @@ export default function WorklogPage() {
     // De-duplicate items before saving
     const itemMap = new Map<string, WorklogItem>();
     logItems.forEach(item => {
-        if(item.itemId) { // only consider items with a selected work item
-            const existing = itemMap.get(item.itemId);
-            if(existing) {
-                existing.hours += item.hours;
-                if(item.description) {
-                    existing.description = (existing.description || '') + ' ' + item.description;
-                }
-            } else {
-                itemMap.set(item.itemId, { ...item });
-            }
+      const key = item.itemId || item.id;
+      const existing = itemMap.get(key);
+      const numHours = Number(item.hours) || 0;
+      if (existing) {
+        existing.hours += numHours;
+        if (item.description) {
+          existing.description = (existing.description || '') + ' ' + item.description;
         }
+      } else {
+        itemMap.set(key, { ...item, hours: numHours });
+      }
     });
 
-    const finalItems = Array.from(itemMap.values());
-    const totalHours = finalItems.reduce((sum, item) => sum + Number(item.hours), 0);
+    const finalItems = Array.from(itemMap.values()).filter(it => it.itemId || it.hours > 0);
+    const totalHours = finalItems.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
 
     if (totalHours > 24) {
       toast({
@@ -388,10 +425,12 @@ export default function WorklogPage() {
     }
 
     setIsSaving(true);
+    const dateKey = format(selectedDate, 'yyyy-MM-dd');
+    setOptimisticDailyHours(prev => ({ ...prev, [dateKey]: totalHours }));
 
     const worklogData = {
       employeeId: selectedEmployee.id,
-      date: format(selectedDate, 'yyyy-MM-dd'),
+      date: dateKey,
       items: finalItems.map(({ id, ...rest }) => rest),
       totalHours: totalHours,
     };
@@ -399,7 +438,12 @@ export default function WorklogPage() {
     const success = await saveWorklog(worklogData);
 
     if (success) {
-      // Data will refresh via snapshot listener, no need to toast on every save
+      if (showToast) {
+        toast({
+          title: 'Worklog Saved',
+          description: `Successfully saved ${totalHours.toFixed(1)}h for ${format(selectedDate, 'PPP')}.`,
+        });
+      }
     } else {
       toast({
         variant: 'destructive',
@@ -409,6 +453,8 @@ export default function WorklogPage() {
     }
     setIsSaving(false);
   };
+
+  const handleAutoSave = () => handleSave(false);
 
 
   return (
@@ -435,7 +481,7 @@ export default function WorklogPage() {
               <Select
                 disabled={!isAdmin}
                 onValueChange={(id) =>
-                  setSelectedEmployee(employees.find((e) => e.id === id) || null)
+                  { setSelectedEmployee(employees.find((e) => e.id === id) || null); setOptimisticDailyHours({}); }
                 }
                 value={selectedEmployee?.id}
               >
@@ -455,12 +501,18 @@ export default function WorklogPage() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">Date</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium">Date</label>
+                <div className="flex items-center gap-2 bg-muted/40 px-3 py-1 rounded-md border text-sm">
+                  <span className="text-muted-foreground text-xs font-medium">Weekly Total:</span>
+                  <span className="font-bold text-foreground">{weeklyTotalHours.toFixed(1)} hrs</span>
+                </div>
+              </div>
               <div className="flex items-center gap-4 my-2">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setDisplayDate(subWeeks(displayDate, 1))}
+                  onClick={() => { setDisplayDate(subWeeks(displayDate, 1)); setOptimisticDailyHours({}); }}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -503,7 +555,7 @@ export default function WorklogPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setDisplayDate(addWeeks(displayDate, 1))}
+                  onClick={() => { setDisplayDate(addWeeks(displayDate, 1)); setOptimisticDailyHours({}); }}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -540,7 +592,7 @@ export default function WorklogPage() {
                   Log for {selectedEmployee.firstName} on {format(selectedDate, 'PPP')}
                 </CardTitle>
                 <CardDescription>
-                  Add or modify items and hours worked. Changes are saved automatically.
+                  Add or modify items and hours worked. Click Save to update the weekly calendar.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -578,6 +630,7 @@ export default function WorklogPage() {
                         value={item.hours === 0 ? '' : item.hours}
                         onChange={(e) => handleItemChange(item.id, 'hours', e.target.value)}
                         onBlur={handleAutoSave}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(true); } }}
                         min="0"
                         max="24"
                         step="any"
@@ -603,14 +656,28 @@ export default function WorklogPage() {
                         </>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveItem(item.id)}
-                      disabled={isSaving}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSave(true)}
+                        disabled={isSaving}
+                        title="Save hours"
+                        className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                      >
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveItem(item.id)}
+                        disabled={isSaving}
+                        title="Remove item"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 <datalist id="work-item-options">
@@ -618,22 +685,39 @@ export default function WorklogPage() {
                     <option key={option.value} value={option.label} />
                   ))}
                 </datalist>
-                <div className="flex justify-between items-center pt-4 border-t mt-4">
-                  <Button variant="outline" onClick={handleAddItem} disabled={isSaving || currentTotalHours >= 24}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                  </Button>
-                  <div className="text-right">
-                    <span className="text-sm font-medium mr-2">Total Logged:</span>
-                    <span className={cn("text-base font-bold", currentTotalHours > 24 ? "text-destructive" : "text-foreground")}>
-                      {currentTotalHours.toFixed(1)} / 24.0 hrs
-                    </span>
-                    {currentTotalHours > 24 && (
-                      <p className="text-xs text-destructive font-medium mt-0.5">
-                        Total effort for a single day cannot exceed 24 hours.
-                      </p>
-                    )}
+                <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between pt-4 border-t mt-4 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleAddItem} disabled={isSaving || currentTotalHours >= 24}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                    </Button>
+                    <Button
+                      onClick={() => handleSave(true)}
+                      disabled={isSaving}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                    >
+                      <Save className="mr-2 h-4 w-4" /> Save Log
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-6 text-right">
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Daily Logged ({format(selectedDate, 'MMM d')})</span>
+                      <span className={cn("text-sm font-bold", currentTotalHours > 24 ? "text-destructive" : "text-foreground")}>
+                        {currentTotalHours.toFixed(1)} / 24.0 hrs
+                      </span>
+                    </div>
+                    <div className="border-l pl-4 border-border/60">
+                      <span className="text-xs text-muted-foreground block">Weekly Total Logged</span>
+                      <span className="text-base font-bold text-foreground">
+                        {weeklyTotalHours.toFixed(1)} hrs
+                      </span>
+                    </div>
                   </div>
                 </div>
+                {currentTotalHours > 24 && (
+                  <p className="text-xs text-destructive font-medium mt-2 text-right">
+                    Total effort for a single day cannot exceed 24 hours.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
