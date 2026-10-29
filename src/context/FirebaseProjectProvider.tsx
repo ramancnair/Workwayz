@@ -122,6 +122,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/testing/defects': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
   '/project-details/pm-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
   '/project-details/fp-pm-dash': ['stories', 'epics', 'sprints', 'employees', 'allUsers', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'releases', 'paymentMilestones', 'worklogs', 'impactedSystems', 'documents', 'weeklyOffDays', 'holidays', 'projectSettings', 'fixedCosts'],
+  '/project-details/project-status': ['allUsers', 'paymentMilestones', 'employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
+  '/initial-estimation/project-status': ['allUsers', 'paymentMilestones', 'employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],
   '/project-details/specifications': ['environments', 'impactedSystems', 'horizontals'],
   '/initial-estimation/specifications': ['initialImpactedSystems', 'initialHorizontals'],
   '/releases/project-releases': ['releases', 'sprints'],
