@@ -123,6 +123,8 @@ const ChartTooltipContent = React.forwardRef<
       indicator?: "line" | "dot" | "dashed"
       nameKey?: string
       labelKey?: string
+      reverse?: boolean
+      reversed?: boolean
     }
 >(
   (
@@ -140,6 +142,8 @@ const ChartTooltipContent = React.forwardRef<
       color,
       nameKey,
       labelKey,
+      reverse = false,
+      reversed = false,
     },
     ref
   ) => {
@@ -185,7 +189,9 @@ const ChartTooltipContent = React.forwardRef<
       return null
     }
 
-    const nestLabel = payload.length === 1 && indicator !== "dot"
+    const displayPayload = (reverse || reversed) ? [...payload].reverse() : payload
+
+    const nestLabel = displayPayload.length === 1 && indicator !== "dot"
 
     return (
       <div
@@ -197,7 +203,7 @@ const ChartTooltipContent = React.forwardRef<
       >
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
-          {payload.map((item, index) => {
+          {displayPayload.map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
             const indicatorColor = color || item.payload.fill || item.color

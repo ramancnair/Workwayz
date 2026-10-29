@@ -488,7 +488,7 @@ export default function TestingDashboard() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartTooltip content={<ChartTooltipContent reverse />} />
                   <ChartLegend content={<ChartLegendContent />} />
                   <Bar dataKey="Low" stackId="a" fill="var(--color-Low)" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="Medium" stackId="a" fill="var(--color-Medium)" radius={[0, 0, 0, 0]} />
