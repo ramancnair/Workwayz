@@ -40,15 +40,14 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Trash2, Edit, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Check, ChevronsUpDown, Info, Search } from 'lucide-react';
-import { type User, type UserRole, type Story, type ImpactedSystem, type Project, type Horizontal } from '@/types';
+import { type User, type UserRole, type ImpactedSystem, type Project, type Horizontal } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { isAssignableToProject } from '@/lib/permissions';
 import { useToast } from "@/hooks/use-toast";
 import { buttonVariants } from '@/components/ui/button';
-import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getYear, setYear, getMonth, setMonth, addMonths, subMonths, addWeeks, subWeeks, addYears, differenceInDays } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -521,28 +520,18 @@ function ResourceDialog({
 }
 
 function CapacityPlanning() {
-  const { sprints, impactedSystems, stories, employees, holidays, weeklyOffDays } = useProject();
+  const { sprints, impactedSystems, employees, holidays, weeklyOffDays, projectSettings } = useProject();
   const [viewType, setViewType] = useState<'sprint' | 'month' | 'week'>('sprint');
-  const [selectedSprintId, setSelectedSprintId] = useState<string>('');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [unit, setUnit] = useState<'hours' | 'days'>('hours');
 
-  const currentSprint = useMemo(() => sprints.find(s => s.isCurrent), [sprints]);
-
-  useEffect(() => {
-    if (currentSprint) {
-      setSelectedSprintId(currentSprint.id);
-    } else if (sprints.length > 0) {
-      setSelectedSprintId(sprints[0].id);
-    }
-  }, [currentSprint, sprints]);
+  const currentSprint = useMemo(() => sprints.find(s => s.isCurrent) || sprints[0], [sprints]);
 
   const { periodStart, periodEnd } = useMemo(() => {
     if (viewType === 'sprint') {
-      const sprint = sprints.find(s => s.id === selectedSprintId);
       return {
-        periodStart: sprint?.startDate ? parseISO(sprint.startDate) : null,
-        periodEnd: sprint?.endDate ? parseISO(sprint.endDate) : null,
+        periodStart: currentSprint?.startDate ? parseISO(currentSprint.startDate) : null,
+        periodEnd: currentSprint?.endDate ? parseISO(currentSprint.endDate) : null,
       };
     }
     if (viewType === 'month') {
@@ -556,7 +545,7 @@ function CapacityPlanning() {
       periodStart: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
       periodEnd: endOfWeek(currentDate, { weekStartsOn: 1 }), // Sunday
     };
-  }, [viewType, selectedSprintId, sprints, currentDate]);
+  }, [viewType, currentSprint, currentDate]);
 
   const getWorkingDays = useCallback((start: Date, end: Date): number => {
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
@@ -574,13 +563,15 @@ function CapacityPlanning() {
   }, [holidays, weeklyOffDays]);
 
   const workingDaysInPeriod = useMemo(() => {
-    if (!periodStart || !periodEnd) return 0;
+    if (!periodStart || !periodEnd) {
+      if (viewType === 'week') return 5;
+      if (viewType === 'month') return 20;
+      return (projectSettings?.sprintDurationInWeeks || 2) * 5;
+    }
     return getWorkingDays(periodStart, periodEnd);
-  }, [periodStart, periodEnd, getWorkingDays]);
+  }, [periodStart, periodEnd, getWorkingDays, viewType, projectSettings]);
 
   const capacityData = useMemo(() => {
-    if (!periodStart || !periodEnd) return [];
-
     return impactedSystems.map(system => {
       const resourcesForSystem = employees.filter(emp => emp.capabilities?.some(c => c === system.id || c === system.name));
 
@@ -590,60 +581,17 @@ function CapacityPlanning() {
         totalCapacityHours += workingDaysInPeriod * 8 * availabilityFactor;
       });
 
-      const utilizedHours = stories
-        .filter(story => {
-          if (story.itemType !== 'Sub Task' || story.impactedSystemId !== system.id) return false;
-
-          if (story.startDate && story.endDate) {
-            const taskStart = parseISO(story.startDate);
-            const taskEnd = parseISO(story.endDate);
-            return isWithinInterval(periodStart, { start: taskStart, end: taskEnd }) ||
-              isWithinInterval(periodEnd, { start: taskStart, end: taskEnd }) ||
-              isWithinInterval(taskStart, { start: periodStart, end: periodEnd });
-          }
-
-          // Fallback for tasks without dates - check parent story's sprint
-          const parentStory = stories.find(s => s.id === story.parentStoryId);
-          if (!parentStory?.sprintId) return false;
-
-          const sprint = sprints.find(s => s.id === parentStory.sprintId);
-          if (sprint?.startDate && sprint?.endDate) {
-            const sprintStart = parseISO(sprint.startDate);
-            const sprintEnd = parseISO(sprint.endDate);
-            return isWithinInterval(periodStart, { start: sprintStart, end: sprintEnd }) ||
-              isWithinInterval(periodEnd, { start: sprintStart, end: sprintEnd }) ||
-              isWithinInterval(sprintStart, { start: periodStart, end: periodEnd });
-          }
-
-          return false;
-        })
-        .reduce((sum, task) => {
-          const taskStart = task.startDate ? parseISO(task.startDate) : periodStart;
-          const taskEnd = task.endDate ? parseISO(task.endDate) : periodEnd;
-          const overlapStart = new Date(Math.max(periodStart.getTime(), taskStart.getTime()));
-          const overlapEnd = new Date(Math.min(periodEnd.getTime(), taskEnd.getTime()));
-
-          if (overlapStart > overlapEnd) return sum;
-
-          const overlapWorkingDays = getWorkingDays(overlapStart, overlapEnd);
-          const taskTotalWorkingDays = getWorkingDays(taskStart, taskEnd) || 1;
-          const dailyEffort = (task.estimatedHours || 0) / taskTotalWorkingDays;
-
-          return sum + (dailyEffort * overlapWorkingDays);
-        }, 0);
-
-      const utilization = totalCapacityHours > 0 ? (utilizedHours / totalCapacityHours) * 100 : 0;
-
       return {
         systemId: system.id,
         systemName: system.name,
         totalCapacityHours: parseFloat(totalCapacityHours.toFixed(2)),
-        utilizedHours: parseFloat(utilizedHours.toFixed(2)),
-        remainingHours: parseFloat((totalCapacityHours - utilizedHours).toFixed(2)),
-        utilization: parseFloat(utilization.toFixed(2)),
       };
     });
-  }, [periodStart, periodEnd, stories, impactedSystems, employees, workingDaysInPeriod, sprints, getWorkingDays]);
+  }, [impactedSystems, employees, workingDaysInPeriod]);
+
+  const totalTeamCapacityHours = useMemo(() => {
+    return capacityData.reduce((sum, item) => sum + item.totalCapacityHours, 0);
+  }, [capacityData]);
 
   const handleDateChange = (changeFn: (date: Date, amount: number) => Date) => {
     setCurrentDate(prev => changeFn(prev, 1));
@@ -651,11 +599,7 @@ function CapacityPlanning() {
 
   const periodTitle = useMemo(() => {
     if (viewType === 'sprint') {
-      const sprint = sprints.find(s => s.id === selectedSprintId)
-      if (!sprint) return "Select a Sprint";
-      const start = sprint.startDate ? format(parseISO(sprint.startDate), 'MMM d') : '?';
-      const end = sprint.endDate ? format(parseISO(sprint.endDate), 'MMM d') : '?';
-      return `${sprint.title} (${start} - ${end})`;
+      return '';
     }
     if (viewType === 'month') {
       return format(currentDate, 'MMMM yyyy');
@@ -664,7 +608,7 @@ function CapacityPlanning() {
       return `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`;
     }
     return '';
-  }, [viewType, selectedSprintId, currentDate, sprints]);
+  }, [viewType, currentDate]);
 
   const displayValue = useCallback((valueInHours: number) => {
     if (unit === 'days') {
@@ -677,7 +621,7 @@ function CapacityPlanning() {
     <Card>
       <CardHeader>
         <CardTitle>Capacity Planning</CardTitle>
-        <CardDescription>View resource capacity based on assigned sub-tasks for each impacted system.</CardDescription>
+        <CardDescription>View total resource capacity of the team for each impacted system.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -690,20 +634,11 @@ function CapacityPlanning() {
               </TabsList>
             </Tabs>
 
-            {viewType === 'sprint' ? (
-              <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Select Sprint" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ) : (
+            {viewType !== 'sprint' && (
               <div className="flex items-center gap-2 border rounded-md p-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft /> </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? subMonths : subWeeks)}> <ChevronLeft className="h-4 w-4" /> </Button>
                 <span className="font-semibold text-sm w-48 text-center">{periodTitle}</span>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight /> </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDateChange(viewType === 'month' ? addMonths : addWeeks)}> <ChevronRight className="h-4 w-4" /> </Button>
               </div>
             )}
           </div>
@@ -721,11 +656,8 @@ function CapacityPlanning() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[25%]">Impacted System</TableHead>
+              <TableHead className="w-[50%]">Impacted System</TableHead>
               <TableHead>Total Capacity ({unit})</TableHead>
-              <TableHead>Utilized ({unit})</TableHead>
-              <TableHead>Remaining ({unit})</TableHead>
-              <TableHead className="w-[25%]">Utilization</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -733,16 +665,12 @@ function CapacityPlanning() {
               <TableRow key={data.systemId}>
                 <TableCell className="font-medium">{data.systemName}</TableCell>
                 <TableCell>{displayValue(data.totalCapacityHours)}</TableCell>
-                <TableCell>{displayValue(data.utilizedHours)}</TableCell>
-                <TableCell>{displayValue(data.remainingHours)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={data.utilization} className="w-full h-3" />
-                    <span className="text-xs font-semibold">{data.utilization.toFixed(0)}%</span>
-                  </div>
-                </TableCell>
               </TableRow>
             ))}
+            <TableRow className="font-bold bg-muted/30 border-t-2">
+              <TableCell>Total Team Capacity</TableCell>
+              <TableCell>{displayValue(totalTeamCapacityHours)}</TableCell>
+            </TableRow>
           </TableBody>
         </Table>
 
