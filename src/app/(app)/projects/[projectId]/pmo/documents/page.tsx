@@ -219,55 +219,6 @@ export default function DocumentsPage() {
             Add Custom Document
           </Button>
         </PageHeader>
-        <Card data-testid="pmo-documents-list" className="pmo-documents">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Document Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Date Added</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {documents.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((doc) => (
-                <TableRow key={doc.id}>
-                  <TableCell className="font-medium">{doc.name}</TableCell>
-                  <TableCell>
-                    {doc.location ? (
-                       <a href={doc.location} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
-                          <LinkIcon className="h-4 w-4" />
-                          View Document
-                        </a>
-                    ) : (
-                        <Button variant="link" className="p-0 h-auto" onClick={() => handleDialogOpen(doc)}>
-                          Add URL here
-                        </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>{format(new Date(doc.createdAt), 'PPP')}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(doc)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setDeletingDocument(doc)}
-                        disabled={defaultDocsList.includes(doc.name.toLowerCase())}
-                        className={defaultDocsList.includes(doc.name.toLowerCase()) ? "opacity-30 cursor-not-allowed" : ""}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-
         {/* PMO Approval Sign-offs Section */}
         <Card className="relative overflow-hidden border border-border/80 bg-background/40 backdrop-blur-md shadow-xl transition-all duration-300 hover:shadow-2xl">
           {/* Glowing cyan top accent border */}
@@ -337,7 +288,7 @@ export default function DocumentsPage() {
                   </div>
                   
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
-                    Authorizes development to begin. Requires a valid **Statement of Work (SOW)** linked in the documents list above.
+                    Authorizes development to begin. Requires a valid **Statement of Work (SOW)** linked in the documents list below.
                   </p>
 
                   {/* Requirements & Permissions Badges */}
@@ -426,7 +377,7 @@ export default function DocumentsPage() {
                   </div>
                   
                   <p className="text-sm text-muted-foreground/80 leading-relaxed">
-                    Authorizes deployment to production environment. Requires a valid **QA Approval** link in the documents list above.
+                    Authorizes deployment to production environment. Requires a valid **QA Approval** link in the documents list below.
                   </p>
 
                   {/* Requirements & Permissions Badges */}
@@ -466,6 +417,55 @@ export default function DocumentsPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        <Card data-testid="pmo-documents-list" className="pmo-documents">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Document Name</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Date Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documents.sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((doc) => (
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium">{doc.name}</TableCell>
+                  <TableCell>
+                    {doc.location ? (
+                       <a href={doc.location} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                          <LinkIcon className="h-4 w-4" />
+                          View Document
+                        </a>
+                    ) : (
+                        <Button variant="link" className="p-0 h-auto" onClick={() => handleDialogOpen(doc)}>
+                          Add URL here
+                        </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>{format(new Date(doc.createdAt), 'PPP')}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(doc)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setDeletingDocument(doc)}
+                        disabled={defaultDocsList.includes(doc.name.toLowerCase())}
+                        className={defaultDocsList.includes(doc.name.toLowerCase()) ? "opacity-30 cursor-not-allowed" : ""}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Card>
       </div>
 
