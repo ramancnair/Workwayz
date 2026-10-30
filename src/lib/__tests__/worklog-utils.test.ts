@@ -168,3 +168,4 @@ describe('Worklog Utils - Project Allocation & Option Filtering', () => {
     });
   });
 });
+
