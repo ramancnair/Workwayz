@@ -49,6 +49,10 @@ import {
   setDoc,
   doc,
 } from '@/lib/db-provider';
+import {
+  getWorkItemOptionsForProject as getWorkItemOptionsHelper,
+  isEmployeeAllocatedToProject,
+} from '@/lib/worklog-utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,6 +74,7 @@ interface EmployeeOption {
   name: string;
   firstName?: string;
   lastName?: string;
+  email?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,63 +154,82 @@ export default function GlobalWorklogPage() {
   const [holidays, setHolidays] = useState<any[]>([]);
   const [weeklyOffDays, setWeeklyOffDays] = useState<number[]>([0, 6]);
 
-  // Load top-level employees and user projects
+  // 1. Load employees from top-level employees collection for admin selection
+  useEffect(() => {
+    if (!db) return;
+
+    const loadEmployees = async () => {
+      try {
+        const empSnap = await getDocs(
+          query(collection(db!, 'employees'), where('isDeleted', '!=', true))
+        );
+        const empList: EmployeeOption[] = [];
+        empSnap.docs.forEach((d: any) => {
+          const data = d.data();
+          if (data.isEnabled === false) return;
+          const empId = (data.empId || d.id || '').trim();
+          const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || empId;
+          if (empId) {
+            empList.push({
+              id: empId,
+              empId,
+              name: fullName,
+              firstName: data.firstName,
+              lastName: data.lastName,
+              email: data.email,
+            });
+          }
+        });
+        empList.sort((a, b) => a.name.localeCompare(b.name));
+        setAvailableEmployees(empList);
+
+        // If current selection is empty, default it
+        if (!selectedEmployeeId) {
+          if (currentUser?.empId) {
+            setSelectedEmployeeId(currentUser.empId);
+          } else if (empList.length > 0) {
+            setSelectedEmployeeId(empList[0].id);
+          }
+        }
+      } catch (eErr) {
+        console.warn('Could not load top-level employees:', eErr);
+      }
+    };
+
+    loadEmployees();
+  }, [currentUser?.empId]);
+
+  // 2. Load projects strictly allocated to the selected employee (or PM)
   useEffect(() => {
     if (!db) {
       setLoadingProjects(false);
       return;
     }
 
-    const loadData = async () => {
+    const loadProjectsForEmployee = async () => {
       try {
         setLoadingProjects(true);
 
-        // 1. Load employees from top-level employees collection for admin selection
-        try {
-          const empSnap = await getDocs(
-            query(collection(db!, 'employees'), where('isDeleted', '!=', true))
-          );
-          const empList: EmployeeOption[] = [];
-          empSnap.docs.forEach((d: any) => {
-            const data = d.data();
-            if (data.isEnabled === false) return;
-            const empId = (data.empId || d.id || '').trim();
-            const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || empId;
-            if (empId) {
-              empList.push({
-                id: empId,
-                empId,
-                name: fullName,
-                firstName: data.firstName,
-                lastName: data.lastName,
-              });
-            }
-          });
-          empList.sort((a, b) => a.name.localeCompare(b.name));
-          setAvailableEmployees(empList);
+        const effectiveEmpId = (selectedEmployeeId || currentUser?.empId || '').trim();
+        const selectedEmp = availableEmployees.find(
+          (e) =>
+            e.empId.toLowerCase() === effectiveEmpId.toLowerCase() ||
+            e.id.toLowerCase() === effectiveEmpId.toLowerCase()
+        );
+        const targetEmpId = effectiveEmpId.toLowerCase();
+        const targetEmail = (
+          selectedEmp?.email ||
+          (effectiveEmpId.toLowerCase() === currentUser?.empId?.toLowerCase() ? currentUser?.email : '') ||
+          ''
+        ).trim().toLowerCase();
 
-          // If current selection is empty, default it
-          if (!selectedEmployeeId) {
-            if (currentUser?.empId) {
-              setSelectedEmployeeId(currentUser.empId);
-            } else if (empList.length > 0) {
-              setSelectedEmployeeId(empList[0].id);
-            }
-          }
-        } catch (eErr) {
-          console.warn('Could not load top-level employees:', eErr);
-        }
-
-        // 2. Load projects
         const projectsSnap = await getDocs(
           query(collection(db!, 'projects'), where('isDeleted', '!=', true))
         );
 
-        const targetEmpId = (currentUser?.empId || selectedEmployeeId || '').trim().toLowerCase();
-        const targetEmail = (currentUser?.email || '').trim().toLowerCase();
         const activeProjects = projectsSnap.docs
           .map((d: any) => ({ ...d.data(), id: d.id }))
-          .filter((p: any) => !p.isArchived && (p.status === 'Active' || !p.status));
+          .filter((p: any) => !p.isArchived && (p.status === 'Active' || !p.status) && p.id !== 'other');
 
         const matchedProjects: ProjectSummary[] = [];
 
@@ -213,33 +237,16 @@ export default function GlobalWorklogPage() {
           activeProjects.map(async (p: any) => {
             const name = p.name || p.projectName || p.id;
 
-            if (isAdmin) {
-              // Admin can see all active projects
-              matchedProjects.push({ id: p.id, name, status: p.status || 'Active' });
-              return;
-            }
-
-            // Check if user is Project Manager
-            const pmId = (p.projectManagerId || '').trim().toLowerCase();
-            if (pmId && (pmId === targetEmpId || pmId === targetEmail)) {
-              matchedProjects.push({ id: p.id, name, status: p.status || 'Active' });
-              return;
-            }
-
-            // Check if user is in project employees sub-collection
+            let resources: any[] = [];
             try {
               const pEmps = await getDocs(collection(db!, 'projects', p.id, 'employees'));
-              const isMember = pEmps.docs.some((ed: any) => {
-                const edData = ed.data();
-                const eId = (edData.empId || ed.id || '').trim().toLowerCase();
-                const email = (edData.email || '').trim().toLowerCase();
-                return eId === targetEmpId || (targetEmail && email === targetEmail);
-              });
-              if (isMember) {
-                matchedProjects.push({ id: p.id, name, status: p.status || 'Active' });
-              }
+              resources = pEmps.docs.map((ed: any) => ({ ...ed.data(), id: ed.id }));
             } catch {
               // safe ignore
+            }
+
+            if (isEmployeeAllocatedToProject(p, targetEmpId, targetEmail, resources)) {
+              matchedProjects.push({ id: p.id, name, status: p.status || 'Active' });
             }
           })
         );
@@ -253,14 +260,25 @@ export default function GlobalWorklogPage() {
       }
     };
 
-    loadData();
-  }, [currentUser?.empId, currentUser?.email, isAdmin]);
+    loadProjectsForEmployee();
+  }, [selectedEmployeeId, currentUser?.empId, currentUser?.email, availableEmployees]);
 
-  // Subscribe to stories and worklogs for each active project
+  // Subscribe to stories and worklogs for each active project and 'other'
   useEffect(() => {
-    if (!db || myProjects.length === 0) return;
+    if (!db) return;
 
     const unsubs: (() => void)[] = [];
+
+    // Always subscribe to 'other' worklogs
+    const otherWorklogsUnsub = onSnapshot(
+      collection(db!, 'projects', 'other', 'worklogs'),
+      (snap: any) => {
+        const list: any[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        setWorklogsByProject((prev) => ({ ...prev, other: list }));
+      },
+      (err: any) => console.warn('other worklogs error:', err)
+    );
+    unsubs.push(otherWorklogsUnsub);
 
     myProjects.forEach((proj) => {
       // Stories
@@ -466,12 +484,18 @@ export default function GlobalWorklogPage() {
             inputVals[rowId] = 'Meeting';
           } else if (item.itemId === 'other') {
             inputVals[rowId] = 'Other';
+          } else if (item.itemId === 'training') {
+            inputVals[rowId] = 'Training / Skill Development';
+          } else if (item.itemId === 'admin') {
+            inputVals[rowId] = 'Administrative Tasks';
+          } else if (item.itemId === 'bench') {
+            inputVals[rowId] = 'Bench / Unallocated';
           } else if (item.itemId === 'holiday') {
             inputVals[rowId] = 'Holiday';
           } else if (item.itemId === 'weekend') {
             inputVals[rowId] = 'Weekend';
           } else {
-            inputVals[rowId] = item.description || item.itemId || '';
+            inputVals[rowId] = item.itemId || item.description || '';
           }
         });
       }
@@ -481,39 +505,28 @@ export default function GlobalWorklogPage() {
       setLogItems(combinedRows);
       setWorkItemInputValues(inputVals);
     } else {
-      // Create initial empty item if user has projects
-      const initialProjId = myProjects[0]?.id || '';
+      // Create initial empty item (default to first assigned project or 'other' if no projects)
+      const initialProjId = myProjects[0]?.id || 'other';
+      const isOther = initialProjId === 'other';
       const initialId = uuidv4();
       setLogItems([
         {
           id: initialId,
           projectId: initialProjId,
-          itemId: '',
-          itemType: 'WorkItem',
+          itemId: isOther ? 'other' : '',
+          itemType: isOther ? 'Other' : 'WorkItem',
           hours: 0,
           description: '',
         },
       ]);
-      setWorkItemInputValues({ [initialId]: '' });
+      setWorkItemInputValues({ [initialId]: isOther ? 'Other' : '' });
     }
   }, [selectedEmployeeId, currentUser?.empId, selectedDate, worklogsByProject, storiesByProject, myProjects]);
 
   // Helper to get work item options for a specific project
   const getWorkItemOptionsForProject = useCallback(
     (projId: string) => {
-      const pStories = storiesByProject[projId] || [];
-      const storyOptions = pStories.map((s) => ({
-        value: s.id,
-        label: `[${s.storyId}] ${s.title}`,
-        group: s.itemType || 'WorkItem',
-      }));
-      const generalOptions = [
-        { value: 'meeting', label: 'Meeting', group: 'General' },
-        { value: 'other', label: 'Other', group: 'General' },
-        { value: 'holiday', label: 'Holiday', group: 'General' },
-        { value: 'weekend', label: 'Weekend', group: 'General' },
-      ];
-      return [...generalOptions, ...storyOptions];
+      return getWorkItemOptionsHelper(projId, storiesByProject[projId] || []);
     },
     [storiesByProject]
   );
@@ -534,20 +547,23 @@ export default function GlobalWorklogPage() {
     }
 
     const defaultProjId =
-      logItems.length > 0 ? logItems[logItems.length - 1].projectId : myProjects[0]?.id || '';
+      logItems.length > 0
+        ? logItems[logItems.length - 1].projectId
+        : (myProjects[0]?.id || 'other');
+    const isOther = defaultProjId === 'other';
     const newId = uuidv4();
     setLogItems([
       ...logItems,
       {
         id: newId,
         projectId: defaultProjId,
-        itemId: '',
-        itemType: 'WorkItem',
+        itemId: isOther ? 'other' : '',
+        itemType: isOther ? 'Other' : 'WorkItem',
         hours: 0,
         description: '',
       },
     ]);
-    setWorkItemInputValues((prev) => ({ ...prev, [newId]: '' }));
+    setWorkItemInputValues((prev) => ({ ...prev, [newId]: isOther ? 'Other' : '' }));
   };
 
   const handleRemoveItem = (id: string) => {
@@ -560,23 +576,33 @@ export default function GlobalWorklogPage() {
   };
 
   const handleProjectChange = (rowId: string, newProjId: string) => {
+    const isOther = newProjId === 'other';
     setLogItems((prev) =>
       prev.map((item) =>
-        item.id === rowId ? { ...item, projectId: newProjId, itemId: '' } : item
+        item.id === rowId
+          ? {
+              ...item,
+              projectId: newProjId,
+              itemId: isOther ? 'other' : '',
+              itemType: isOther ? 'Other' : 'WorkItem',
+            }
+          : item
       )
     );
-    setWorkItemInputValues((prev) => ({ ...prev, [rowId]: '' }));
+    setWorkItemInputValues((prev) => ({ ...prev, [rowId]: isOther ? 'Other' : '' }));
   };
 
   const handleWorkItemInputChange = (rowId: string, projId: string, inputValue: string) => {
     setWorkItemInputValues((prev) => ({ ...prev, [rowId]: inputValue }));
     const options = getWorkItemOptionsForProject(projId);
-    const match = options.find((opt) => opt.label === inputValue);
+    const match = options.find((opt) => opt.label.toLowerCase() === inputValue.trim().toLowerCase());
 
     if (match) {
       let itemType: 'WorkItem' | 'Meeting' | 'Other' = 'WorkItem';
       if (match.value === 'meeting') itemType = 'Meeting';
-      if (['other', 'holiday', 'weekend'].includes(match.value)) itemType = 'Other';
+      if (['other', 'holiday', 'weekend', 'training', 'admin', 'bench'].includes(match.value)) {
+        itemType = 'Other';
+      }
       setLogItems((prev) =>
         prev.map((item) =>
           item.id === rowId ? { ...item, itemId: match.value, itemType } : item
@@ -585,7 +611,13 @@ export default function GlobalWorklogPage() {
     } else {
       setLogItems((prev) =>
         prev.map((item) =>
-          item.id === rowId ? { ...item, itemId: '', itemType: 'WorkItem' } : item
+          item.id === rowId
+            ? {
+                ...item,
+                itemId: inputValue.trim() || (projId === 'other' ? 'other' : ''),
+                itemType: projId === 'other' ? 'Other' : 'WorkItem',
+              }
+            : item
         )
       );
     }
@@ -661,13 +693,21 @@ export default function GlobalWorklogPage() {
       myProjects.forEach((p) => {
         itemsByProj[p.id] = [];
       });
+      itemsByProj['other'] = [];
+
+      // Include any project currently in worklogsByProject for this employee
+      Object.keys(worklogsByProject).forEach((projKey) => {
+        if (!itemsByProj[projKey]) {
+          itemsByProj[projKey] = [];
+        }
+      });
 
       logItems.forEach((row) => {
-        if (!row.projectId) return;
-        if (!itemsByProj[row.projectId]) {
-          itemsByProj[row.projectId] = [];
+        const pId = row.projectId || 'other';
+        if (!itemsByProj[pId]) {
+          itemsByProj[pId] = [];
         }
-        itemsByProj[row.projectId].push(row);
+        itemsByProj[pId].push({ ...row, projectId: pId });
       });
 
       // Save each project's worklog document
@@ -698,6 +738,12 @@ export default function GlobalWorklogPage() {
         const docId = `${effectiveEmpId}_${dateKey}`;
         const worklogDocRef = doc(db!, 'projects', projId, 'worklogs', docId);
 
+        const hadExistingLog = (worklogsByProject[projId] || []).some(
+          (log) =>
+            (log.employeeId || '').toLowerCase() === effectiveEmpId.toLowerCase() &&
+            normalizeDateKey(log.date) === dateKey
+        );
+
         if (finalItems.length > 0 || projTotalHours > 0) {
           await setDoc(
             worklogDocRef,
@@ -706,6 +752,17 @@ export default function GlobalWorklogPage() {
               date: dateKey,
               items: finalItems.map(({ id, ...rest }) => rest),
               totalHours: projTotalHours,
+            },
+            { merge: true }
+          );
+        } else if (hadExistingLog) {
+          await setDoc(
+            worklogDocRef,
+            {
+              employeeId: effectiveEmpId,
+              date: dateKey,
+              items: [],
+              totalHours: 0,
             },
             { merge: true }
           );
@@ -985,7 +1042,7 @@ export default function GlobalWorklogPage() {
                         <div className="space-y-1">
                           {index === 0 && <label className="text-sm font-medium">Project</label>}
                           <Select
-                            value={item.projectId}
+                            value={item.projectId || 'other'}
                             onValueChange={(val) => handleProjectChange(item.id, val)}
                             disabled={isSaving}
                           >
@@ -993,20 +1050,30 @@ export default function GlobalWorklogPage() {
                               <SelectValue placeholder="Select Project" />
                             </SelectTrigger>
                             <SelectContent>
-                              {myProjects.length === 0 ? (
-                                <SelectItem value="default" disabled className="text-xs">
-                                  No projects available
+                              {myProjects.map((p) => (
+                                <SelectItem key={p.id} value={p.id} className="text-xs">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    <span className="truncate">{p.name}</span>
+                                  </div>
                                 </SelectItem>
-                              ) : (
-                                myProjects.map((p) => (
-                                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                              ))}
+                              {item.projectId &&
+                                item.projectId !== 'other' &&
+                                !myProjects.some((p) => p.id === item.projectId) && (
+                                  <SelectItem value={item.projectId} className="text-xs">
                                     <div className="flex items-center gap-1.5 truncate">
                                       <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                      <span className="truncate">{p.name}</span>
+                                      <span className="truncate">{item.projectId}</span>
                                     </div>
                                   </SelectItem>
-                                ))
-                              )}
+                                )}
+                              <SelectItem value="other" className="text-xs">
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <Briefcase className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                  <span className="truncate font-medium">Other</span>
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
