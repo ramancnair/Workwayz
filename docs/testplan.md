@@ -78,7 +78,7 @@ npm run test:e2e:install
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
 | **TC-PRJ-001** | Project layout and tab bar navigation | Top navigation and sidebar submenus switch views | ✅ Automated |
-| **TC-PRJ-002** | Initial estimation & specifications | Scope specifications and estimation tables display | ✅ Automated |
+| **TC-PRJ-002** | Initial estimation & Project Status | Scope specifications and estimation tables display; Initial Estimation Project Status focuses on Key Info & Health (PMO permits & milestones scoped to Project Details) | ✅ Automated |
 | **TC-PRJ-003** | PM Dashboard & project status | Progress bars, schedule health, effort metrics load | ✅ Automated |
 
 ### Pillar 4: Agile Development Lifecycle (`e2e/04-development-lifecycle.spec.ts`)

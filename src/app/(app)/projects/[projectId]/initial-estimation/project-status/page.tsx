@@ -12,14 +12,14 @@ import { cn } from '@/lib/utils';
 import { type ProjectStatus, type RagStatus, type PricingModel } from '@/types';
 import { isAssignableToProject } from '@/lib/permissions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Edit, Circle, Search, CheckCircle2, AlertCircle, Coins } from 'lucide-react';
+import { Edit, Circle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -88,12 +88,7 @@ export default function ProjectSynopsisPage() {
         project, 
         isLoading, 
         allUsers = [], 
-        updateProject,
-        employees = [],
-        fixedCosts = [],
-        holidays = [],
-        weeklyOffDays = [],
-        paymentMilestones = []
+        updateProject
     } = useProject();
     
     const [isHealthDialogOpen, setIsHealthDialogOpen] = useState(false);
@@ -158,140 +153,6 @@ export default function ProjectSynopsisPage() {
             }
         }
     }, [project, infoForm, isInfoDialogOpen, allUsers]);
-
-    // PMO Permits
-    const permitToBuildApproved = !!project?.pmoApproval?.permitToBuild?.approved;
-    const permitToBuildAt = project?.pmoApproval?.permitToBuild?.approvedAt;
-
-    const permitToDeployApproved = !!project?.pmoApproval?.permitToDeploy?.approved;
-    const permitToDeployAt = project?.pmoApproval?.permitToDeploy?.approvedAt;
-
-    const formatApprovedDate = (dateStr?: string) => {
-        if (!dateStr) return null;
-        try {
-            return format(new Date(dateStr), 'PPP');
-        } catch {
-            return null;
-        }
-    };
-
-    // Helper functions for billing total calculation
-    const calculateBusinessDays = useCallback((startDateStr?: string, endDateStr?: string): number => {
-        if (!startDateStr || !endDateStr) return 0;
-        try {
-            const start = parseISO(startDateStr);
-            const end = parseISO(endDateStr);
-            
-            if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-                return 0;
-            }
-
-            const holidayDates = holidays.map(h => new Date(h.date));
-            const interval = eachDayOfInterval({ start, end });
-            
-            const businessDays = interval.filter(day => {
-                const dayOfWeek = day.getDay();
-                const isWeekend = weeklyOffDays.includes(dayOfWeek);
-                const isHoliday = holidayDates.some(holiday => isSameDay(day, holiday));
-                return !isWeekend && !isHoliday;
-            });
-
-            return businessDays.length;
-        } catch(e) {
-            console.error("Error calculating business days", e);
-            return 0;
-        }
-    }, [holidays, weeklyOffDays]);
-
-    const calculateProjectMonths = useCallback((): number => {
-        if (!project?.startDate || !project?.endDate) return 1;
-        try {
-            const start = parseISO(project.startDate);
-            const end = parseISO(project.endDate);
-            
-            if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-                return 1;
-            }
-            
-            const yearsDiff = end.getFullYear() - start.getFullYear();
-            const monthsDiff = end.getMonth() - start.getMonth();
-            return Math.max(1, yearsDiff * 12 + monthsDiff + 1);
-        } catch(e) {
-            console.error("Error calculating project months", e);
-            return 1;
-        }
-    }, [project]);
-
-    const calculatedTotalBill = useMemo(() => {
-        if (!employees || !fixedCosts) {
-            return 0;
-        }
-        
-        let totalRevenue = 0;
-
-        employees.forEach(user => {
-            const workingDays = calculateBusinessDays(user.onboardingDate, user.offloadingDate);
-            if (workingDays > 0) {
-                totalRevenue += workingDays * (user.billedRate || 0);
-            }
-        });
-        
-        const totalFixedCost = fixedCosts.reduce((acc, fc) => {
-            if (fc.type === 'Monthly') {
-                const months = calculateProjectMonths();
-                return acc + ((fc.cost || 0) * months);
-            }
-            return acc + (fc.cost || 0);
-        }, 0);
-
-        return totalRevenue + totalFixedCost;
-    }, [employees, fixedCosts, calculateBusinessDays, calculateProjectMonths]);
-
-    const effectiveContractValue = useMemo(() => {
-        if (!project) return 0;
-        return project.isProjectValueOverridden 
-            ? (project.projectValue || 0) 
-            : calculatedTotalBill;
-    }, [project, calculatedTotalBill]);
-
-    const { realisedAmount, remainingAmount, realisedPercentage, remainingPercentage } = useMemo(() => {
-        if (!paymentMilestones) return { realisedAmount: 0, remainingAmount: 0, realisedPercentage: 0, remainingPercentage: 0 };
-        
-        let realised = 0;
-        let remaining = 0;
-        let realisedPct = 0;
-        let remainingPct = 0;
-
-        paymentMilestones.forEach(m => {
-            const amount = project?.pricingModel === 'Fixed Bid'
-                ? ((m.billingPercentage / 100) * effectiveContractValue)
-                : (m.amount || 0);
-
-            const pct = m.billingPercentage || 0;
-
-            if (m.status === 'Payment Completed') {
-                realised += amount;
-                realisedPct += pct;
-            } else {
-                remaining += amount;
-                remainingPct += pct;
-            }
-        });
-
-        const computedRealisedPct = effectiveContractValue > 0
-            ? (realised / effectiveContractValue) * 100
-            : realisedPct;
-        const computedRemainingPct = effectiveContractValue > 0
-            ? (remaining / effectiveContractValue) * 100
-            : remainingPct;
-
-        return { 
-            realisedAmount: realised, 
-            remainingAmount: remaining,
-            realisedPercentage: computedRealisedPct,
-            remainingPercentage: computedRemainingPct,
-        };
-    }, [paymentMilestones, project, effectiveContractValue]);
 
     const projectManager = project?.projectManagerId
         ? allUsers.find(e => e.id === project.projectManagerId)
@@ -608,157 +469,6 @@ export default function ProjectSynopsisPage() {
                         </DialogContent>
                     </Dialog>
                 )}
-
-                {/* 3. PMO Permits Card */}
-                <Card data-testid="pmo-status-card" className="border-border/60 shadow-sm">
-                    <CardHeader className="py-2.5 px-5 border-b border-border/30">
-                        <CardTitle className="text-base font-semibold tracking-tight">PMO</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-5 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-                        <DetailCard 
-                            title="Permit to Build" 
-                            value={
-                                <div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        {permitToBuildApproved ? (
-                                            <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium px-2 py-0.5 text-xs rounded-full flex items-center gap-1.5 w-fit">
-                                                <CheckCircle2 className="h-3 w-3" />
-                                                Approved
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium px-2 py-0.5 text-xs rounded-full flex items-center gap-1.5 w-fit">
-                                                <AlertCircle className="h-3 w-3" />
-                                                Pending
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    {permitToBuildApproved && permitToBuildAt && (
-                                        <p className="text-[11px] text-muted-foreground font-normal mt-0.5">
-                                            {formatApprovedDate(permitToBuildAt)}
-                                        </p>
-                                    )}
-                                </div>
-                            }
-                        />
-                        <DetailCard 
-                            title="Permit to Deploy" 
-                            value={
-                                <div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        {permitToDeployApproved ? (
-                                            <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium px-2 py-0.5 text-xs rounded-full flex items-center gap-1.5 w-fit">
-                                                <CheckCircle2 className="h-3 w-3" />
-                                                Approved
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium px-2 py-0.5 text-xs rounded-full flex items-center gap-1.5 w-fit">
-                                                <AlertCircle className="h-3 w-3" />
-                                                Pending
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    {permitToDeployApproved && permitToDeployAt && (
-                                        <p className="text-[11px] text-muted-foreground font-normal mt-0.5">
-                                            {formatApprovedDate(permitToDeployAt)}
-                                        </p>
-                                    )}
-                                </div>
-                            }
-                        />
-                    </CardContent>
-                </Card>
-
-                {/* 4. Payment Milestones (FB or TnM) */}
-                <Card data-testid="pmo-financials-card" className="border-border/60 shadow-sm">
-                    <CardHeader className="py-2.5 px-5 border-b border-border/30">
-                        <CardTitle className="text-base font-semibold tracking-tight">
-                            {project.pricingModel === 'Fixed Bid' ? 'FB Payment Milestones' : 'TnM Payment Milestones'}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-5 py-3 space-y-3">
-                        {project.pricingModel === 'Fixed Bid' ? (
-                            <>
-                                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-border/20">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-muted-foreground">Final Contract Value (USD)</span>
-                                        {project.isProjectValueOverridden ? (
-                                            <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-400 border border-amber-500/20">
-                                                Custom Override
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
-                                                Default (Total Bill)
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-lg font-bold text-foreground tracking-tight">
-                                        ${effectiveContractValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
-                                    <div className="relative overflow-hidden bg-emerald-500/[0.04] border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
-                                            <CheckCircle2 className="h-4 w-4" />
-                                        </div>
-                                        <div className="space-y-0.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/80">Total Realised</span>
-                                            <div className="text-base font-bold text-emerald-400 tracking-tight flex items-baseline gap-1.5 flex-wrap">
-                                                <span>${realisedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                <span className="text-xs font-medium text-emerald-500/80">
-                                                    ({realisedPercentage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative overflow-hidden bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3 flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-400">
-                                            <Coins className="h-4 w-4" />
-                                        </div>
-                                        <div className="space-y-0.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500/80">Remaining Amount</span>
-                                            <div className="text-base font-bold text-blue-400 tracking-tight flex items-baseline gap-1.5 flex-wrap">
-                                                <span>${remainingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                <span className="text-xs font-medium text-blue-500/80">
-                                                    ({remainingPercentage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
-                                <div className="relative overflow-hidden bg-emerald-500/[0.04] border border-emerald-500/20 rounded-lg p-3 flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/80">Total Realised</span>
-                                        <div className="text-base font-bold text-emerald-400 tracking-tight">
-                                            ${realisedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {project.monthlyBilledValue !== undefined && project.monthlyBilledValue !== null && (
-                                    <div className="relative overflow-hidden bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3 flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-400">
-                                            <Coins className="h-4 w-4" />
-                                        </div>
-                                        <div className="space-y-0.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500/80">Monthly Billed Value</span>
-                                            <div className="text-base font-bold text-blue-400 tracking-tight">
-                                                ${(project.monthlyBilledValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );
