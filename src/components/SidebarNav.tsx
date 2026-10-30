@@ -275,11 +275,20 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Project Resources",
       icon: Users,
     },
-
     {
       href: `${basePath}/resources/resource-workload`,
       label: "Resource Workload",
       icon: GanttChartSquare,
+    },
+    {
+      href: `${basePath}/resources/leave-calendar`,
+      label: "Leave Calendar",
+      icon: CalendarDays,
+    },
+    {
+      href: `${basePath}/resources/leave-summary`,
+      label: "Leave Summary",
+      icon: CalendarCheck,
     },
   ];
 
@@ -315,11 +324,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/holidays`,
       label: "Company Holidays",
-      icon: CalendarDays,
-    },
-    {
-      href: `${basePath}/holidays/leave-calendar`,
-      label: "Leave Calendar",
       icon: CalendarDays,
     },
   ];

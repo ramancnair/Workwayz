@@ -3,15 +3,15 @@ import { AccessLevel } from '@/types';
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, string[]> = {
   'Senior Management': [
     'Project Home', 'Portfolio Dashboard', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Messages', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
     'Project Home', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Messages', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
     'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker', 'Messages',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'Leave Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
   ],
   'Team Member': [
     'Project Home', 'Leave Tracker', 'Messages',
@@ -83,7 +83,8 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.includes('/assumptions')) return 'Assumptions';
   if (pathname.includes('/issues')) return 'Issues';
   if (pathname.includes('/dependencies')) return 'Dependencies';
-  if (pathname.includes('/holidays/leave-calendar')) return 'Leave Calendar';
+  if (pathname.includes('/resources/leave-calendar') || pathname.includes('/holidays/leave-calendar')) return 'Leave Calendar';
+  if (pathname.includes('/resources/leave-summary')) return 'Leave Summary';
   if (pathname.endsWith('/holidays')) return 'Project Holiday Calendar';
   if (pathname.includes('/pmo/documents')) return 'PMO Documents';
   if (pathname.includes('/pmo/fb-billing')) return 'PMO FB Billing';
@@ -176,6 +177,7 @@ export const allProjectPageNames = [
   'Dependencies',
   'Project Holiday Calendar',
   'Leave Calendar',
+  'Leave Summary',
   'PMO Documents',
   'PMO FB Billing',
   'PMO FB Payment Milestones',
@@ -234,6 +236,8 @@ export function getProjectLandingPage(
         { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
         { name: 'Worklog', path: `${basePath}/resources/worklog` },
         { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+        { name: 'Leave Calendar', path: `${basePath}/resources/leave-calendar` },
+        { name: 'Leave Summary', path: `${basePath}/resources/leave-summary` },
         { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
         { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
         { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
@@ -242,7 +246,6 @@ export function getProjectLandingPage(
         { name: 'Issues', path: `${basePath}/issues` },
         { name: 'Dependencies', path: `${basePath}/dependencies` },
         { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
-        { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
         { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
         { name: 'PMO FB Billing', path: `${basePath}/pmo/fb-billing` },
         { name: 'PMO FB Payment Milestones', path: `${basePath}/pmo/fb-payment-milestones` },
@@ -274,6 +277,8 @@ export function getProjectLandingPage(
         { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
         { name: 'Worklog', path: `${basePath}/resources/worklog` },
         { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+        { name: 'Leave Calendar', path: `${basePath}/resources/leave-calendar` },
+        { name: 'Leave Summary', path: `${basePath}/resources/leave-summary` },
         { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
         { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
         { name: 'RAID Dashboard', path: `${basePath}/raid-dashboard` },
@@ -284,7 +289,6 @@ export function getProjectLandingPage(
         { name: 'Specifications (Initial Estimation)', path: `${basePath}/initial-estimation/specifications` },
         { name: 'Project Status (Initial Estimation)', path: `${basePath}/initial-estimation/project-status` },
         { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
-        { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
         { name: 'PMO Documents', path: `${basePath}/pmo/documents` },
         { name: 'PMO FB Billing', path: `${basePath}/pmo/fb-billing` },
         { name: 'PMO FB Payment Milestones', path: `${basePath}/pmo/fb-payment-milestones` },
@@ -379,8 +383,10 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/resources`,
         candidates: [
           { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
-          { name: 'Worklog', path: `${basePath}/resources/worklog` },
           { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+          { name: 'Leave Calendar', path: `${basePath}/resources/leave-calendar` },
+          { name: 'Leave Summary', path: `${basePath}/resources/leave-summary` },
+          { name: 'Worklog', path: `${basePath}/resources/worklog` },
           { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
         ],
       },
@@ -394,7 +400,6 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/holidays`,
         candidates: [
           { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
-          { name: 'Leave Calendar', path: `${basePath}/holidays/leave-calendar` },
         ],
       },
       {

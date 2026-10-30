@@ -26,6 +26,17 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     await expect(page.locator('body')).toContainText(/Hours required for this week|Weekly Total Logged/i);
   });
 
+  test('TC-RES-004: Leave Calendar and Leave Summary views render under Resources', async ({ page }) => {
+    const projectId = await getOrNavigateToProject(page);
+    await page.goto(`/projects/${projectId}/resources/leave-calendar`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Leave Calendar/i);
+    await expect(page.locator('body')).toContainText(/View team availability for the month/i);
+
+    await page.goto(`/projects/${projectId}/resources/leave-summary`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toContainText(/Leave Summary/i);
+    await expect(page.locator('body')).toContainText(/Resource Leave Breakdown|Paid Leaves/i);
+  });
+
   test('TC-ADM-001: User Profile and Messages views render personal details and single-column message list', async ({ page }) => {
     await page.goto('/my-account', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Account|Profile|Email|Password|Settings/i);

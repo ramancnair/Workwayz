@@ -129,6 +129,8 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/releases/project-releases': ['releases', 'sprints'],
   '/resources/project-resources': ['employees', 'allUsers', 'impactedSystems', 'stories', 'sprints', 'holidays', 'weeklyOffDays', 'horizontals'],
   '/resources/resource-workload': ['employees', 'worklogs', 'stories', 'holidays', 'weeklyOffDays'],
+  '/resources/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
+  '/resources/leave-summary': ['employees', 'holidays', 'weeklyOffDays'],
   '/resources/worklog': ['employees', 'stories', 'worklogs', 'holidays', 'weeklyOffDays'],
   '/holidays/leave-tracker': ['employees', 'holidays', 'weeklyOffDays'],
   '/holidays/leave-calendar': ['employees', 'holidays', 'weeklyOffDays'],
