@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag override (e.g. v0.1.0)'
+        description: 'Release tag override (e.g. v0.1.0 or Workwayz-v1.0.1)'
         required: false
         default: ''
 
@@ -41,11 +41,29 @@ jobs:
       # --- 3. Synchronize Version to Git Tag ---
       - name: Synchronize package version to git tag
         run: |
-          RAW_TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          CLEAN_VERSION="${RAW_TAG#v}"
+          RAW_TAG="${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}"
+          CLEAN_VERSION=$(node -e '
+            const fs = require("fs");
+            const raw = process.argv[1] || "";
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const match = raw.match(/(?:^|[^\d])(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/);
+            let v = match ? match[1] : null;
+            if (!v) {
+              try {
+                const semver = require("semver");
+                const c = semver.coerce(raw);
+                if (c) v = c.version;
+              } catch (e) {}
+            }
+            if (!v) v = pkg.version;
+            console.log(v);
+          ' "$RAW_TAG")
+
+          echo "Synchronizing package version to $CLEAN_VERSION (extracted from tag: $RAW_TAG)..."
           npm version "$CLEAN_VERSION" --no-git-tag-version --allow-same-version
           echo "RELEASE_TAG=v${CLEAN_VERSION}" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+          echo "RAW_RELEASE_TAG=${RAW_TAG}" >> $GITHUB_ENV
 
       # --- 4. Build Next.js Application ---
       - name: Build Next.js Application
@@ -62,7 +80,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to NPM Registry
-        run: npm publish --access public --verbose
+        run: |
+          if npm view "workwayz@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "Version ${PACKAGE_VERSION} is already published on npm registry. Skipping duplicate publish."
+          else
+            npm publish --access public --verbose
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -121,6 +144,7 @@ jobs:
           tags: |
             type=raw,value=latest
             type=raw,value=${{ env.RELEASE_TAG }}
+            type=raw,value=${{ env.PACKAGE_VERSION }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
@@ -134,6 +158,7 @@ jobs:
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name || github.event.inputs.tag || github.ref_name }}
           files: |
             workwayz-standalone-${{ env.RELEASE_TAG }}.tar.gz
             docker-compose.yml
