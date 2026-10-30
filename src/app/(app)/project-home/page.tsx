@@ -51,6 +51,7 @@ import { deleteProjectAndSubcollections } from '@/lib/firebase-helpers';
 import { PageHeader } from '@/components/PageHeader';
 import { isAssignableToProject } from '@/lib/permissions';
 import { type Portfolio, type Project, type PricingModel, type User, type ProjectStatus, type RagStatus } from '@/types';
+import { matchesProjectTab, getPortfolioTabStats, type ProjectDashboardTab } from '@/lib/project-tab-filter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -305,9 +306,10 @@ export default function ProjectsDashboard() {
   const [filterText, setFilterText] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>({ id: 'name', desc: false });
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+  const [activeTab, setActiveTab] = useState<ProjectDashboardTab>('active');
 
   const [activeExpanded, setActiveExpanded] = useState<string[]>([]);
+  const [estimatesExpanded, setEstimatesExpanded] = useState<string[]>([]);
   const [archiveExpanded, setArchiveExpanded] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof projectSchema>>({
@@ -478,13 +480,7 @@ export default function ProjectsDashboard() {
 
   const getPortfolioProjectStats = useCallback((portfolioId: string) => {
     const portfolioProjects = projects.filter(p => p.portfolioId === portfolioId && !p.isDeleted);
-    const active = portfolioProjects.filter(p => !p.isArchived).length;
-    const inactive = portfolioProjects.filter(p => !!p.isArchived).length;
-    return {
-      total: portfolioProjects.length,
-      active,
-      inactive,
-    };
+    return getPortfolioTabStats(portfolioProjects);
   }, [projects]);
 
   const getPortfolioProjectCount = useCallback((portfolioId: string) => {
@@ -713,7 +709,7 @@ export default function ProjectsDashboard() {
     if (!db) return;
     try {
       const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, { isArchived: false, archivedAt: null });
+      await updateDoc(projectRef, { isArchived: false, archivedAt: null, status: 'Active' });
       toast({ title: 'Success', description: `Project "${project.name}" reactivated successfully.` });
     } catch (error) {
       console.error('Error reactivating project:', error);
@@ -740,7 +736,7 @@ export default function ProjectsDashboard() {
     }
   };
 
-  const getProjectsByPortfolio = useCallback((isArchiveTab: boolean) => {
+  const getProjectsByPortfolio = useCallback((tab: ProjectDashboardTab) => {
     const userMap = new Map(users.map(u => [u.id, u]));
     const portfolioIds = new Set(portfolios.map(p => p.id));
 
@@ -772,27 +768,27 @@ export default function ProjectsDashboard() {
       });
     };
 
+    const matchesSearch = (p: Project) => (
+      p.name.toLowerCase().includes(filterText.toLowerCase()) ||
+      p.id.toLowerCase().includes(filterText.toLowerCase()) ||
+      (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
+    );
+
     const result = portfolios.map(portfolio => {
-      let filtered = projects.filter(p => {
-        const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
-        return matchesArchiveState && p.portfolioId === portfolio.id && (
-          p.name.toLowerCase().includes(filterText.toLowerCase()) ||
-          p.id.toLowerCase().includes(filterText.toLowerCase()) ||
-          (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
-        );
-      });
+      let filtered = projects.filter(p => (
+        matchesProjectTab(p, tab) &&
+        p.portfolioId === portfolio.id &&
+        matchesSearch(p)
+      ));
       return { ...portfolio, projects: sortProjects(filtered) };
     });
 
     // Check for any unassigned or general projects
-    const unassigned = projects.filter(p => {
-      const matchesArchiveState = isArchiveTab ? !!p.isArchived : !p.isArchived;
-      return matchesArchiveState && (!p.portfolioId || !portfolioIds.has(p.portfolioId)) && (
-        p.name.toLowerCase().includes(filterText.toLowerCase()) ||
-        p.id.toLowerCase().includes(filterText.toLowerCase()) ||
-        (p.summary && p.summary.toLowerCase().includes(filterText.toLowerCase()))
-      );
-    });
+    const unassigned = projects.filter(p => (
+      matchesProjectTab(p, tab) &&
+      (!p.portfolioId || !portfolioIds.has(p.portfolioId)) &&
+      matchesSearch(p)
+    ));
 
     if (unassigned.length > 0) {
       result.push({
@@ -806,8 +802,9 @@ export default function ProjectsDashboard() {
     return result;
   }, [users, portfolios, projects, filterText, sorting]);
 
-  const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(false), [getProjectsByPortfolio]);
-  const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio(true), [getProjectsByPortfolio]);
+  const activeProjectsByPortfolio = useMemo(() => getProjectsByPortfolio('active'), [getProjectsByPortfolio]);
+  const estimatesProjectsByPortfolio = useMemo(() => getProjectsByPortfolio('initial-estimates'), [getProjectsByPortfolio]);
+  const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio('archive'), [getProjectsByPortfolio]);
 
   // Automatically expand portfolios when actively searching/filtering so matching results are visible
   useEffect(() => {
@@ -815,13 +812,17 @@ export default function ProjectsDashboard() {
       const matchingActive = activeProjectsByPortfolio
         .filter(p => p.projects.length > 0)
         .map(p => p.id);
+      const matchingEstimates = estimatesProjectsByPortfolio
+        .filter(p => p.projects.length > 0)
+        .map(p => p.id);
       const matchingArchive = archivedProjectsByPortfolio
         .filter(p => p.projects.length > 0)
         .map(p => p.id);
       setActiveExpanded(matchingActive);
+      setEstimatesExpanded(matchingEstimates);
       setArchiveExpanded(matchingArchive);
     }
-  }, [filterText, activeProjectsByPortfolio, archivedProjectsByPortfolio]);
+  }, [filterText, activeProjectsByPortfolio, estimatesProjectsByPortfolio, archivedProjectsByPortfolio]);
 
   const SortableHeader = ({ columnId, children, className }: { columnId: string; children: React.ReactNode, className?: string; }) => (
     <TableHead className={className}>
@@ -899,9 +900,10 @@ export default function ProjectsDashboard() {
           />
         </Dialog>
 
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'archive')} className="w-full">
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as ProjectDashboardTab)} className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="active">Active Projects</TabsTrigger>
+            <TabsTrigger value="initial-estimates">Initial Estimates</TabsTrigger>
             <TabsTrigger value="archive">Inactive Projects</TabsTrigger>
           </TabsList>
 
@@ -1177,6 +1179,133 @@ export default function ProjectsDashboard() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="initial-estimates">
+            <Card>
+              <CardContent className="p-4">
+                <Input
+                  placeholder="Filter initial estimates..."
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="max-w-sm"
+                />
+              </CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center p-8 text-muted-foreground gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span>Loading initial estimates...</span>
+                </div>
+              ) : estimatesProjectsByPortfolio.filter(p => p.projects.length > 0).length === 0 ? (
+                <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
+                  <Folder className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <h3 className="text-base font-semibold mb-1">No initial estimate projects</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                    Projects in initial estimation will appear here. Create a new project to start estimating.
+                  </p>
+                  <Button onClick={() => handleOpenDialog(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Project
+                  </Button>
+                </div>
+              ) : (
+                <Accordion type="multiple" value={estimatesExpanded} onValueChange={setEstimatesExpanded} className="w-full">
+                  {estimatesProjectsByPortfolio.map(portfolio => {
+                    if (portfolio.projects.length === 0) return null;
+                    return (
+                      <AccordionItem value={portfolio.id} key={portfolio.id} className="group">
+                        <AccordionTrigger className="px-6 py-4 bg-muted/50 hover:bg-muted/80" hideChevron>
+                          <div className="flex items-center gap-4 flex-1">
+                            <ChevronRight className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                            <Folder className="h-5 w-5 text-purple-400" />
+                            <span className="font-semibold">{portfolio.name}</span>
+                            <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                              {portfolio.projects.length} {portfolio.projects.length === 1 ? 'project' : 'projects'}
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <SortableHeader columnId="id" className="w-[120px]">Project ID</SortableHeader>
+                                <SortableHeader columnId="name">Project Name</SortableHeader>
+                                <TableHead className="w-[90px]">Health</TableHead>
+                                <SortableHeader columnId="pricingModel">Pricing Model</SortableHeader>
+                                <SortableHeader columnId="status">Status</SortableHeader>
+                                <SortableHeader columnId="projectManagerId">Project Manager</SortableHeader>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {portfolio.projects.map((project) => {
+                                const projectManager = users.find(u => u.id === project.projectManagerId);
+                                const projectUrl = `/projects/${project.id}/initial-estimation/specifications`;
+                                return (
+                                  <TableRow key={project.id}>
+                                    <TableCell className="font-medium">
+                                      <Link href={projectUrl} className="block w-full h-full hover:underline">
+                                        {project.id}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        <div className="hover:underline font-medium">{project.name}</div>
+                                        {project.summary && (
+                                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2" title={project.summary}>
+                                            {project.summary}
+                                          </div>
+                                        )}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-xs text-muted-foreground font-medium pl-3">—</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        <span className="text-xs font-medium">
+                                          {project.pricingModel || 'T&M'}
+                                        </span>
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        {project.status ? (
+                                          <Badge className={cn('font-semibold', statusStyles[project.status])}>
+                                            {project.status}
+                                          </Badge>
+                                        ) : 'N/A'}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Link href={projectUrl} className="block w-full h-full">
+                                        {projectManager ? (
+                                          <span>{projectManager.firstName} {projectManager.lastName}</span>
+                                        ) : 'Unassigned'}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)} title="Edit Project">
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setDeletingProject(project)} title="Delete Project">
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              )}
+            </Card>
+          </TabsContent>
+
           <TabsContent value="archive">
             <Card>
               <CardContent className="p-4">
@@ -1333,11 +1462,13 @@ export default function ProjectsDashboard() {
                       <span>
                         The portfolio <strong className="text-foreground">&quot;{deletingPortfolio.name}&quot;</strong> cannot be deleted because it contains{' '}
                         <strong className="text-foreground">
-                          {stats.active === 0 && stats.inactive > 0
-                            ? `${stats.inactive} inactive ${stats.inactive === 1 ? 'project' : 'projects'}`
-                            : stats.active > 0 && stats.inactive > 0
-                            ? `${stats.total} projects (${stats.active} active, ${stats.inactive} inactive)`
-                            : `${stats.active} active ${stats.active === 1 ? 'project' : 'projects'}`}
+                          {(() => {
+                            const parts: string[] = [];
+                            if (stats.active > 0) parts.push(`${stats.active} active`);
+                            if (stats.initialEstimates > 0) parts.push(`${stats.initialEstimates} initial estimate${stats.initialEstimates === 1 ? '' : 's'}`);
+                            if (stats.inactive > 0) parts.push(`${stats.inactive} inactive`);
+                            return `${stats.total} project${stats.total === 1 ? '' : 's'} (${parts.join(', ')})`;
+                          })()}
                         </strong>.
                       </span>
                       {stats.inactive > 0 && (
