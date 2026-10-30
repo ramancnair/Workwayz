@@ -129,7 +129,6 @@ const pageSections: PageSection[] = [
           'Worklog',
           'Resource Workload',
           'Leave Calendar',
-          'Leave Summary',
           'Project Gantt',
         ],
       },
@@ -182,6 +181,7 @@ const pageSections: PageSection[] = [
         topNavName: 'Time Off',
         pages: [
           'Project Holiday Calendar',
+          'Leave Summary',
         ],
       },
       {

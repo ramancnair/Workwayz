@@ -120,7 +120,6 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
         if (hasAccess('Project Resources')) return `${basePath}/resources/project-resources`;
         if (hasAccess('Resource Workload')) return `${basePath}/resources/resource-workload`;
         if (hasAccess('Leave Calendar')) return `${basePath}/resources/leave-calendar`;
-        if (hasAccess('Leave Summary')) return `${basePath}/resources/leave-summary`;
         if (hasAccess('Worklog')) return `${basePath}/resources/worklog`;
         if (hasAccess('Project Gantt')) return `${basePath}/resources/project-gantt`;
         return `${basePath}/resources/project-resources`;
@@ -156,6 +155,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
       case 'holidays':
         if (hasAccess('Project Holiday Calendar')) return `${basePath}/holidays`;
+        if (hasAccess('Leave Summary')) return `${basePath}/holidays/leave-summary`;
         return `${basePath}/holidays`;
 
       case 'pmo':
@@ -233,7 +233,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                         <Link href={getDefaultRouteForTab('project')}>Project Details</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Leave Calendar') || hasAccess('Leave Summary') || hasAccess('Project Gantt')) && (
+                    {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Leave Calendar') || hasAccess('Project Gantt')) && (
                       <TabsTrigger value="resources" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('resources')}>Resources</Link>
                       </TabsTrigger>
@@ -258,7 +258,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                         <Link href={getDefaultRouteForTab('governance')}>Governance</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Project Holiday Calendar')) && (
+                    {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Summary')) && (
                       <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                       </TabsTrigger>

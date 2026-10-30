@@ -116,7 +116,7 @@ npm run test:e2e:install
 | **TC-RES-001** | Project resources & capacity planning | Member assignments and allocation percentages | ✅ Automated |
 | **TC-RES-002** | Global Worklog & Project Effort Allocation | Worklog under My Projects with active project selection and cross-project logging | ✅ Automated |
 | **TC-RES-003** | Worklog Allocation Gating & Other Option | Only shows assigned active projects for the selected resource; provides Other project option for unallocated time & overhead tasks | ✅ Automated |
-| **TC-RES-004** | Leave Calendar & Leave Summary split under Resources | Separates Leave Summary to its own page and nests both Leave Calendar and Leave Summary under Resources | ✅ Automated |
+| **TC-RES-004** | Leave Calendar under Resources & Leave Summary under Time Off | Places Leave Calendar under Resources below Resource Workload, and Leave Summary under Time Off below Company Holidays | ✅ Automated |
 | **TC-REL-001** | Release planning & deployments | Version milestones, release timelines, and Show Sprints grouping (aligned vs non-release) | ✅ Automated |
 | **TC-ADM-001** | User Profile & Messages hub | Personal profile credentials and single-column Gmail-style Messages view | ✅ Automated |
 

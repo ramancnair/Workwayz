@@ -285,11 +285,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Leave Calendar",
       icon: CalendarDays,
     },
-    {
-      href: `${basePath}/resources/leave-summary`,
-      label: "Leave Summary",
-      icon: CalendarCheck,
-    },
   ];
 
   const governanceMenuItems = [
@@ -325,6 +320,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/holidays`,
       label: "Company Holidays",
       icon: CalendarDays,
+    },
+    {
+      href: `${basePath}/holidays/leave-summary`,
+      label: "Leave Summary",
+      icon: CalendarCheck,
     },
   ];
 
