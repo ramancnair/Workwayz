@@ -119,6 +119,7 @@ function MockProjectSidebar({ pathname, projectId = 'P1' }: { pathname: string; 
   const basePath = `/projects/${projectId}`;
   const isTrashPath = pathname.startsWith(`${basePath}/project-trash`) || pathname.startsWith(`${basePath}/trash`);
   const isDevelopmentPath = pathname.startsWith(`${basePath}/development`);
+  const isHolidaysPath = pathname.startsWith(`${basePath}/holidays`);
 
   const devMenuItems = [
     { href: `${basePath}/development/dashboard`, label: "Development Dashboard" },
@@ -132,12 +133,38 @@ function MockProjectSidebar({ pathname, projectId = 'P1' }: { pathname: string; 
     { href: `${basePath}/project-trash`, label: "Project Trash" },
   ];
 
-  const menuItems = isTrashPath ? trashMenuItems : (isDevelopmentPath ? devMenuItems : devMenuItems);
+  const holidaysMenuItems = [
+    { href: `${basePath}/holidays`, label: "Company Holidays" },
+    { href: `${basePath}/holidays/leave-calendar`, label: "Leave Calendar" },
+  ];
+
+  const menuItems = isTrashPath ? trashMenuItems : (isHolidaysPath ? holidaysMenuItems : devMenuItems);
+
+  const activeItemHref = (() => {
+    const cleanPath = pathname.replace(/\/$/, '');
+    const matchingItems = menuItems.filter(item => {
+      if (!item.href || item.href === '#') return false;
+      const cleanHref = item.href.replace(/\/$/, '');
+      return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+    });
+
+    if (matchingItems.length === 0) return null;
+
+    const bestMatch = matchingItems.reduce((best, curr) => {
+      const cleanBestHref = best.href.replace(/\/$/, '');
+      const cleanCurrHref = curr.href.replace(/\/$/, '');
+      const bestExact = cleanPath === cleanBestHref;
+      const currExact = cleanPath === cleanCurrHref;
+      if (currExact && !bestExact) return curr;
+      if (bestExact && !currExact) return best;
+      return cleanCurrHref.length > cleanBestHref.length ? curr : best;
+    });
+
+    return bestMatch.href;
+  })();
 
   const isItemActive = (href: string) => {
-    const cleanHref = href.replace(/\/$/, '');
-    const cleanPath = pathname.replace(/\/$/, '');
-    return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+    return activeItemHref === href;
   };
 
   return (
@@ -243,6 +270,32 @@ describe('Project Sidebar Trash Navigation', () => {
     expect(screen.getByText('Development Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Product Backlog')).toBeInTheDocument();
     expect(screen.queryByText('Project Trash')).not.toBeInTheDocument();
+  });
+
+  it('highlights ONLY Leave Calendar when on /holidays/leave-calendar and does not highlight Company Holidays', () => {
+    render(<MockProjectSidebar pathname="/projects/P1/holidays/leave-calendar" />);
+
+    const leaveCalendarLink = screen.getByRole('link', { name: 'Leave Calendar' });
+    const companyHolidaysLink = screen.getByRole('link', { name: 'Company Holidays' });
+
+    expect(leaveCalendarLink).toHaveAttribute('data-active', 'true');
+    expect(leaveCalendarLink.className).toContain('text-emerald-600');
+
+    expect(companyHolidaysLink).toHaveAttribute('data-active', 'false');
+    expect(companyHolidaysLink.className).not.toContain('text-emerald-600');
+  });
+
+  it('highlights ONLY Company Holidays when on /holidays', () => {
+    render(<MockProjectSidebar pathname="/projects/P1/holidays" />);
+
+    const companyHolidaysLink = screen.getByRole('link', { name: 'Company Holidays' });
+    const leaveCalendarLink = screen.getByRole('link', { name: 'Leave Calendar' });
+
+    expect(companyHolidaysLink).toHaveAttribute('data-active', 'true');
+    expect(companyHolidaysLink.className).toContain('text-emerald-600');
+
+    expect(leaveCalendarLink).toHaveAttribute('data-active', 'false');
+    expect(leaveCalendarLink.className).not.toContain('text-emerald-600');
   });
 });
 

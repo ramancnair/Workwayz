@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { getPageNameForRoute } from "@/lib/permissions";
 import {
@@ -420,11 +420,32 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     return hasAccess(pageName || item.label);
   });
 
+  const activeItemHref = useMemo(() => {
+    const cleanPath = effectivePath.replace(/\/$/, '');
+    const matchingItems = menuItems.filter(item => {
+      if (!item.href || item.href === '#') return false;
+      const cleanHref = item.href.replace(/\/$/, '');
+      return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+    });
+
+    if (matchingItems.length === 0) return null;
+
+    const bestMatch = matchingItems.reduce((best, curr) => {
+      const cleanBestHref = best.href.replace(/\/$/, '');
+      const cleanCurrHref = curr.href.replace(/\/$/, '');
+      const bestExact = cleanPath === cleanBestHref;
+      const currExact = cleanPath === cleanCurrHref;
+      if (currExact && !bestExact) return curr;
+      if (bestExact && !currExact) return best;
+      return cleanCurrHref.length > cleanBestHref.length ? curr : best;
+    });
+
+    return bestMatch.href;
+  }, [menuItems, effectivePath]);
+
   const isItemActive = (href: string) => {
     if (!href || href === '#') return false;
-    const cleanHref = href.replace(/\/$/, '');
-    const cleanPath = effectivePath.replace(/\/$/, '');
-    return cleanPath === cleanHref || cleanPath.startsWith(`${cleanHref}/`);
+    return activeItemHref === href;
   };
 
   return (
