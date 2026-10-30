@@ -153,8 +153,8 @@ const storyCoverageConfig = {
     label: "Covered",
     color: '#10b981',
   },
-  'Uncovered': {
-    label: "Uncovered",
+  'Not Covered': {
+    label: "Not Covered",
     color: '#ef4444',
   },
 } satisfies ChartConfig;
@@ -350,7 +350,7 @@ export default function TestingDashboard() {
 
     const chartData = [
       { name: 'Covered', value: covered.length, fill: '#10b981' },
-      { name: 'Uncovered', value: uncovered.length, fill: '#ef4444' }
+      { name: 'Not Covered', value: uncovered.length, fill: '#ef4444' }
     ];
 
     return { covered, uncovered, chartData };
@@ -436,7 +436,7 @@ export default function TestingDashboard() {
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
           <div>
-            <h3 className="text-lg font-semibold text-center mb-4">Test Cases Daily Trend</h3>
+            <h3 className="text-lg font-semibold text-center mb-4">Test Case Execution</h3>
             <ChartContainer config={dailyActivityConfig} className="h-[300px] w-full">
               <LineChart data={dailyViewData.tcData}>
                 <CartesianGrid vertical={false} />
@@ -555,7 +555,7 @@ export default function TestingDashboard() {
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="uncovered" className="text-xs flex items-center gap-1.5 justify-center py-1.5">
                       <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                      Uncovered
+                      Not Covered
                       <Badge variant="secondary" className="px-1 py-0 text-[10px] ml-1 font-semibold">
                         {storyCoverageData.uncovered.length}
                       </Badge>
