@@ -44,7 +44,7 @@ import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types
 import { isBugWorkItem, isPbiWorkItem } from '@/types';
 import { cn, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Trash2, ArrowUpDown, Search, X } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { parseISO } from 'date-fns';
 
@@ -101,16 +101,23 @@ function SortableHeader({
   columnId,
   onSort,
   children,
+  className,
 }: {
   columnId: string;
   onSort: (columnId: string) => void;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <TableHead>
-      <Button variant="ghost" onClick={() => onSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+    <TableHead className={className}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-3 h-8 px-3 font-semibold text-xs tracking-tight text-muted-foreground hover:text-foreground data-[state=open]:bg-accent"
+        onClick={() => onSort(columnId)}
+      >
+        <span>{children}</span>
+        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-60" />
       </Button>
     </TableHead>
   );

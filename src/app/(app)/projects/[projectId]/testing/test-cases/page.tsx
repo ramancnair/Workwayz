@@ -38,7 +38,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2, ArrowUpDown, X, Bot, Columns, Paperclip, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown, X, Bot, Columns, Paperclip, Search } from 'lucide-react';
 import { type TestCase, type TestCaseStatus, type TestCaseType, type Story } from '@/types';
 import { isPbiWorkItem } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -92,16 +92,34 @@ function SortableHeader({
   columnId,
   onSort,
   children,
+  className,
+  sortDirection,
 }: {
   columnId: string;
   onSort: (columnId: string) => void;
   children: React.ReactNode;
+  className?: string;
+  sortDirection?: 'asc' | 'desc' | null;
 }) {
   return (
-    <TableHead>
-      <Button variant="ghost" onClick={() => onSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+    <TableHead className={className}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          "-ml-3 h-8 px-3 font-semibold text-xs tracking-tight hover:text-foreground data-[state=open]:bg-accent",
+          sortDirection ? "text-foreground bg-accent/50 font-bold" : "text-muted-foreground"
+        )}
+        onClick={() => onSort(columnId)}
+      >
+        <span>{children}</span>
+        {sortDirection === 'asc' ? (
+          <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-primary" />
+        ) : sortDirection === 'desc' ? (
+          <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-primary" />
+        ) : (
+          <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-60" />
+        )}
       </Button>
     </TableHead>
   );
@@ -503,7 +521,7 @@ export default function TestCasesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                 <TableHead className="w-10">
+                 <TableHead className="w-12">
                     <Checkbox
                         checked={filteredAndSortedTestCases.length > 0 && selectedTestCases.length === filteredAndSortedTestCases.length}
                         onCheckedChange={(value) =>
@@ -512,23 +530,95 @@ export default function TestCasesPage() {
                         aria-label="Select all"
                     />
                  </TableHead>
-                {columnVisibility.testCaseId && <SortableHeader columnId="testCaseId" onSort={handleSort}>ID</SortableHeader>}
-                {columnVisibility.title && <SortableHeader columnId="title" onSort={handleSort}>Title</SortableHeader>}
-                {columnVisibility.type && <SortableHeader columnId="type" onSort={handleSort}>Type</SortableHeader>}
-                {columnVisibility.storyId && <SortableHeader columnId="storyId" onSort={handleSort}>Story</SortableHeader>}
-                {columnVisibility.sprintId && <SortableHeader columnId="sprintId" onSort={handleSort}>Sprint</SortableHeader>}
-                {columnVisibility.releaseId && <SortableHeader columnId="releaseId" onSort={handleSort}>Release</SortableHeader>}
-                <TableHead className="text-right">Actions</TableHead>
+                {columnVisibility.testCaseId && (
+                  <SortableHeader
+                    columnId="testCaseId"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'testCaseId' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[110px]"
+                  >
+                    ID
+                  </SortableHeader>
+                )}
+                {columnVisibility.title && (
+                  <SortableHeader
+                    columnId="title"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'title' ? (sorting.desc ? 'desc' : 'asc') : null}
+                  >
+                    Title
+                  </SortableHeader>
+                )}
+                {columnVisibility.type && (
+                  <SortableHeader
+                    columnId="type"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'type' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[140px]"
+                  >
+                    Type
+                  </SortableHeader>
+                )}
+                {columnVisibility.storyId && (
+                  <SortableHeader
+                    columnId="storyId"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'storyId' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[140px]"
+                  >
+                    Story
+                  </SortableHeader>
+                )}
+                {columnVisibility.sprintId && (
+                  <SortableHeader
+                    columnId="sprintId"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'sprintId' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[140px]"
+                  >
+                    Sprint
+                  </SortableHeader>
+                )}
+                {columnVisibility.releaseId && (
+                  <SortableHeader
+                    columnId="releaseId"
+                    onSort={handleSort}
+                    sortDirection={sorting?.id === 'releaseId' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[140px]"
+                  >
+                    Release
+                  </SortableHeader>
+                )}
+                <TableHead className="w-[100px] text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAndSortedTestCases.map((tc) => {
-                const relatedStory = stories.find(s => s.id === tc.storyId);
-                const sprint = sprints.find(s => s.id === tc.sprintId);
-                const release = releases.find(r => r.id === tc.releaseId);
-                return (
+              {filteredAndSortedTestCases.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={
+                      1 +
+                      (columnVisibility.testCaseId ? 1 : 0) +
+                      (columnVisibility.title ? 1 : 0) +
+                      (columnVisibility.type ? 1 : 0) +
+                      (columnVisibility.storyId ? 1 : 0) +
+                      (columnVisibility.sprintId ? 1 : 0) +
+                      (columnVisibility.releaseId ? 1 : 0) +
+                      1
+                    }
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No test cases found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAndSortedTestCases.map((tc) => {
+                  const relatedStory = stories.find(s => s.id === tc.storyId);
+                  const sprint = sprints.find(s => s.id === tc.sprintId);
+                  const release = releases.find(r => r.id === tc.releaseId);
+                  return (
                     <TableRow key={tc.id} data-state={selectedTestCases.includes(tc.id) && "selected"}>
-                        <TableCell>
+                        <TableCell className="w-12">
                             <Checkbox
                                 checked={selectedTestCases.includes(tc.id)}
                                 onCheckedChange={(value) =>
@@ -541,27 +631,46 @@ export default function TestCasesPage() {
                                 aria-label="Select row"
                             />
                         </TableCell>
-                        {columnVisibility.testCaseId && <TableCell className="font-medium">{tc.testCaseId}</TableCell>}
+                        {columnVisibility.testCaseId && <TableCell className="w-[110px] font-medium">{tc.testCaseId}</TableCell>}
                         {columnVisibility.title && <TableCell>{tc.title}</TableCell>}
-                         {columnVisibility.type && <TableCell>{tc.type}</TableCell>}
-                        {columnVisibility.storyId && <TableCell>
+                        {columnVisibility.type && <TableCell className="w-[140px]">{tc.type}</TableCell>}
+                        {columnVisibility.storyId && (
+                          <TableCell className="w-[140px]">
                             {relatedStory ? <Badge variant="secondary">{relatedStory.storyId}</Badge> : 'N/A'}
-                        </TableCell>}
-                        {columnVisibility.sprintId && <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>}
-                        {columnVisibility.releaseId && <TableCell>{release?.releaseId || 'N/A'}</TableCell>}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleDialogOpen(tc)}>
-                                <Edit className="h-4 w-4" />
+                          </TableCell>
+                        )}
+                        {columnVisibility.sprintId && (
+                          <TableCell className="w-[140px]">{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>
+                        )}
+                        {columnVisibility.releaseId && (
+                          <TableCell className="w-[140px]">{release?.releaseId || 'N/A'}</TableCell>
+                        )}
+                        <TableCell className="w-[100px] text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleDialogOpen(tc)}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeletingTestCase(tc)}>
-                                <Trash2 className="h-4 w-4" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeletingTestCase(tc)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
                             </Button>
                           </div>
                         </TableCell>
                     </TableRow>
-                )
-              })}
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </Card>

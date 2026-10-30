@@ -166,9 +166,14 @@ function SortableHeader({
 }) {
   return (
     <TableHead className={className}>
-      <Button variant="ghost" onClick={() => onSort(columnId)}>
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-3 h-8 px-3 font-semibold text-xs tracking-tight text-muted-foreground hover:text-foreground data-[state=open]:bg-accent"
+        onClick={() => onSort(columnId)}
+      >
+        <span>{children}</span>
+        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-60" />
       </Button>
     </TableHead>
   );
