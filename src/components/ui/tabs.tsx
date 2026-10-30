@@ -17,7 +17,7 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       variant === "default" && "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-      variant === "folder" && "w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-1 flex flex-wrap items-end",
+      variant === "folder" && "w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-1 flex flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-end",
       variant === "underline" && "w-full justify-start h-auto p-0 bg-transparent border-b border-border rounded-none gap-4 flex",
       className
     )}

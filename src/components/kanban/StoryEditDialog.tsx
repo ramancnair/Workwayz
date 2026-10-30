@@ -528,12 +528,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                         <Tabs defaultValue="details" className="w-full">
                             <TabsList variant="folder">
                                 <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
-                                <TabsTrigger variant="folder" value="logs">
-                                    Logs
-                                    <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
-                                        {selectedStorySubItems.logs.length}
-                                    </Badge>
-                                </TabsTrigger>
+                                <TabsTrigger variant="folder" value="logs" className="shrink-0">Logs</TabsTrigger>
                             </TabsList>
                             <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                                 <div className="space-y-4">
@@ -1159,36 +1154,16 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                     )}
                   />
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList variant="folder">
-                            <TabsTrigger variant="folder" value="details">Details</TabsTrigger>
+                        <TabsList variant="folder" className="w-full flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <TabsTrigger variant="folder" value="details" className="shrink-0">Details</TabsTrigger>
                             {isPbiWorkItem(selectedStory.itemType) && (
                                 <>
-                                    <TabsTrigger variant="folder" value="subTasks">
-                                        Sub-Tasks
-                                        <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
-                                            {selectedStorySubItems.subTasks.length}
-                                        </Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger variant="folder" value="bugs">
-                                        Defects
-                                        <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
-                                            {selectedStorySubItems.bugs.length}
-                                        </Badge>
-                                    </TabsTrigger>
-                                    <TabsTrigger variant="folder" value="testCases">
-                                        Test Cases
-                                        <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
-                                            {selectedStoryTestCases.length}
-                                        </Badge>
-                                    </TabsTrigger>
+                                    <TabsTrigger variant="folder" value="subTasks" className="shrink-0">Sub-Tasks</TabsTrigger>
+                                    <TabsTrigger variant="folder" value="bugs" className="shrink-0">Defects</TabsTrigger>
+                                    <TabsTrigger variant="folder" value="testCases" className="shrink-0">Test Cases</TabsTrigger>
                                 </>
                             )}
-                            <TabsTrigger variant="folder" value="logs">
-                                Logs
-                                <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0 h-4">
-                                    {selectedStorySubItems.logs.length}
-                                </Badge>
-                            </TabsTrigger>
+                            <TabsTrigger variant="folder" value="logs" className="shrink-0">Logs</TabsTrigger>
                         </TabsList>
                     <TabsContent value="details" className="pt-4 focus-visible:outline-none">
                       <div className="space-y-4">
