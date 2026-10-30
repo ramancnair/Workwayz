@@ -745,7 +745,7 @@ export default function ProjectDashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle>Resource Costs</CardTitle>
+              <CardTitle>Revenue vs. Cost by Role</CardTitle>
               <div className="flex items-center gap-2">
                 <Select value={costDurationType} onValueChange={(v) => setCostDurationType(v as any)}>
                   <SelectTrigger className="w-[120px] h-8">
