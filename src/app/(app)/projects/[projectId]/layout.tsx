@@ -111,9 +111,9 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
       case 'project':
         if (hasAccess('Project Status')) return `${basePath}/project-details/project-status`;
+        if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
         if (hasAccess('PM Dashboard')) return `${basePath}/project-details/pm-dashboard`;
         if (hasAccess('Project PromptBoard') || hasAccess('FP PM Dash')) return `${basePath}/project-details/fp-pm-dash`;
-        if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
         return `${basePath}/project-details/project-status`;
 
       case 'resources':

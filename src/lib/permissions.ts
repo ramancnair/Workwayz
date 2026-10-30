@@ -362,10 +362,10 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/project-details`,
         candidates: [
           { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
           { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
           { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
           { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
-          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         ],
       },
       {

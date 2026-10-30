@@ -232,6 +232,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: ClipboardList,
     },
     {
+      href: `${basePath}/project-details/specifications`,
+      label: "Specifications",
+      icon: Server,
+    },
+    {
       href: `${basePath}/project-details/pm-dashboard`,
       label: "PM Dashboard",
       icon: LayoutDashboard,
@@ -240,11 +245,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/project-details/fp-pm-dash`,
       label: "Project PromptBoard",
       icon: Sparkles,
-    },
-    {
-      href: `${basePath}/project-details/specifications`,
-      label: "Specifications",
-      icon: Server,
     },
   ];
 
