@@ -138,6 +138,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
 
       case 'testing':
         if (hasAccess('Test Dashboard')) return `${basePath}/testing/dashboard`;
+        if (hasAccess('Defect Tracker')) return `${basePath}/testing/defect-tracker`;
         if (hasAccess('Test Cases') || hasAccess('Test Backlog') || hasAccess('Test Backlogs')) return `${basePath}/testing/test-cases`;
         if (hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan')) return `${basePath}/testing/test-cycle`;
         if (hasAccess('Test Execution') || hasAccess('Test Executions')) return `${basePath}/testing/test-execution`;
@@ -248,7 +249,7 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                         <Link href={getDefaultRouteForTab('development')}>Development</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Backlogs') || hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Test Executions') || hasAccess('Defects')) && (
+                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Backlogs') || hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Test Executions') || hasAccess('Defects') || hasAccess('Defect Tracker')) && (
                       <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('testing')}>Testing</Link>
                       </TabsTrigger>

@@ -351,6 +351,7 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/testing`,
         candidates: [
           { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
+          { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
           { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
           { name: 'Test Backlogs', path: `${basePath}/testing/test-cases` },
           { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
@@ -359,7 +360,6 @@ export function getPermittedFallbackRoute(
           { name: 'Test Executions', path: `${basePath}/testing/test-execution` },
           { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
           { name: 'Defects', path: `${basePath}/testing/defects` },
-          { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
         ],
       },
       {

@@ -199,6 +199,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: TestTube2,
     },
     {
+      href: `${basePath}/testing/defect-tracker`,
+      label: "Defect Tracker",
+      icon: Bug,
+    },
+    {
       href: `${basePath}/testing/test-cases`,
       label: "Test Cases",
       icon: ClipboardCheck,
@@ -216,11 +221,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/testing/defects`,
       label: "Defects",
-      icon: Bug,
-    },
-    {
-      href: `${basePath}/testing/defect-tracker`,
-      label: "Defect Tracker",
       icon: Bug,
     },
   ];
