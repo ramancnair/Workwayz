@@ -405,6 +405,24 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
                 if (name === 'kanbanColumns' && data.length === 0) {
                     setState(defaultKanbanColumns.map((c, i) => ({ ...c, id: `col-${i}` })));
                 } else {
+                    if (name === 'sprints') {
+                        data.sort((a: any, b: any) => {
+                            if (a.startDate && b.startDate) {
+                                const diff = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+                                if (diff !== 0) return diff;
+                            }
+                            return (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
+                        });
+                    }
+                    if (name === 'releases') {
+                        data.sort((a: any, b: any) => {
+                            if (a.startDate && b.startDate) {
+                                const diff = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+                                if (diff !== 0) return diff;
+                            }
+                            return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+                        });
+                    }
                     setState(data);
                 }
             } else if (snapshot.exists()) { // DocumentSnapshot

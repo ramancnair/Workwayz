@@ -118,16 +118,36 @@ export default function ProjectDashboardPage() {
   const [timeSpentReleaseId, setTimeSpentReleaseId] = useState<string>('all');
 
 
-  const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
+  const sortedSprints = useMemo(() => {
+    return [...sprints].sort((a, b) => {
+      if (a.startDate && b.startDate) {
+        const diff = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        if (diff !== 0) return diff;
+      }
+      return (a.title || '').localeCompare(b.title || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [sprints]);
+
+  const releases = useMemo(() => {
+    return releasesAndMilestones
+      .filter(r => r.itemType === 'Release')
+      .sort((a, b) => {
+        if (a.startDate && b.startDate) {
+          const diff = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+          if (diff !== 0) return diff;
+        }
+        return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+      });
+  }, [releasesAndMilestones]);
 
   useEffect(() => {
-    const currentSprint = sprints.find(s => s.isCurrent);
+    const currentSprint = sortedSprints.find(s => s.isCurrent);
     if (currentSprint) {
       setWorkloadSprintId(currentSprint.id);
-    } else if (sprints.length > 0) {
-      setWorkloadSprintId(sprints[0].id);
+    } else if (sortedSprints.length > 0) {
+      setWorkloadSprintId(sortedSprints[0].id);
     }
-  }, [sprints]);
+  }, [sortedSprints]);
 
   const swimLanes = useMemo(() => {
     return kanbanColumns.length > 0
@@ -508,7 +528,7 @@ export default function ProjectDashboardPage() {
 
   const costDurationOptions = useMemo(() => {
     if (costDurationType === 'release') return releases.map(r => ({ value: r.id, label: `[${r.releaseId}] ${r.name}` }));
-    if (costDurationType === 'sprint') return sprints.map(s => ({ value: s.id, label: s.title }));
+    if (costDurationType === 'sprint') return sortedSprints.map(s => ({ value: s.id, label: s.title }));
     return [];
   }, [costDurationType, releases, sprints]);
 
@@ -577,7 +597,7 @@ export default function ProjectDashboardPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sprints</SelectItem>
-                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    {sortedSprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -636,7 +656,7 @@ export default function ProjectDashboardPage() {
                   <SelectTrigger className="h-8 w-[150px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sprints</SelectItem>
-                    {sprints.map(opt => (
+                    {sortedSprints.map(opt => (
                       <SelectItem key={opt.id} value={opt.id}>{opt.title}</SelectItem>
                     ))}
                   </SelectContent>
@@ -699,7 +719,7 @@ export default function ProjectDashboardPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sprints</SelectItem>
-                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    {sortedSprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -810,7 +830,7 @@ export default function ProjectDashboardPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sprints</SelectItem>
-                    {sprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    {sortedSprints.map(s => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
