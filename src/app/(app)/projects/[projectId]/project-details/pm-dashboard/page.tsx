@@ -20,7 +20,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, XAxis, YAxis, Cell, Legend, Tooltip } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Label, LabelList, Pie, PieChart, RadialBar, RadialBarChart, ReferenceLine, XAxis, YAxis, Cell, Legend, Tooltip } from 'recharts';
 import { Users, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,6 +35,10 @@ import { Separator } from '@/components/ui/separator';
 const workloadChartConfig = {
   subTaskEffort: { label: 'Sub-Task Effort', color: 'hsl(var(--chart-2))' },
   bugEffort: { label: 'Bug Effort', color: 'hsl(var(--chart-5))' },
+} satisfies ChartConfig;
+
+const resourceCapacityChartConfig = {
+  value: { label: 'Capacity Load', color: 'hsl(var(--chart-2))' },
 } satisfies ChartConfig;
 
 const resourceCostsConfig = {
@@ -296,88 +300,6 @@ export default function ProjectDashboardPage() {
     });
   }, [stories, timeSpentSprintId, timeSpentReleaseId, timeSpentMetric, swimLanes, testDate]);
 
-  const resourceTimeData = useMemo(() => {
-    const parentIdsWithSubTasks = new Set<string>();
-    stories.forEach(s => {
-      if (s.parentStoryId && !s.isDeleted) {
-        parentIdsWithSubTasks.add(s.parentStoryId);
-      }
-    });
-
-    const eligibleStories = stories.filter(story => {
-      if (story.isDeleted) return false;
-      if (timeSpentSprintId !== 'all' && story.sprintId !== timeSpentSprintId) return false;
-      if (timeSpentReleaseId !== 'all' && story.releaseId !== timeSpentReleaseId) return false;
-
-      if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(story.itemType)) {
-        if (parentIdsWithSubTasks.has(story.id)) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    const now = testDate ? new Date(testDate) : new Date();
-    const doneColumnName = kanbanColumns.find(c => c.isDoneColumn)?.name || 'Done';
-
-    const resourceTotals: Record<string, number> = {};
-    const resourceCounts: Record<string, number> = {};
-    const resourceActiveWip: Record<string, number> = {};
-
-    eligibleStories.forEach(story => {
-      if (!story.assigneeId) return;
-
-      const start = story.developmentStartDate
-        ? new Date(story.developmentStartDate)
-        : (story.createdAt ? new Date(story.createdAt) : new Date());
-
-      const end = story.completionDate
-        ? new Date(story.completionDate)
-        : now;
-
-      const lifespanDays = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-      resourceTotals[story.assigneeId] = (resourceTotals[story.assigneeId] || 0) + lifespanDays;
-      resourceCounts[story.assigneeId] = (resourceCounts[story.assigneeId] || 0) + 1;
-
-      if (story.status !== doneColumnName && story.status !== 'Complete') {
-        resourceActiveWip[story.assigneeId] = (resourceActiveWip[story.assigneeId] || 0) + 1;
-      }
-    });
-
-    const data = employees.map(emp => {
-      const totalDays = resourceTotals[emp.id] || 0;
-      const count = resourceCounts[emp.id] || 0;
-      const avgDays = count > 0 ? totalDays / count : 0;
-      const activeWip = resourceActiveWip[emp.id] || 0;
-
-      // Bottleneck Risk Score = Cycle Time * WIP Count
-      const score = avgDays * activeWip;
-
-      let color = '#10b981'; // Green (Low Risk)
-      let riskLevel = 'Low';
-      if (score >= 5 || activeWip >= 4) {
-        color = '#ef4444'; // Red (High Risk)
-        riskLevel = 'High';
-      } else if (score >= 1.5 || activeWip >= 2) {
-        color = '#f59e0b'; // Amber (Medium Risk)
-        riskLevel = 'Medium';
-      }
-
-      return {
-        name: `${emp.firstName} ${emp.lastName}`,
-        displayName: `${emp.firstName} ${emp.lastName} (${activeWip} WIP)`,
-        value: Math.round(avgDays * 10) / 10,
-        activeWip,
-        riskLevel,
-        color,
-        count,
-      };
-    }).filter(d => d.count > 0 || d.value > 0);
-
-    return data.sort((a, b) => b.value - a.value);
-  }, [stories, employees, timeSpentSprintId, timeSpentReleaseId, testDate, kanbanColumns]);
-
   const calculateBusinessDays = useCallback((startStr?: string, endStr?: string): number => {
     if (!startStr || !endStr) return 0;
     try {
@@ -405,6 +327,118 @@ export default function ProjectDashboardPage() {
       return 0;
     }
   }, [holidays, weeklyOffDays]);
+
+  const resourceCapacityData = useMemo(() => {
+    const parentIdsWithSubTasks = new Set<string>();
+    stories.forEach(s => {
+      if (s.parentStoryId && !s.isDeleted) {
+        parentIdsWithSubTasks.add(s.parentStoryId);
+      }
+    });
+
+    const eligibleStories = stories.filter(story => {
+      if (story.isDeleted) return false;
+      if (timeSpentSprintId !== 'all' && story.sprintId !== timeSpentSprintId) return false;
+      if (timeSpentReleaseId !== 'all' && story.releaseId !== timeSpentReleaseId) return false;
+
+      if (['Story', 'User Story', 'Requirement/Story', 'Feature Change'].includes(story.itemType)) {
+        if (parentIdsWithSubTasks.has(story.id)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const resourceEffortHours: Record<string, number> = {};
+    const resourceTaskCount: Record<string, number> = {};
+
+    eligibleStories.forEach(story => {
+      if (!story.assigneeId) return;
+      const effort = story.estimatedHours || 0;
+      resourceEffortHours[story.assigneeId] = (resourceEffortHours[story.assigneeId] || 0) + effort;
+      resourceTaskCount[story.assigneeId] = (resourceTaskCount[story.assigneeId] || 0) + 1;
+    });
+
+    const hoursPerDay = projectSettings?.manDayToHours || 8;
+    const defaultSprintDays = (projectSettings?.sprintDurationInWeeks || 2) * (7 - (weeklyOffDays?.length || 2));
+
+    let sprintWorkingDays = 0;
+    if (timeSpentSprintId !== 'all') {
+      const selectedSprint = sprints.find(s => s.id === timeSpentSprintId);
+      if (selectedSprint?.startDate && selectedSprint?.endDate) {
+        sprintWorkingDays = calculateBusinessDays(selectedSprint.startDate, selectedSprint.endDate);
+      } else {
+        sprintWorkingDays = defaultSprintDays;
+      }
+    } else if (timeSpentReleaseId !== 'all') {
+      const releaseSprints = sprints.filter(s => s.releaseId === timeSpentReleaseId);
+      if (releaseSprints.length > 0) {
+        sprintWorkingDays = releaseSprints.reduce((sum, s) => {
+          if (s.startDate && s.endDate) {
+            return sum + calculateBusinessDays(s.startDate, s.endDate);
+          }
+          return sum + defaultSprintDays;
+        }, 0);
+      } else {
+        const release = releases.find(r => r.id === timeSpentReleaseId);
+        if (release?.startDate && release?.endDate) {
+          sprintWorkingDays = calculateBusinessDays(release.startDate, release.endDate);
+        } else {
+          sprintWorkingDays = defaultSprintDays;
+        }
+      }
+    } else {
+      if (sprints.length > 0) {
+        sprintWorkingDays = sprints.reduce((sum, s) => {
+          if (s.startDate && s.endDate) {
+            return sum + calculateBusinessDays(s.startDate, s.endDate);
+          }
+          return sum + defaultSprintDays;
+        }, 0);
+      } else {
+        sprintWorkingDays = defaultSprintDays;
+      }
+    }
+
+    if (sprintWorkingDays <= 0) {
+      sprintWorkingDays = defaultSprintDays > 0 ? defaultSprintDays : 10;
+    }
+
+    const data = employees.map(emp => {
+      const assignedHours = Math.round((resourceEffortHours[emp.id] || 0) * 10) / 10;
+      const count = resourceTaskCount[emp.id] || 0;
+      const availabilityFactor = (emp.availability !== undefined && emp.availability !== null ? emp.availability : 100) / 100;
+      const safeAvailability = availabilityFactor > 0 ? availabilityFactor : 1;
+      const availableCapacity = Math.round(sprintWorkingDays * hoursPerDay * safeAvailability * 10) / 10;
+
+      // Capacity Load Factor = Assigned Task Effort (hours) / Available Sprint Capacity (hours)
+      const loadFactor = availableCapacity > 0 ? assignedHours / availableCapacity : 0;
+      const roundedLoadFactor = Math.round(loadFactor * 100) / 100;
+
+      let color = '#10b981'; // Green: Within Capacity (< 0.8)
+      let statusText = 'Within Capacity';
+      if (roundedLoadFactor > 1.0) {
+        color = '#ef4444'; // Red: Overloaded (> 1.0)
+        statusText = 'Overloaded';
+      } else if (roundedLoadFactor >= 0.8) {
+        color = '#f59e0b'; // Amber: Near Capacity (0.8 - 1.0)
+        statusText = 'Near Capacity';
+      }
+
+      return {
+        name: `${emp.firstName} ${emp.lastName}`,
+        displayName: `${emp.firstName} ${emp.lastName} (${assignedHours}h)`,
+        value: roundedLoadFactor,
+        assignedEffort: assignedHours,
+        availableCapacity,
+        taskCount: count,
+        statusText,
+        color,
+      };
+    }).filter(d => d.taskCount > 0 || d.assignedEffort > 0);
+
+    return data.sort((a, b) => b.value - a.value);
+  }, [stories, employees, timeSpentSprintId, timeSpentReleaseId, sprints, releases, projectSettings, weeklyOffDays, calculateBusinessDays]);
 
   const workloadData = useMemo(() => {
     const sprintStories = workloadSprintId === 'all'
@@ -875,21 +909,74 @@ export default function ProjectDashboardPage() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <div>
-              <CardTitle>Time by Resource</CardTitle>
-              <CardDescription>Average days assigned. Colors: Red (High), Amber (Medium), Green (Low) Bottleneck Risk.</CardDescription>
+              <CardTitle>Capacity Load by Resource</CardTitle>
+              <CardDescription>Assigned effort vs. sprint capacity. Red: Overloaded (&gt;1.0), Amber: Near Capacity (0.8–1.0), Green: Within Capacity (&lt;0.8).</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            {resourceTimeData.length > 0 ? (
-              <ChartContainer config={{}} className="h-[300px] w-full">
-                <BarChart data={resourceTimeData} layout="vertical" margin={{ left: 10, right: 65, top: 10, bottom: 10 }}>
+            {resourceCapacityData.length > 0 ? (
+              <ChartContainer config={resourceCapacityChartConfig} className="h-[300px] w-full">
+                <BarChart data={resourceCapacityData} layout="vertical" margin={{ left: 10, right: 65, top: 10, bottom: 10 }}>
                   <CartesianGrid horizontal={false} />
-                  <XAxis type="number" tickFormatter={(val) => `${val}d`} />
-                  <YAxis dataKey="displayName" type="category" tickLine={false} axisLine={false} tickMargin={8} width={120} fontSize={9} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <XAxis
+                    type="number"
+                    domain={[0, (dataMax: number) => Math.max(1.2, Math.ceil(dataMax * 10) / 10)]}
+                    tickFormatter={(val) => `${val}`}
+                  />
+                  <YAxis
+                    dataKey="displayName"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    width={130}
+                    fontSize={9}
+                  />
+                  <ReferenceLine
+                    x={1.0}
+                    stroke="#ef4444"
+                    strokeDasharray="3 3"
+                    label={{ value: '1.0 Limit', fill: '#ef4444', fontSize: 10, position: 'top' }}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value, name, item) => (
+                          <div className="flex flex-col gap-1 w-full text-xs">
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Load Factor:</span>
+                              <span className="font-semibold text-foreground">
+                                {Number(value).toFixed(2)} ({Math.round(Number(value) * 100)}%)
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Assigned Effort:</span>
+                              <span className="font-medium text-foreground">{item.payload.assignedEffort}h</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Available Capacity:</span>
+                              <span className="font-medium text-foreground">{item.payload.availableCapacity}h</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">Status:</span>
+                              <span className="font-semibold" style={{ color: item.payload.color }}>
+                                {item.payload.statusText}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    }
+                  />
                   <Bar dataKey="value" layout="vertical" radius={[0, 4, 4, 0]}>
-                    <LabelList dataKey="value" position="right" formatter={(val: number) => `${val}d`} className="fill-foreground font-semibold" fontSize={10} />
-                    {resourceTimeData.map((entry) => (
+                    <LabelList
+                      dataKey="value"
+                      position="right"
+                      formatter={(val: number) => `${val.toFixed(2)}`}
+                      className="fill-foreground font-semibold"
+                      fontSize={10}
+                    />
+                    {resourceCapacityData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Bar>
