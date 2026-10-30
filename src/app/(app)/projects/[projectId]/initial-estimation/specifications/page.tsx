@@ -71,6 +71,7 @@ const systemSchema = z.object({
 const horizontalFormSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
   weightage: z.coerce.number().min(0, 'Weightage must be positive.').max(100, 'Weightage cannot exceed 100%.'),
+  dailyBillingRate: z.union([z.coerce.number(), z.literal('')]).optional(),
 });
 
 const categories: ImpactedSystemCategory[] = ['Technology', 'Function'];
@@ -100,7 +101,9 @@ export default function InitialEstimationPage() {
   const [deletingSystem, setDeletingSystem] = useState<ImpactedSystem | null>(null);
   const [isSystemSubmitting, setIsSystemSubmitting] = useState(false);
 
-  const [isHorizontalFormOpen, setIsHorizontalFormOpen] = useState(false);
+  const [isHorizontalDialogOpen, setIsHorizontalDialogOpen] = useState(false);
+  const [editingHorizontal, setEditingHorizontal] = useState<Horizontal | null>(null);
+  const [isHorizontalSubmitting, setIsHorizontalSubmitting] = useState(false);
   const [deletingHorizontal, setDeletingHorizontal] = useState<Horizontal | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -125,7 +128,7 @@ export default function InitialEstimationPage() {
   
   const horizontalForm = useForm<z.infer<typeof horizontalFormSchema>>({
     resolver: zodResolver(horizontalFormSchema),
-    defaultValues: { name: '', weightage: 0 },
+    defaultValues: { name: '', weightage: 0, dailyBillingRate: '' as any },
   });
 
   useEffect(() => {
@@ -150,6 +153,20 @@ export default function InitialEstimationPage() {
       }
     }
   }, [isSystemDialogOpen, editingSystem, systemForm]);
+
+  useEffect(() => {
+    if (isHorizontalDialogOpen) {
+      if (editingHorizontal) {
+        horizontalForm.reset({
+          name: editingHorizontal.name,
+          weightage: editingHorizontal.weightage,
+          dailyBillingRate: editingHorizontal.dailyBillingRate !== undefined ? formatRateInput(editingHorizontal.dailyBillingRate) as any : '',
+        });
+      } else {
+        horizontalForm.reset({ name: '', weightage: 0, dailyBillingRate: '' as any });
+      }
+    }
+  }, [isHorizontalDialogOpen, editingHorizontal, horizontalForm]);
   
   const handleConfirmEstimation = async () => {
     setIsConfirming(true);
@@ -552,7 +569,7 @@ export default function InitialEstimationPage() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Button onClick={() => setIsHorizontalFormOpen(true)}>
+                    <Button onClick={() => handleHorizontalDialogOpen(null)}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add Horizontal
                     </Button>
@@ -622,9 +639,14 @@ export default function InitialEstimationPage() {
                                     <TableCell>${cost.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         {project?.status === 'Initial Estimation' && (
-                                            <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(h)}>
-                                                <Trash2 className="h-4 w-4" />
+                                          <div className="flex items-center justify-end gap-1">
+                                            <Button variant="ghost" size="icon" onClick={() => handleHorizontalDialogOpen(h)} title="Edit Horizontal">
+                                              <Edit className="h-4 w-4" />
                                             </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => setDeletingHorizontal(h)} title="Delete Horizontal">
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
                                         )}
                                     </TableCell>
                                 </TableRow>
@@ -632,45 +654,7 @@ export default function InitialEstimationPage() {
                         })}
                     </TableBody>
                      <TableFooter>
-                        {project?.status === 'Initial Estimation' && isHorizontalFormOpen && (
-                            <TableRow>
-                                <TableCell colSpan={6}>
-                                    <div className="mt-4 pt-4 border-t">
-                                        <h4 className="font-medium mb-2">Add New Horizontal</h4>
-                                        <Form {...horizontalForm}>
-                                            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="flex items-start gap-4">
-                                               <FormField
-                                                control={horizontalForm.control}
-                                                name="name"
-                                                render={({ field }) => (
-                                                  <FormItem className="flex-1">
-                                                    <FormLabel>Name</FormLabel>
-                                                    <FormControl><Input placeholder="e.g. Security" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                  </FormItem>
-                                                )}
-                                              />
-                                                <FormField
-                                                control={horizontalForm.control}
-                                                name="weightage"
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Weightage (%)</FormLabel>
-                                                    <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <div className="pt-8">
-                                                <Button type="submit">Add</Button>
-                                                <Button type="button" variant="ghost" onClick={() => setIsHorizontalFormOpen(false)}>Cancel</Button>
-                                              </div>
-                                            </form>
-                                        </Form>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        )}
+                        
                         <TableRow>
                           <TableCell colSpan={2} className="text-right font-bold">Total Horizontal Effort</TableCell>
                           <TableCell className="font-bold">{totalHorizontalEffort.toFixed(2)}</TableCell>
@@ -795,6 +779,79 @@ export default function InitialEstimationPage() {
               <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                 <Button type="submit" disabled={isSystemSubmitting}>
                   {isSystemSubmitting ? (editingSystem ? 'Saving...' : 'Creating...') : (editingSystem ? 'Save Changes' : 'Create System')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isHorizontalDialogOpen} onOpenChange={(open) => { setIsHorizontalDialogOpen(open); if (!open) setEditingHorizontal(null); }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingHorizontal ? 'Edit Horizontal' : 'Add New Horizontal'}</DialogTitle>
+          </DialogHeader>
+          <Form {...horizontalForm}>
+            <form onSubmit={horizontalForm.handleSubmit(onHorizontalSubmit)} className="space-y-4">
+              <FormField
+                control={horizontalForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Horizontal Name</FormLabel>
+                    <FormControl><Input placeholder="E.g., Testing" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={horizontalForm.control}
+                name="weightage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Weightage (%)</FormLabel>
+                    <FormControl><Input type="number" step="any" min={0} max={100} placeholder="10" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={horizontalForm.control}
+                name="dailyBillingRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Daily Billing Rate (USD)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={formatRateInput(averageDevRate)}
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.length > 1 && /^0[0-9]/.test(val)) {
+                            val = val.replace(/^0+/, '');
+                          }
+                          if (/^(0|[1-9]\d{0,11})?(\.\d{0,2})?$/.test(val)) {
+                            field.onChange(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (field.value !== undefined && field.value !== '') {
+                            field.onChange(formatRateInput(field.value));
+                          }
+                        }}
+                        className="font-mono"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isHorizontalSubmitting}>
+                  {isHorizontalSubmitting ? (editingHorizontal ? 'Saving...' : 'Creating...') : (editingHorizontal ? 'Save Changes' : 'Create Horizontal')}
                 </Button>
               </DialogFooter>
             </form>
