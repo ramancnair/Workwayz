@@ -1198,13 +1198,9 @@ export default function ProjectsDashboard() {
                 <div className="text-center py-12 px-4 border border-dashed rounded-lg m-4 bg-muted/20">
                   <Folder className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                   <h3 className="text-base font-semibold mb-1">No initial estimate projects</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
-                    Projects in initial estimation will appear here. Create a new project to start estimating.
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Projects in initial estimation will appear here.
                   </p>
-                  <Button onClick={() => handleOpenDialog(null)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Project
-                  </Button>
                 </div>
               ) : (
                 <Accordion type="multiple" value={estimatesExpanded} onValueChange={setEstimatesExpanded} className="w-full">
