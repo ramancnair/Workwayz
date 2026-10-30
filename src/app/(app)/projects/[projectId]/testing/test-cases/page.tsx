@@ -535,7 +535,7 @@ export default function TestCasesPage() {
                     columnId="testCaseId"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'testCaseId' ? (sorting.desc ? 'desc' : 'asc') : null}
-                    className="w-[110px]"
+                    className="w-[100px]"
                   >
                     ID
                   </SortableHeader>
@@ -545,6 +545,7 @@ export default function TestCasesPage() {
                     columnId="title"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'title' ? (sorting.desc ? 'desc' : 'asc') : null}
+                    className="w-[34%]"
                   >
                     Title
                   </SortableHeader>
@@ -554,7 +555,7 @@ export default function TestCasesPage() {
                     columnId="type"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'type' ? (sorting.desc ? 'desc' : 'asc') : null}
-                    className="w-[140px]"
+                    className="w-[16%]"
                   >
                     Type
                   </SortableHeader>
@@ -564,7 +565,7 @@ export default function TestCasesPage() {
                     columnId="storyId"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'storyId' ? (sorting.desc ? 'desc' : 'asc') : null}
-                    className="w-[140px]"
+                    className="w-[16%]"
                   >
                     Story
                   </SortableHeader>
@@ -574,7 +575,7 @@ export default function TestCasesPage() {
                     columnId="sprintId"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'sprintId' ? (sorting.desc ? 'desc' : 'asc') : null}
-                    className="w-[140px]"
+                    className="w-[26%]"
                   >
                     Sprint
                   </SortableHeader>
@@ -584,7 +585,7 @@ export default function TestCasesPage() {
                     columnId="releaseId"
                     onSort={handleSort}
                     sortDirection={sorting?.id === 'releaseId' ? (sorting.desc ? 'desc' : 'asc') : null}
-                    className="w-[140px]"
+                    className="w-[26%]"
                   >
                     Release
                   </SortableHeader>
@@ -631,19 +632,19 @@ export default function TestCasesPage() {
                                 aria-label="Select row"
                             />
                         </TableCell>
-                        {columnVisibility.testCaseId && <TableCell className="w-[110px] font-medium">{tc.testCaseId}</TableCell>}
+                        {columnVisibility.testCaseId && <TableCell className="font-medium">{tc.testCaseId}</TableCell>}
                         {columnVisibility.title && <TableCell>{tc.title}</TableCell>}
-                        {columnVisibility.type && <TableCell className="w-[140px]">{tc.type}</TableCell>}
+                        {columnVisibility.type && <TableCell>{tc.type}</TableCell>}
                         {columnVisibility.storyId && (
-                          <TableCell className="w-[140px]">
+                          <TableCell>
                             {relatedStory ? <Badge variant="secondary">{relatedStory.storyId}</Badge> : 'N/A'}
                           </TableCell>
                         )}
                         {columnVisibility.sprintId && (
-                          <TableCell className="w-[140px]">{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>
+                          <TableCell>{sprint?.title || (tc.sprintId === null ? 'Backlog' : 'N/A')}</TableCell>
                         )}
                         {columnVisibility.releaseId && (
-                          <TableCell className="w-[140px]">{release?.releaseId || 'N/A'}</TableCell>
+                          <TableCell>{release?.releaseId || 'N/A'}</TableCell>
                         )}
                         <TableCell className="w-[100px] text-center">
                           <div className="flex items-center justify-center gap-1">
