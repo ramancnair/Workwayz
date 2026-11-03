@@ -61,3 +61,14 @@ if (typeof window !== 'undefined') {
   // Mock scrollTo
   window.scrollTo = vi.fn() as any;
 }
+
+import { beforeEach, afterAll } from 'vitest';
+import { resetLocalDbStore } from './src/lib/local-db-engine';
+
+beforeEach(() => {
+  resetLocalDbStore();
+});
+
+afterAll(() => {
+  resetLocalDbStore();
+});

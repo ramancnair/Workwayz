@@ -22,10 +22,12 @@ export function isLocalDbActive(): boolean {
   if (_runtimeDbProvider) return _runtimeDbProvider === 'local';
   if (typeof window !== 'undefined') {
     const cached = localStorage.getItem('workwayz_db_provider');
-    if (cached) return cached === 'local';
+    if (cached === 'local') return true;
+    if (cached === 'firebase' || cached === 'supabase' || cached === 'postgres') return false;
   }
   const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
-  if (envVal) return envVal === 'local';
+  if (envVal === 'local') return true;
+  if (envVal === 'firebase' || envVal === 'supabase' || envVal === 'postgres') return false;
 
   if (typeof window === 'undefined') {
     try {
@@ -35,11 +37,18 @@ export function isLocalDbActive(): boolean {
       if (fs.existsSync(connsPath)) {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
-        if (activeDb?.provider) {
-          return activeDb.provider === 'local';
-        }
+        if (activeDb?.provider === 'local') return true;
+        if (activeDb?.provider) return false;
       }
     } catch {}
+  }
+
+  const hasRemoteFirebase = Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+  const hasRemoteSupabase = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('127.0.0.1')
+  );
+  if (!hasRemoteFirebase && !hasRemoteSupabase) {
+    return true;
   }
   return false;
 }
@@ -68,6 +77,9 @@ export function isSupabaseActive(): boolean {
         }
       }
     } catch {}
+  }
+  if (isLocalDbActive()) {
+    return true;
   }
   return false;
 }

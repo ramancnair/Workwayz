@@ -42,7 +42,7 @@ export async function setupAuthenticatedWorkspace(
     role: user.role || 'Administrator',
     issuedAt: Date.now(),
     needsPasswordReset: false,
-    authProvider: 'firebase',
+    authProvider: 'local',
   };
 
   // Set auth cookie
@@ -59,6 +59,8 @@ export async function setupAuthenticatedWorkspace(
   await page.addInitScript((session) => {
     localStorage.setItem('workwayz_user', JSON.stringify(session));
     localStorage.setItem('workwayz_remember_me', 'true');
+    localStorage.setItem('workwayz_db_provider', 'local');
+    localStorage.setItem('workwayz_auth_provider', 'local');
     localStorage.setItem('pf_has_admin', 'true');
     localStorage.setItem('pf_admin_setup_done', 'true');
     sessionStorage.setItem('workwayz_session_active', 'true');

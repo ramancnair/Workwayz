@@ -35,6 +35,10 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     await page.addInitScript(() => {
       localStorage.clear();
       sessionStorage.clear();
+      localStorage.setItem('pf_has_admin', 'true');
+      localStorage.setItem('pf_admin_setup_done', 'true');
+      localStorage.setItem('workwayz_db_provider', 'local');
+      localStorage.setItem('workwayz_auth_provider', 'local');
     });
 
     await page.goto('/my-projects');
@@ -81,6 +85,10 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     // Stale session in localStorage but NO browser session cookie (browser was closed), remember me not checked
     await page.context().clearCookies();
     await page.addInitScript(() => {
+      localStorage.setItem('pf_has_admin', 'true');
+      localStorage.setItem('pf_admin_setup_done', 'true');
+      localStorage.setItem('workwayz_db_provider', 'local');
+      localStorage.setItem('workwayz_auth_provider', 'local');
       localStorage.setItem('workwayz_user', JSON.stringify({
         uid: 'admin-test-001',
         empId: 'E100001',
@@ -89,7 +97,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
         accessLevel: 'Administrator',
         issuedAt: Date.now() - 10 * 60 * 1000,
         rememberMe: false,
-        authProvider: 'firebase',
+        authProvider: 'local',
       }));
     });
 
@@ -104,6 +112,10 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
   test('TC-AUTH-007: Remember-me session survives browser restart and skips the login form', async ({ page }) => {
     await page.context().clearCookies();
     await page.addInitScript(() => {
+      localStorage.setItem('pf_has_admin', 'true');
+      localStorage.setItem('pf_admin_setup_done', 'true');
+      localStorage.setItem('workwayz_db_provider', 'local');
+      localStorage.setItem('workwayz_auth_provider', 'local');
       localStorage.setItem('workwayz_user', JSON.stringify({
         uid: 'admin-test-001',
         empId: 'E100001',
@@ -112,7 +124,7 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
         accessLevel: 'Administrator',
         issuedAt: Date.now() - 10 * 60 * 1000,
         rememberMe: true,
-        authProvider: 'firebase',
+        authProvider: 'local',
       }));
     });
 

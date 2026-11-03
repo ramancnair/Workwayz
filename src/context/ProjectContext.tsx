@@ -213,7 +213,7 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       const cached = localStorage.getItem('workwayz_db_provider');
       if (cached) return cached;
     }
-    return process.env.NEXT_PUBLIC_DB_PROVIDER || 'supabase';
+    return process.env.NEXT_PUBLIC_DB_PROVIDER || 'local';
   });
 
   useEffect(() => {
@@ -230,8 +230,8 @@ export function ProjectProvider({ children, projectId }: PropsWithChildren<{ pro
       .catch(() => {});
   }, []);
 
-  const isSupabase = dbProvider === 'supabase' || dbProvider === 'postgres';
-  if (isSupabase) {
+  const isRelational = dbProvider === 'supabase' || dbProvider === 'postgres' || dbProvider === 'local';
+  if (isRelational) {
     return <PostgresProjectProvider projectId={projectId}>{children}</PostgresProjectProvider>;
   }
   return <FirebaseProjectProvider projectId={projectId}>{children}</FirebaseProjectProvider>;

@@ -50,6 +50,7 @@ firestore-debug.log
 
 # local configuration profiles & secrets
 connections.json
+workwayz-local-db.json
 connections.*.json
 *.key
 service-account*.json

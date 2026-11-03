@@ -8,32 +8,39 @@ import { getProfilesPath, getEnvPath } from '@/lib/config-paths';
 const autoSeedFromEnv = (conns: any): boolean => {
     let changed = false;
     const envPath = getEnvPath();
-    if (!fs.existsSync(envPath)) return false;
-
     const envMap = new Map<string, string>();
-    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-    lines.forEach(line => {
-        if (!line || !line.includes('=')) return;
-        const idx = line.indexOf('=');
-        envMap.set(line.substring(0, idx).trim(), line.substring(idx + 1).trim().replace(/^"/, '').replace(/"$/, ''));
-    });
 
-    if (envMap.size === 0) return false;
+    if (fs.existsSync(envPath)) {
+        const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+        lines.forEach(line => {
+            if (!line || !line.includes('=')) return;
+            const idx = line.indexOf('=');
+            envMap.set(line.substring(0, idx).trim(), line.substring(idx + 1).trim().replace(/^"/, '').replace(/"$/, ''));
+        });
+    }
+
+    const getVal = (key: string): string | undefined => envMap.get(key) || process.env[key];
 
     if (!conns.database || conns.database.length === 0) {
-        let dbProvider = envMap.get('NEXT_PUBLIC_DB_PROVIDER') || envMap.get('NEXT_PUBLIC_DATABASE_PROVIDER') || (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : (envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
+        let dbProvider = getVal('NEXT_PUBLIC_DB_PROVIDER') || getVal('NEXT_PUBLIC_DATABASE_PROVIDER') ||
+            (getVal('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : (getVal('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : 'local'));
         if (dbProvider) {
-            const db: any = { id: crypto.randomUUID(), profileName: 'Primary .env Connection', provider: dbProvider, isActive: true };
+            const db: any = {
+                id: crypto.randomUUID(),
+                profileName: dbProvider === 'local' ? 'Embedded Local Database' : 'Primary Database Connection',
+                provider: dbProvider,
+                isActive: true
+            };
             if (dbProvider === 'firebase') {
-                db.projectId = envMap.get('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
-                db.apiKey = envMap.get('NEXT_PUBLIC_FIREBASE_API_KEY');
-                db.authDomain = envMap.get('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
-                db.storageBucket = envMap.get('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
-                db.messagingSenderId = envMap.get('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
-                db.appId = envMap.get('NEXT_PUBLIC_FIREBASE_APP_ID');
+                db.projectId = getVal('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
+                db.apiKey = getVal('NEXT_PUBLIC_FIREBASE_API_KEY');
+                db.authDomain = getVal('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
+                db.storageBucket = getVal('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
+                db.messagingSenderId = getVal('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
+                db.appId = getVal('NEXT_PUBLIC_FIREBASE_APP_ID');
             } else if (dbProvider === 'supabase') {
-                db.supabaseUrl = envMap.get('NEXT_PUBLIC_SUPABASE_URL');
-                db.supabaseAnonKey = envMap.get('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+                db.supabaseUrl = getVal('NEXT_PUBLIC_SUPABASE_URL');
+                db.supabaseAnonKey = getVal('NEXT_PUBLIC_SUPABASE_ANON_KEY');
             }
             conns.database = [db];
             changed = true;
@@ -41,25 +48,26 @@ const autoSeedFromEnv = (conns: any): boolean => {
     }
 
     if (!conns.ai || conns.ai.length === 0) {
-        let aiProvider = envMap.get('NEXT_PUBLIC_AI_PROVIDER') || (envMap.get('GEMINI_API_KEY') ? 'google' : null);
+        let aiProvider = getVal('NEXT_PUBLIC_AI_PROVIDER') || (getVal('GEMINI_API_KEY') ? 'google' : null);
         if (aiProvider) {
-            const ai: any = { id: crypto.randomUUID(), profileName: 'Primary .env GenAI', provider: aiProvider, isActive: true };
-            if (aiProvider === 'google') ai.apiKey = envMap.get('GEMINI_API_KEY');
-            else if (aiProvider === 'openai') ai.apiKey = envMap.get('OPENAI_API_KEY');
-            else if (aiProvider === 'anthropic') ai.apiKey = envMap.get('ANTHROPIC_API_KEY');
-            else if (['lmstudio', 'ollama'].includes(aiProvider)) ai.baseUrl = envMap.get('LOCAL_AI_BASE_URL');
+            const ai: any = { id: crypto.randomUUID(), profileName: 'Primary GenAI', provider: aiProvider, isActive: true };
+            if (aiProvider === 'google') ai.apiKey = getVal('GEMINI_API_KEY');
+            else if (aiProvider === 'openai') ai.apiKey = getVal('OPENAI_API_KEY');
+            else if (aiProvider === 'anthropic') ai.apiKey = getVal('ANTHROPIC_API_KEY');
+            else if (['lmstudio', 'ollama'].includes(aiProvider)) ai.baseUrl = getVal('LOCAL_AI_BASE_URL');
 
-            if (envMap.get('AI_DEFAULT_MODEL')) ai.model = envMap.get('AI_DEFAULT_MODEL');
+            if (getVal('AI_DEFAULT_MODEL')) ai.model = getVal('AI_DEFAULT_MODEL');
             conns.ai = [ai];
             changed = true;
         }
     }
 
     if (!conns.authentication || conns.authentication.length === 0) {
-        let authProvider = envMap.get('NEXT_PUBLIC_AUTH_PROVIDER') || (envMap.get('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : 'firebase');
+        let authProvider = getVal('NEXT_PUBLIC_AUTH_PROVIDER') ||
+            (getVal('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : (getVal('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : 'local'));
         const auth: any = {
             id: crypto.randomUUID(),
-            profileName: 'Primary .env Auth',
+            profileName: authProvider === 'local' ? 'Local Embedded Authentication' : 'Primary Auth',
             provider: authProvider,
             googleSso: false,
             facebookSso: false,
@@ -73,9 +81,9 @@ const autoSeedFromEnv = (conns: any): boolean => {
     return changed;
 };
 
-const getConnections = () => {
-    const p = getProfilesPath();
+const getConnections = (): any => {
     let conns: any = { database: [], ai: [], authentication: [] };
+    const p = getProfilesPath();
     if (fs.existsSync(p)) {
         try {
             conns = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -84,7 +92,9 @@ const getConnections = () => {
 
     // Auto-seed existing variables if arrays are empty so they appear on UI
     if (autoSeedFromEnv(conns)) {
-        saveConnections(conns);
+        try {
+            saveConnections(conns);
+        } catch (_) {}
     }
 
     return conns;
@@ -139,31 +149,30 @@ export async function POST(request: Request) {
         }
 
         let lastSavedProfile: any = null;
-        let lastType: any = null;
+        let lastType: string = '';
 
         for (const item of items) {
             const { type, profile } = item;
-            if (!type || !profile) continue;
-
-            if (!profile.id) {
-                profile.id = crypto.randomUUID();
+            if (!['database', 'ai', 'authentication'].includes(type) || !profile) {
+                continue;
             }
 
             if (!conns[type]) conns[type] = [];
 
-            const idx = conns[type].findIndex((p: any) => p.id === profile.id);
-            const isExistingActive = idx >= 0 ? !!conns[type][idx].isActive : false;
-            const shouldBeActive = profile.isActive === true || isExistingActive || conns[type].length === 0;
+            if (!profile.id) profile.id = crypto.randomUUID();
+
+            const existingIdx = conns[type].findIndex((p: any) => p.id === profile.id);
+            const idx = existingIdx >= 0 ? existingIdx : conns[type].findIndex((p: any) => p.profileName === profile.profileName);
+
+            const shouldBeActive = profile.isActive === true;
 
             if (idx >= 0) {
                 const existing = conns[type][idx];
                 if (type === 'database') {
-                    if (profile.provider === existing.provider) {
+                    if (existing.provider === 'firebase') {
                         if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
-                        if (!profile.supabaseAnonKey || profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
-                        if (!profile.connectionString || profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
-                    } else {
-                        if (profile.apiKey && profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
+                    } else if (existing.provider === 'supabase' || existing.provider === 'postgres') {
+                        if (!profile.apiKey || profile.apiKey.includes('****')) profile.apiKey = existing.apiKey;
                         if (profile.supabaseAnonKey && profile.supabaseAnonKey.includes('****')) profile.supabaseAnonKey = existing.supabaseAnonKey;
                         if (profile.connectionString && profile.connectionString.includes('****')) profile.connectionString = existing.connectionString;
                     }
@@ -189,7 +198,7 @@ export async function POST(request: Request) {
         syncConnectionsToEnv(conns);
 
         const masked = lastSavedProfile && (lastType === 'database' || lastType === 'ai')
-            ? maskProfile(lastSavedProfile, lastType)
+            ? maskProfile(lastSavedProfile, lastType as any)
             : lastSavedProfile;
 
         return NextResponse.json({ success: true, profile: masked });

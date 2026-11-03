@@ -59,7 +59,17 @@ export function getLocalDbFilePath(): string {
   return path.join(dir, 'workwayz-local-db.json');
 }
 
-function createEmptyStore(): LocalDatabaseStore {
+export function resetLocalDbStore(): void {
+  const { fs } = getNodeModules();
+  const filePath = getLocalDbFilePath();
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (_) {}
+}
+
+export function createEmptyStore(): LocalDatabaseStore {
   return {
     version: 1,
     auth_users: [],

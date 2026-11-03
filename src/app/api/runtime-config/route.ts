@@ -80,13 +80,26 @@ export async function GET() {
                 dbProvider = 'supabase';
             } else if (getEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID')) {
                 dbProvider = 'firebase';
+            } else {
+                dbProvider = 'local';
+            }
+        }
+
+        let authProvider = getEnv('NEXT_PUBLIC_AUTH_PROVIDER');
+        if (!authProvider) {
+            if (getEnv('NEXT_PUBLIC_SUPABASE_URL')) {
+                authProvider = 'supabase';
+            } else if (getEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID')) {
+                authProvider = 'firebase';
+            } else {
+                authProvider = 'local';
             }
         }
 
         // Return only non-secret, client-safe public config values
         const config = {
-            dbProvider:        dbProvider || null,
-            authProvider:      getEnv('NEXT_PUBLIC_AUTH_PROVIDER') || null,
+            dbProvider:        dbProvider || 'local',
+            authProvider:      authProvider || 'local',
             supabaseUrl:       getEnv('NEXT_PUBLIC_SUPABASE_URL') || null,
             supabaseAnonKey:   getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') || null,
             firebaseProjectId: getEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID') || null,

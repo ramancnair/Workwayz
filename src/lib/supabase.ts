@@ -24,11 +24,14 @@ function isLocalProviderActive(): boolean {
         try {
             const cached = localStorage.getItem('workwayz_db_provider');
             if (cached === 'local') return true;
+            if (cached === 'firebase' || cached === 'supabase' || cached === 'postgres') return false;
         } catch (_) {}
     }
     if (_runtimeConfig?.dbProvider === 'local') return true;
+    if (_runtimeConfig?.dbProvider === 'firebase' || _runtimeConfig?.dbProvider === 'supabase' || _runtimeConfig?.dbProvider === 'postgres') return false;
     const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
     if (envVal === 'local') return true;
+    if (envVal === 'firebase' || envVal === 'supabase' || envVal === 'postgres') return false;
 
     if (typeof window === 'undefined') {
         try {
@@ -39,9 +42,20 @@ function isLocalProviderActive(): boolean {
                 const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
                 const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
                 if (activeDb?.provider === 'local') return true;
+                if (activeDb?.provider === 'firebase' || activeDb?.provider === 'supabase' || activeDb?.provider === 'postgres') return false;
             }
         } catch (_) {}
     }
+
+    // Default to true if no other remote database configuration is configured
+    const hasRemoteSupabase = Boolean(
+        process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('127.0.0.1')
+    );
+    const hasRemoteFirebase = Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+    if (!hasRemoteSupabase && !hasRemoteFirebase) {
+        return true;
+    }
+
     return false;
 }
 
@@ -101,7 +115,8 @@ function getClientSync(): SupabaseClient | null {
         return _client;
     }
 
-    return null;
+    // Default to local client to guarantee safe zero-config execution
+    return localSupabaseClient as SupabaseClient;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +131,7 @@ function buildServerClient(): SupabaseClient | null {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (url && key) return createSupabaseClient(url, key);
-    return null;
+    return localSupabaseClient as SupabaseClient;
 }
 
 // Exported async initializer — call this once at app startup on the client
@@ -133,13 +148,13 @@ export async function initSupabaseClient(): Promise<void> {
 }
 
 // Proxy — all callers (supabase-firestore-adapter, login page, etc.) use this.
-// On first property access, it returns the live client if ready, or null.
+// On first property access, it returns the live client if ready, or local fallback.
 const supabaseProxy = new Proxy({} as any, {
     get(_target, prop: string) {
         const client = typeof window === 'undefined'
             ? buildServerClient()
             : getClientSync();
-        if (!client) return undefined;
+        if (!client) return (localSupabaseClient as any)[prop];
         const value = (client as any)[prop];
         return typeof value === 'function' ? value.bind(client) : value;
     }
