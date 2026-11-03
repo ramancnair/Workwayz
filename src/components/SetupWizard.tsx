@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -72,7 +73,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiBaseUrl, setAiBaseUrl] = useState('');
   const [aiModel, setAiModel] = useState('');
-  const [configureAi, setConfigureAi] = useState<boolean>(true);
+  const [configureAiLater, setConfigureAiLater] = useState<boolean>(false);
 
   const handleDbProviderChange = (val: string) => {
     setDbProvider(val);
@@ -141,7 +142,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           if (aiSetup) {
             const activeAi = data.ai.find((a: any) => a.isActive) || data.ai[0];
             if (activeAi) {
-              setConfigureAi(true);
+              setConfigureAiLater(false);
               setAiProfileId(activeAi.id);
               setAiProjectName(activeAi.profileName || 'Wizard AI Config');
               setAiProvider(activeAi.provider || 'google');
@@ -368,7 +369,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         { type: 'database', profile: dbProfile },
         { type: 'authentication', profile: authProfile },
       ];
-      if (configureAi) {
+      if (!configureAiLater && (aiApiKey || aiBaseUrl || ['lmstudio', 'ollama'].includes(aiProvider))) {
         batchItems.push({ type: 'ai', profile: aiProfile });
       }
 
@@ -516,8 +517,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className={cn("h-screen w-full overflow-y-auto bg-muted/20 flex flex-col items-center p-4 sm:p-6 md:p-8 outline-none", onClose && "fixed inset-0 z-50 bg-background/60 backdrop-blur-sm")}>
-      <div className={cn("w-full max-w-3xl space-y-6 my-auto py-6", onClose && "bg-background border rounded-xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col my-auto")}>
+    <div className={cn("h-screen w-full overflow-hidden bg-muted/20 flex flex-col items-center justify-center p-3 sm:p-4 outline-none", onClose && "fixed inset-0 z-50 bg-background/60 backdrop-blur-sm")}>
+      <div className={cn("w-full max-w-3xl h-full max-h-[96vh] flex flex-col space-y-3 sm:space-y-4 my-auto", onClose && "bg-background border rounded-xl p-6 shadow-2xl relative max-h-[90vh]")}>
         {onClose && (
           <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10" onClick={onClose}>
             <X className="w-4 h-4" />
@@ -575,8 +576,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
         </div>
 
         {/* Forms */}
-        <Card className="shadow-lg border-border/60 flex flex-col min-h-0">
-          <CardHeader className="shrink-0">
+        <Card className="shadow-xl border-border/60 flex-1 min-h-0 flex flex-col overflow-hidden bg-card">
+          <CardHeader className="shrink-0 p-4 sm:p-5 border-b border-border/40">
             <CardTitle className="text-xl flex items-center gap-2">
               {steps[step - 1].title} Setup
             </CardTitle>
@@ -588,7 +589,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               {step === 5 && "Review and finalize your setup configuration."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="min-h-[300px] overflow-y-auto flex-1 p-6">
+          <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
             {/* Step 1: DB */}
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1005,23 +1006,38 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             {/* Step 4: AI */}
             {step === 4 && (
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-border/70 bg-muted/20">
-                  <div className="space-y-0.5 pr-4">
-                    <Label htmlFor="configure-ai-switch" className="text-sm font-semibold cursor-pointer">
-                      Configure AI Provider Now
+                <div className="flex items-center space-x-3 p-3.5 rounded-lg border border-border/70 bg-muted/20">
+                  <Checkbox
+                    id="configure-ai-later"
+                    checked={configureAiLater}
+                    onCheckedChange={(checked) => setConfigureAiLater(checked === true)}
+                  />
+                  <div className="grid gap-0.5 leading-none">
+                    <Label
+                      htmlFor="configure-ai-later"
+                      className="text-sm font-medium cursor-pointer select-none text-foreground"
+                    >
+                      I will configure AI later
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Enable WayFinder AI Copilot and automated estimation. You can also skip this and configure it anytime later in Settings.
+                      Skip AI setup for now. You can connect Google Gemini, OpenAI, or local LLMs anytime in Settings.
                     </p>
                   </div>
-                  <Switch
-                    id="configure-ai-switch"
-                    checked={configureAi}
-                    onCheckedChange={setConfigureAi}
-                  />
                 </div>
 
-                {configureAi ? (
+                {configureAiLater ? (
+                  <div className="p-6 rounded-xl border border-dashed border-border/80 bg-muted/10 text-center space-y-3 my-2">
+                    <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                      <Bot className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">AI Configuration Deferred</h4>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
+                        You are proceeding without configuring an AI model. All agile sprint planning, backlog management, kanban boards, test cases, and RAID logs will remain 100% operational.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-4 pt-1">
                     <div className="space-y-2">
                       <Label>Project Name</Label>
@@ -1058,27 +1074,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                         <Input placeholder="http://localhost:11434" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)} />
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="p-6 rounded-xl border border-dashed border-border/80 bg-muted/10 text-center space-y-3 my-2">
-                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                      <Bot className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">AI Configuration Deferred</h4>
-                      <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-                        You can proceed without configuring AI. All agile boards, backlog grooming, project management, QA testing, and RAID governance features will remain 100% operational.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setConfigureAi(true)}
-                      className="mt-1 text-xs"
-                    >
-                      Enable AI Configuration
-                    </Button>
                   </div>
                 )}
               </div>
@@ -1133,8 +1128,8 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     </li>
                     <li className="flex justify-between">
                       <span className="text-muted-foreground">AI Integration:</span>
-                      <span className={cn("font-medium", configureAi ? "capitalize" : "text-amber-500 dark:text-amber-400")}>
-                        {configureAi ? aiProvider : "Configuring later in Settings"}
+                      <span className={cn("font-medium", !configureAiLater ? "capitalize" : "text-amber-500 dark:text-amber-400")}>
+                        {!configureAiLater ? aiProvider : "Configuring later in Settings"}
                       </span>
                     </li>
                   </ul>
@@ -1142,7 +1137,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
               </div>
             )}
           </CardContent>
-          <CardFooter className="shrink-0 sticky bottom-0 bg-card z-10 flex justify-between items-center border-t border-border/50 bg-muted/10 rounded-b-lg p-4">
+          <CardFooter className="shrink-0 border-t border-border/50 bg-card p-4 flex justify-between items-center z-10">
             <Button
               variant="outline"
               type="button"
@@ -1153,19 +1148,6 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
             </Button>
 
             <div className="flex items-center gap-2">
-              {step === 4 && configureAi && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setConfigureAi(false);
-                    setStep(5);
-                  }}
-                  className="text-xs sm:text-sm text-muted-foreground hover:text-foreground mr-1"
-                >
-                  I will configure this later
-                </Button>
-              )}
               {onClose && step < 5 && (
                 <Button type="button" onClick={handleSave} disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white">
                   {isSaving ? "Saving..." : "Save Changes"} <Save className="w-4 h-4 ml-2" />

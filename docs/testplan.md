@@ -129,6 +129,8 @@ npm run test:e2e:install
 | **TC-WIZ-003** | Multi-step navigation traversal | Forward/backward progression through wizard steps | ✅ Automated |
 | **TC-WIZ-004** | Clean wizard exit & completion | Close or skip action returns user to workspace | ✅ Automated |
 | **TC-WIZ-005** | Super Admin account setup & local DB provisioning | Admin user step requests First/Last Name, designates Super Admin role, and supports zero-config Local Embedded Database & Auth | ✅ Automated |
+| **TC-WIZ-006** | AI Configuration deferred option | Step 4 provides "I will configure AI later" checkbox that hides API inputs and reports deferred state on Step 5 summary | ✅ Automated |
+| **TC-WIZ-007** | Pinned Card Navigation Footer | Wizard navigation buttons (Back, Next, Complete Setup) remain docked in CardFooter and do not scroll with card content | ✅ Automated |
 
 ---
 
