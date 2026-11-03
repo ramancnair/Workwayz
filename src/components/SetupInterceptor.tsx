@@ -18,6 +18,7 @@ export function SetupInterceptor() {
           const dbSetup = Array.isArray(data.database) && data.database.some((d: any) => Boolean(d.provider));
           const authSetup = Array.isArray(data.authentication) && data.authentication.some((a: any) => Boolean(a.provider));
           const aiSetup = Array.isArray(data.ai) && data.ai.length > 0;
+          const hasAdmin = typeof data.hasAdmin === 'boolean' ? data.hasAdmin : true;
 
           const isConfigured = dbSetup;
 
@@ -32,6 +33,9 @@ export function SetupInterceptor() {
             if (pathname.startsWith('/setup-wizard')) {
               const isForced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('force') === 'true';
               if (isForced) return;
+
+              // If no admin user exists in the database, allow setup-wizard so they can create the admin account
+              if (!hasAdmin) return;
 
               const { isValid } = validateSession(false);
               if (isValid) {

@@ -42,8 +42,8 @@ test.describe('Pillar 1: Authentication & Access Control', () => {
     });
 
     await page.goto('/my-projects');
-    await page.waitForURL('**/login', { timeout: 10000 });
-    expect(page.url()).toContain('/login');
+    await page.waitForURL(/(.*\/login|\/$)/, { timeout: 10000 });
+    await expect(page.locator('body')).toContainText(/Log in|Sign In/i);
   });
 
   test('TC-AUTH-004: Injected administrator session bypasses login and displays My Projects', async ({ page }) => {

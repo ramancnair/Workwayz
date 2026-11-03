@@ -131,9 +131,28 @@ export async function GET() {
         const maskedDb = (conns.database || []).map((p: any) => maskProfile(p, 'database'));
         const maskedAi = (conns.ai || []).map((p: any) => maskProfile(p, 'ai'));
         const auth = (conns.authentication || []);
-        return NextResponse.json({ database: maskedDb, ai: maskedAi, authentication: auth });
+
+        let hasAdmin = false;
+        const activeDb = (conns.database || []).find((p: any) => p.isActive) || conns.database?.[0];
+        const dbProvider = activeDb?.provider;
+
+        if (dbProvider === 'local') {
+            try {
+                const { readLocalDbStore } = await import('@/lib/local-db-engine');
+                const store = readLocalDbStore();
+                const hasAuthUser = Array.isArray(store.auth_users) && store.auth_users.length > 0;
+                const hasAdminEmp = Array.isArray(store.tables?.employees) && store.tables.employees.some(
+                    (e: any) => (e.accessLevel === 'Super Admin' || e.accessLevel === 'Administrator') && !e.isDeleted
+                );
+                hasAdmin = hasAuthUser || hasAdminEmp;
+            } catch (_) {}
+        } else if (dbProvider) {
+            hasAdmin = true;
+        }
+
+        return NextResponse.json({ database: maskedDb, ai: maskedAi, authentication: auth, hasAdmin });
     } catch (e) {
-        return NextResponse.json({ database: [], ai: [], authentication: [] });
+        return NextResponse.json({ database: [], ai: [], authentication: [], hasAdmin: false });
     }
 }
 
