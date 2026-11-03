@@ -88,11 +88,11 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
     fetch('/api/config/profiles')
       .then(res => res.json())
       .then(data => {
-        const dbSetup = Array.isArray(data.database) && data.database.length > 0;
-        const authSetup = Array.isArray(data.authentication) && data.authentication.length > 0;
+        const dbSetup = Array.isArray(data.database) && data.database.some((d: any) => Boolean(d.provider));
+        const authSetup = Array.isArray(data.authentication) && data.authentication.some((a: any) => Boolean(a.provider));
         const aiSetup = Array.isArray(data.ai) && data.ai.length > 0;
 
-        if (dbSetup || authSetup || aiSetup) {
+        if (dbSetup) {
           setIsFirstRun(false);
 
           const isForced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('force') === 'true';

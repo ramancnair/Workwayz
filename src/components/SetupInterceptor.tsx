@@ -15,11 +15,11 @@ export function SetupInterceptor() {
         const res = await fetch('/api/config/profiles');
         if (res.ok) {
           const data = await res.json();
-          const dbSetup = Array.isArray(data.database) && data.database.length > 0;
-          const authSetup = Array.isArray(data.authentication) && data.authentication.length > 0;
+          const dbSetup = Array.isArray(data.database) && data.database.some((d: any) => Boolean(d.provider));
+          const authSetup = Array.isArray(data.authentication) && data.authentication.some((a: any) => Boolean(a.provider));
           const aiSetup = Array.isArray(data.ai) && data.ai.length > 0;
 
-          const isConfigured = dbSetup || authSetup || aiSetup;
+          const isConfigured = dbSetup;
 
           if (!isConfigured) {
             // First time run detected, nothing configured.

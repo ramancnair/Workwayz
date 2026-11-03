@@ -65,17 +65,19 @@ const autoSeedFromEnv = (conns: any): boolean => {
     if (!conns.authentication || conns.authentication.length === 0) {
         let authProvider = getVal('NEXT_PUBLIC_AUTH_PROVIDER') ||
             (getVal('NEXT_PUBLIC_SUPABASE_URL') ? 'supabase' : (getVal('NEXT_PUBLIC_FIREBASE_PROJECT_ID') ? 'firebase' : null));
-        const auth: any = {
-            id: crypto.randomUUID(),
-            profileName: authProvider === 'local' ? 'Local Embedded Authentication' : 'Primary Auth',
-            provider: authProvider,
-            googleSso: false,
-            facebookSso: false,
-            appleSso: false,
-            isActive: true
-        };
-        conns.authentication = [auth];
-        changed = true;
+        if (authProvider) {
+            const auth: any = {
+                id: crypto.randomUUID(),
+                profileName: authProvider === 'local' ? 'Local Embedded Authentication' : 'Primary Auth',
+                provider: authProvider,
+                googleSso: false,
+                facebookSso: false,
+                appleSso: false,
+                isActive: true
+            };
+            conns.authentication = [auth];
+            changed = true;
+        }
     }
 
     return changed;
