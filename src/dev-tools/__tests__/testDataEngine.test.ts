@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   PRESET_CONFIGS,
+  INITIAL_ESTIMATE_NAME_TEMPLATES,
   getActiveStudioItems,
   getStudioLog,
   recordStudioLog,
@@ -19,6 +20,7 @@ describe('TestDataStudio Engine & Presets', () => {
     expect(minimal).toBeDefined();
     expect(minimal.portfolioCount).toBe(1);
     expect(minimal.projectCount).toBe(2);
+    expect(minimal.initialEstimateCount).toBe(2);
     expect(minimal.userCount).toBe(8);
     expect(minimal.pricingModel).toBe('T&M');
   });
@@ -28,6 +30,7 @@ describe('TestDataStudio Engine & Presets', () => {
     expect(standard).toBeDefined();
     expect(standard.portfolioCount).toBe(2);
     expect(standard.projectCount).toBe(5);
+    expect(standard.initialEstimateCount).toBe(2);
     expect(standard.userCount).toBe(16);
     expect(standard.pricingModel).toBe('Mixed');
   });
@@ -37,8 +40,18 @@ describe('TestDataStudio Engine & Presets', () => {
     expect(stress).toBeDefined();
     expect(stress.portfolioCount).toBe(4);
     expect(stress.projectCount).toBe(12);
+    expect(stress.initialEstimateCount).toBe(2);
     expect(stress.userCount).toBe(32);
     expect(stress.pricingModel).toBe('Mixed');
+  });
+
+    it('should export INITIAL_ESTIMATE_NAME_TEMPLATES with descriptive proposal names', () => {
+    expect(INITIAL_ESTIMATE_NAME_TEMPLATES).toBeDefined();
+    expect(INITIAL_ESTIMATE_NAME_TEMPLATES.length).toBeGreaterThanOrEqual(2);
+    INITIAL_ESTIMATE_NAME_TEMPLATES.forEach(name => {
+      expect(typeof name).toBe('string');
+      expect(name.length).toBeGreaterThan(0);
+    });
   });
 
   it('should properly distribute roles in all presets', () => {

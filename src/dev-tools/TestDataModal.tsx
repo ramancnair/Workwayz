@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   Sparkles,
+  FileSpreadsheet,
   Trash2,
   X,
   Loader2,
@@ -37,6 +38,7 @@ import {
   GeneratorConfig,
   PRESET_CONFIGS,
   PROJECT_NAME_TEMPLATES,
+  INITIAL_ESTIMATE_NAME_TEMPLATES,
   generateEmployees,
   ensurePortfolios,
   generateProjects,
@@ -279,6 +281,17 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
   const togglePresetExpand = (presetKey: 'minimal' | 'standard' | 'stress') => {
     applyPreset(presetKey);
     setExpandedPreset(prev => (prev === presetKey ? null : presetKey));
+  };
+
+
+  const getPresetInitialEstimateList = (presetKey: 'minimal' | 'standard' | 'stress') => {
+    const count = PRESET_CONFIGS[presetKey].initialEstimateCount ?? 2;
+    const pricingModel = PRESET_CONFIGS[presetKey].pricingModel;
+    return Array.from({ length: count }).map((_, i) => {
+      const name = INITIAL_ESTIMATE_NAME_TEMPLATES[i % INITIAL_ESTIMATE_NAME_TEMPLATES.length];
+      const pricing = pricingModel === 'Mixed' ? (i % 2 === 0 ? 'Fixed Bid' : 'T&M') : pricingModel;
+      return { name, pricing };
+    });
   };
 
   const getPresetProjectList = (presetKey: 'minimal' | 'standard' | 'stress') => {
@@ -769,7 +782,10 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     <span>Portfolios:</span> <span className="font-semibold text-foreground">1</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Projects:</span> <span className="font-semibold text-foreground">2</span>
+                    <span>Active Projects:</span> <span className="font-semibold text-foreground">2</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Initial Estimates:</span> <span className="font-semibold text-purple-600 dark:text-purple-400 font-bold">2</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Users:</span> <span className="font-semibold text-foreground">8 Members</span>
@@ -782,7 +798,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
               <div className="mt-4 pt-3 border-t border-border space-y-2">
                 <div className="text-[11px] text-muted-foreground font-medium">
-                  ~16 Work Items • 6 Sprints • 6 Test Cycles
+                  ~16 Work Items • 6 Sprints • 6 Test Cycles • 2 Initial Estimates
                 </div>
 
                 <Button
@@ -843,7 +859,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                       <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
                         <span className="flex items-center gap-1">
                           <FolderKanban className="w-3.5 h-3.5 text-primary" />
-                          Projects Included ({getPresetProjectList('minimal').length})
+                          Active Projects Included ({getPresetProjectList('minimal').length})
                         </span>
                         <span className="text-[10px] text-muted-foreground font-mono font-normal">
                           {presetAutoRun['minimal'] ? `${getPresetProgressLabel('minimal')} sim` : 'fresh'}
@@ -884,6 +900,28 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                           );
                         })}
                       </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-purple-500" />
+                            Initial Estimates Included ({getPresetInitialEstimateList('minimal').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            scoping / draft specs
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {getPresetInitialEstimateList('minimal').map((est, idx) => (
+                            <div key={idx} className="p-2 rounded bg-card/90 border border-border/70 text-[11px] flex items-center justify-between">
+                              <span className="font-medium text-foreground">{idx + 1}. {est.name}</span>
+                              <Badge variant="outline" className="text-[10px] text-purple-600 dark:text-purple-400 border-purple-500/30">
+                                Initial Estimate • {est.pricing}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -917,7 +955,10 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     <span>Portfolios:</span> <span className="font-semibold text-foreground">2</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Projects:</span> <span className="font-semibold text-foreground">5</span>
+                    <span>Active Projects:</span> <span className="font-semibold text-foreground">5</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Initial Estimates:</span> <span className="font-semibold text-purple-600 dark:text-purple-400 font-bold">2</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Users:</span> <span className="font-semibold text-foreground">16 Members</span>
@@ -930,7 +971,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
               <div className="mt-4 pt-3 border-t border-border space-y-2">
                 <div className="text-[11px] text-muted-foreground font-medium">
-                  ~40 Work Items • 15 Sprints • 15 Test Cycles
+                  ~40 Work Items • 15 Sprints • 15 Test Cycles • 2 Initial Estimates
                 </div>
 
                 <Button
@@ -991,7 +1032,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                       <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
                         <span className="flex items-center gap-1">
                           <FolderKanban className="w-3.5 h-3.5 text-primary" />
-                          Projects Included ({getPresetProjectList('standard').length})
+                          Active Projects Included ({getPresetProjectList('standard').length})
                         </span>
                         <span className="text-[10px] text-muted-foreground font-mono font-normal">
                           {presetAutoRun['standard'] ? `${getPresetProgressLabel('standard')} sim` : 'fresh'}
@@ -1032,6 +1073,28 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                           );
                         })}
                       </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-purple-500" />
+                            Initial Estimates Included ({getPresetInitialEstimateList('standard').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            scoping / draft specs
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {getPresetInitialEstimateList('standard').map((est, idx) => (
+                            <div key={idx} className="p-2 rounded bg-card/90 border border-border/70 text-[11px] flex items-center justify-between">
+                              <span className="font-medium text-foreground">{idx + 1}. {est.name}</span>
+                              <Badge variant="outline" className="text-[10px] text-purple-600 dark:text-purple-400 border-purple-500/30">
+                                Initial Estimate • {est.pricing}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1060,7 +1123,10 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                     <span>Portfolios:</span> <span className="font-semibold text-foreground">4</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Projects:</span> <span className="font-semibold text-foreground">12</span>
+                    <span>Active Projects:</span> <span className="font-semibold text-foreground">12</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Initial Estimates:</span> <span className="font-semibold text-purple-600 dark:text-purple-400 font-bold">2</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Users:</span> <span className="font-semibold text-foreground">32 Members</span>
@@ -1073,7 +1139,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
 
               <div className="mt-4 pt-3 border-t border-border space-y-2">
                 <div className="text-[11px] text-muted-foreground font-medium">
-                  ~96 Work Items • 36 Sprints • 36 Test Cycles
+                  ~96 Work Items • 36 Sprints • 36 Test Cycles • 2 Initial Estimates
                 </div>
 
                 <Button
@@ -1134,7 +1200,7 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                       <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
                         <span className="flex items-center gap-1">
                           <FolderKanban className="w-3.5 h-3.5 text-primary" />
-                          Projects Included ({getPresetProjectList('stress').length})
+                          Active Projects Included ({getPresetProjectList('stress').length})
                         </span>
                         <span className="text-[10px] text-muted-foreground font-mono font-normal">
                           {presetAutoRun['stress'] ? `${getPresetProgressLabel('stress')} sim` : 'fresh'}
@@ -1174,6 +1240,28 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                             </div>
                           );
                         })}
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-border/60">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                          <span className="flex items-center gap-1">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-purple-500" />
+                            Initial Estimates Included ({getPresetInitialEstimateList('stress').length})
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                            scoping / draft specs
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          {getPresetInitialEstimateList('stress').map((est, idx) => (
+                            <div key={idx} className="p-2 rounded bg-card/90 border border-border/70 text-[11px] flex items-center justify-between">
+                              <span className="font-medium text-foreground">{idx + 1}. {est.name}</span>
+                              <Badge variant="outline" className="text-[10px] text-purple-600 dark:text-purple-400 border-purple-500/30">
+                                Initial Estimate • {est.pricing}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1216,7 +1304,24 @@ Other studio runs, original users, and genuine projects/portfolios will remain c
                 </div>
 
                 <div>
-                  <Label className="block text-muted-foreground mb-2 text-xs">Pricing Model</Label>
+                  
+                <div>
+                  <div className="flex justify-between text-muted-foreground mb-2">
+                    <span>Initial Estimates to Generate:</span>
+                    <Badge variant="outline" className="font-mono text-xs text-purple-600 dark:text-purple-400">
+                      {config.initialEstimateCount ?? 2} Estimates
+                    </Badge>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={6}
+                    step={1}
+                    value={[config.initialEstimateCount ?? 2]}
+                    onValueChange={([val]) => setConfig({ ...config, initialEstimateCount: val })}
+                  />
+                </div>
+
+                <Label className="block text-muted-foreground mb-2 text-xs">Pricing Model</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['Fixed Bid', 'T&M', 'Mixed'] as const).map(model => (
                       <Button

@@ -1106,3 +1106,129 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   // ── Commit all batches ────────────────────────────────────────────────────────
   await batch.commit();
 }
+
+/**
+ * Generates initial estimation specifications (Impacted Systems, Horizontals, Environments, and Scoping metadata)
+ * for a project in Initial Estimation state.
+ */
+export async function generateInitialEstimateData(opts: {
+  db: Firestore;
+  projectId: string;
+  globalUsers: User[];
+  pricingModel?: string;
+  startDate?: Date;
+  endDate?: Date;
+}): Promise<void> {
+  const { db, projectId, globalUsers, pricingModel, startDate, endDate } = opts;
+  const pRef = doc(db, 'projects', projectId);
+  const col = (name: string) => collection(pRef, name);
+  const batch = new AutoBatch(db);
+
+  const effStartDate = startDate || new Date();
+  const effEndDate = endDate || addDays(effStartDate, 90);
+
+  // 1. Initial Impacted Systems (draft specification backlog)
+  const systemDefs = [
+    {
+      name: 'Omnichannel Web & Mobile Front End',
+      category: 'Technology',
+      description: 'Next.js client interface, state management, and responsive layout framework.',
+      estimate: 35,
+      dailyBillingRate: 10500,
+    },
+    {
+      name: 'Core API & Microservices Gateway',
+      category: 'Technology',
+      description: 'Backend service orchestration, REST endpoints, and domain service logic.',
+      estimate: 45,
+      dailyBillingRate: 12000,
+    },
+    {
+      name: 'Data Pipeline & Cloud Persistence',
+      category: 'Technology',
+      description: 'Database schema, caching layers, and search indexing pipeline.',
+      estimate: 25,
+      dailyBillingRate: 11000,
+    },
+    {
+      name: 'Authentication & Role-Based Access Control',
+      category: 'Function',
+      description: 'SSO provider integration, session management, and permission matrix.',
+      estimate: 20,
+      dailyBillingRate: 9500,
+    },
+    {
+      name: 'Automated Notification & Event Streaming',
+      category: 'Function',
+      description: 'Real-time webhook dispatcher, push notifications, and email alerting.',
+      estimate: 18,
+      dailyBillingRate: 9000,
+    },
+  ];
+
+  systemDefs.forEach(s => {
+    const initRef = doc(col('initialImpactedSystems'));
+    batch.set(initRef, clean({
+      name: s.name,
+      category: s.category,
+      description: s.description,
+      estimate: s.estimate,
+      dailyBillingRate: s.dailyBillingRate,
+    }));
+  });
+
+  // 2. Initial Horizontals (standard discipline weightages)
+  const horizontalDefs = [
+    { name: 'Project Management', weightage: 10, isEnabled: true, dailyBillingRate: 10000 },
+    { name: 'Business Analysis', weightage: 10, isEnabled: true, dailyBillingRate: 9500 },
+    { name: 'Testing', weightage: 15, isEnabled: true, dailyBillingRate: 8000 },
+    { name: 'Architecture', weightage: 10, isEnabled: true, dailyBillingRate: 13000 },
+    { name: 'UI/UX Design', weightage: 5, isEnabled: true, dailyBillingRate: 8500 },
+  ];
+
+  horizontalDefs.forEach(h => {
+    const initRef = doc(col('initialHorizontals'));
+    batch.set(initRef, clean({
+      name: h.name,
+      weightage: h.weightage,
+      isEnabled: h.isEnabled,
+      dailyBillingRate: h.dailyBillingRate,
+    }));
+  });
+
+  // 3. Environments
+  const envDefs = [
+    { name: 'Development', url: 'https://dev.workwayz.local' },
+    { name: 'QA / Testing', url: 'https://qa.workwayz.local' },
+    { name: 'Staging / UAT', url: 'https://uat.workwayz.local' },
+    { name: 'Production', url: 'https://app.workwayz.local' },
+  ];
+  envDefs.forEach((e, idx) => {
+    const envRef = doc(col('environments'));
+    batch.set(envRef, clean({ ...e, order: idx }));
+  });
+
+  // 4. Employees subcollection (assigned PM & key team leads)
+  if (globalUsers && globalUsers.length > 0) {
+    const pm = globalUsers.find(u => u.accessLevel === 'Project Manager' || u.accessLevel === 'Lead') || globalUsers[0];
+    const pmRef = doc(col('employees'), pm.id);
+    batch.set(pmRef, clean({
+      id: pm.id,
+      name: pm.name,
+      email: pm.email,
+      role: 'Project Manager',
+      availability: 100,
+      onboardingDate: effStartDate.toISOString(),
+      offloadingDate: effEndDate.toISOString(),
+    }));
+  }
+
+  // 5. Update summary and specifications metadata
+  batch.update(pRef, clean({
+    summary: 'Initial architectural specifications, scope breakdown, and horizontal discipline weightages for project scoping and governance sign-off.',
+    description: 'Initial estimation proposal generated via Test Data Studio.',
+  }));
+
+  await batch.commit();
+}
+
