@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, beforeEach, afterAll } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { resetLocalDbStore } from './src/lib/local-db-engine';
 
 // Polyfill worker_threads.markAsUncloneable if missing in older environments
 try {
@@ -62,8 +66,9 @@ if (typeof window !== 'undefined') {
   window.scrollTo = vi.fn() as any;
 }
 
-import { beforeEach, afterAll } from 'vitest';
-import { resetLocalDbStore } from './src/lib/local-db-engine';
+// Isolate Vitest runs from the workspace root so tests NEVER overwrite or delete the dev database
+const vitestDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'workwayz-vitest-'));
+process.env.WORKWAYZ_DATA_DIR = vitestDataDir;
 
 beforeEach(() => {
   resetLocalDbStore();
@@ -71,4 +76,7 @@ beforeEach(() => {
 
 afterAll(() => {
   resetLocalDbStore();
+  try {
+    fs.rmSync(vitestDataDir, { recursive: true, force: true });
+  } catch (_) {}
 });

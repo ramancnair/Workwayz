@@ -60,8 +60,13 @@ export function getLocalDbFilePath(): string {
 }
 
 export function resetLocalDbStore(): void {
-  const { fs } = getNodeModules();
+  const { fs, path } = getNodeModules();
   const filePath = getLocalDbFilePath();
+  const rootDbPath = path.resolve(process.cwd(), 'workwayz-local-db.json');
+  // Never delete root workspace database unless explicitly in a temporary or overridden data directory
+  if (path.resolve(filePath) === rootDbPath && !process.env.WORKWAYZ_DATA_DIR) {
+    return;
+  }
   try {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);

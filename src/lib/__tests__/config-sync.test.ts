@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { syncConnectionsToEnv, readEnvMap, writeEnvMap } from '../config-sync';
+import { getEnvLocalPath } from '../config-paths';
 
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof import('fs')>('fs');
@@ -42,7 +43,7 @@ describe('Config Sync Engine (config-sync.ts)', () => {
     });
 
     it('should synchronize active Supabase profile to .env.local', () => {
-        const envLocalPath = path.join(process.cwd(), '.env.local');
+        const envLocalPath = getEnvLocalPath();
         mockFiles[envLocalPath] = 'CUSTOM_VAR="keep_me"\n';
 
         const mockConnections = {
@@ -93,7 +94,7 @@ describe('Config Sync Engine (config-sync.ts)', () => {
     });
 
     it('should synchronize active Firebase profile to .env.local when database changes', () => {
-        const envLocalPath = path.join(process.cwd(), '.env.local');
+        const envLocalPath = getEnvLocalPath();
         mockFiles[envLocalPath] = 'NEXT_PUBLIC_SUPABASE_URL="https://old.supabase.co"\n';
 
         const mockConnections = {
