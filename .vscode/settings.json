@@ -1,3 +1,5 @@
 {
-  "workbench.startupEditor": "readme"
+  "workbench.startupEditor": "readme",
+  "vitest.enable": true,
+  "vitest.rootConfig": "./vitest.config.mts"
 }
