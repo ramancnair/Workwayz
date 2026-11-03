@@ -357,8 +357,13 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
         ? Math.round(customArray.reduce((a, b) => a + b, 0) / customArray.length)
         : (config.simulationProgress ?? 75);
 
+      const initialEstimateCountToUse = isCustomTab
+        ? (config.initialEstimateCount ?? 2)
+        : (PRESET_CONFIGS[selectedPreset].initialEstimateCount ?? 2);
+
       const createdProjects = await generateProjects({
         count: projectCountToUse,
+        initialEstimateCount: initialEstimateCountToUse,
         portfolioIds: portfolioIdsToUse,
         pricingModel: config.pricingModel,
         globalUsers: createdUsers,
@@ -378,14 +383,17 @@ export default function TestDataModal({ isOpen, onClose }: TestDataModalProps) {
       });
       setStudioLog(savedLog);
 
+      const activeCount = createdProjects.filter(p => p.status !== 'Initial Estimation').length;
+      const initialCount = createdProjects.filter(p => p.status === 'Initial Estimation').length;
+
       setStatusMessage({
         type: 'success',
-        text: `Successfully generated ${createdProjects.length} projects and ${createdUsers.length} users. Studio creation log updated.`
+        text: `Successfully generated ${activeCount} active project(s), ${initialCount} initial estimate(s), and ${createdUsers.length} users. Studio creation log updated.`
       });
 
       toast({
         title: 'Test Data Studio Generation Complete',
-        description: `Populated ${createdProjects.length} project(s) across ${portfolioIdsToUse.length} portfolio(s). Studio manifest recorded.`
+        description: `Populated ${activeCount} active project(s) and ${initialCount} initial estimate(s) across ${portfolioIdsToUse.length} portfolio(s). Studio manifest recorded.`
       });
 
       await refreshLog();

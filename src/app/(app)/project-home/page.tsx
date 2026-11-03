@@ -806,6 +806,23 @@ export default function ProjectsDashboard() {
   const estimatesProjectsByPortfolio = useMemo(() => getProjectsByPortfolio('initial-estimates'), [getProjectsByPortfolio]);
   const archivedProjectsByPortfolio = useMemo(() => getProjectsByPortfolio('archive'), [getProjectsByPortfolio]);
 
+  // Automatically expand all populated portfolios on initial data load
+  const [hasInitializedActiveExpanded, setHasInitializedActiveExpanded] = useState(false);
+  useEffect(() => {
+    if (!hasInitializedActiveExpanded && activeProjectsByPortfolio.some(p => p.projects.length > 0)) {
+      setActiveExpanded(activeProjectsByPortfolio.filter(p => p.projects.length > 0).map(p => p.id));
+      setHasInitializedActiveExpanded(true);
+    }
+  }, [activeProjectsByPortfolio, hasInitializedActiveExpanded]);
+
+  const [hasInitializedEstimatesExpanded, setHasInitializedEstimatesExpanded] = useState(false);
+  useEffect(() => {
+    if (!hasInitializedEstimatesExpanded && estimatesProjectsByPortfolio.some(p => p.projects.length > 0)) {
+      setEstimatesExpanded(estimatesProjectsByPortfolio.filter(p => p.projects.length > 0).map(p => p.id));
+      setHasInitializedEstimatesExpanded(true);
+    }
+  }, [estimatesProjectsByPortfolio, hasInitializedEstimatesExpanded]);
+
   // Automatically expand portfolios when actively searching/filtering so matching results are visible
   useEffect(() => {
     if (filterText.trim()) {

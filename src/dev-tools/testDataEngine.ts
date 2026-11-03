@@ -735,7 +735,7 @@ export async function generateProjects(
     onProgress?: (message: string) => void;
   }
 ): Promise<Project[]> {
-  const { count, initialEstimateCount = 0, portfolioIds, pricingModel, globalUsers, autoRunSimulation, simulationProgress, projectSimulationProgress, onProgress } = opts;
+  const { count, initialEstimateCount = 2, portfolioIds, pricingModel, globalUsers, autoRunSimulation, simulationProgress, projectSimulationProgress, onProgress } = opts;
   if (!db) throw new Error('Database is not initialized.');
 
   onProgress?.('Scanning existing projects for next ID sequence...');
@@ -823,7 +823,7 @@ export async function generateProjects(
   }
 
   // Generate Initial Estimation projects (scoping & draft specifications)
-  const numInitialEstimates = initialEstimateCount;
+  const numInitialEstimates = opts.initialEstimateCount !== undefined ? opts.initialEstimateCount : 2;
   for (let j = 0; j < numInitialEstimates; j++) {
     currentMaxId++;
     const projectId = `P${currentYear}${currentMaxId.toString().padStart(5, '0')}`;

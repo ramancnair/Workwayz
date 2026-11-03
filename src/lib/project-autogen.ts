@@ -60,9 +60,13 @@ class AutoBatch {
     }
   }
 
-  set(ref: any, data: any) {
+  set(ref: any, data: any, options?: any) {
     this.next();
-    this.current.set(ref, data);
+    if (options) {
+      this.current.set(ref, data, options);
+    } else {
+      this.current.set(ref, data);
+    }
     this.count++;
   }
 
@@ -1224,10 +1228,10 @@ export async function generateInitialEstimateData(opts: {
   }
 
   // 5. Update summary and specifications metadata
-  batch.update(pRef, clean({
+  batch.set(pRef, clean({
     summary: 'Initial architectural specifications, scope breakdown, and horizontal discipline weightages for project scoping and governance sign-off.',
     description: 'Initial estimation proposal generated via Test Data Studio.',
-  }));
+  }), { merge: true });
 
   await batch.commit();
 }
