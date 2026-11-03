@@ -316,14 +316,14 @@ describe('Studio Creation Log & Asset Tracking', () => {
 });
 
 describe('DevTools Component Module Exports', () => {
-  it('should import and parse TestDataModal, StudioLogViewerModal, and DevTriggerButton without syntax or module errors', async () => {
-    const { default: TestDataModal } = await import('../TestDataModal');
-    const { StudioLogViewerModal } = await import('../StudioLogViewerModal');
-    const { default: DevTriggerButton } = await import('../DevTriggerButton');
+  it('should import and parse StudioLogViewerModal without syntax or module errors', async () => {
 
-    expect(TestDataModal).toBeDefined();
+    const { StudioLogViewerModal } = await import('../StudioLogViewerModal');
+
+
+
     expect(StudioLogViewerModal).toBeDefined();
-    expect(DevTriggerButton).toBeDefined();
+
   }, 20000);
 });
 

@@ -59,7 +59,7 @@ import { db, collection, query, where, onSnapshot, unsubscribeAllListeners } fro
 import { useSidebar } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTestDataStudio, triggerOpenTestDataStudio } from "@/dev-tools";
+
 import { getEffectiveRoute } from "@/lib/route-utils";
 
 type PmSidebarNavProps = {
@@ -70,7 +70,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
-  const { isEnabled: isTestDataStudioEnabled } = useTestDataStudio();
+
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string; empId?: string; id?: string }>({ name: '', email: '', avatar: '' });
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [routeTick, setRouteTick] = useState<number>(0);
