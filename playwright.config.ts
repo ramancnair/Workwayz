@@ -68,6 +68,10 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
-    timeout: 120000,
+        timeout: 120000,
+    env: {
+      NEXT_PUBLIC_DB_PROVIDER: 'local',
+      NEXT_PUBLIC_AUTH_PROVIDER: 'local',
+    },
   },
 });
