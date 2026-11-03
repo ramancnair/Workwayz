@@ -19,6 +19,14 @@ vi.mock('../supabase', () => ({
   },
 }));
 
+vi.mock('../local-supabase-shim', () => ({
+  localSupabaseClient: {
+    auth: {
+      updateUser: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    },
+  },
+}));
+
 describe('Authentication Utilities (auth-utils.ts)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,6 +39,11 @@ describe('Authentication Utilities (auth-utils.ts)', () => {
 
   it('should successfully update password with supabase provider', async () => {
     const res = await changeUserPassword('NewSecretPass123!', 'supabase');
+    expect(res.success).toBe(true);
+  });
+
+  it('should successfully update password with local provider', async () => {
+    const res = await changeUserPassword('NewSecretPass123!', 'local');
     expect(res.success).toBe(true);
   });
 

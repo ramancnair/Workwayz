@@ -118,8 +118,8 @@ workwayz
 
 1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
 2. If this is your first run, Workwayz will launch the **In-App Setup Wizard** (`/setup-wizard`).
-3. Follow the on-screen steps to select your backend (**Firebase**, **Supabase Cloud**, or **Supabase Docker**) and enter your Google Gemini API key.
-4. Settings are automatically persisted to your user directory (`~/.workwayz`), surviving package updates and restarts.
+3. Follow the on-screen steps to select your backend (**Local Embedded Database (Default / Zero-Config)**, **Supabase**, or **Firebase**) and optionally enter your Google Gemini API key.
+4. Settings and local embedded database records are automatically persisted to your user directory (`~/.workwayz`), surviving package updates and restarts.
 
 ---
 

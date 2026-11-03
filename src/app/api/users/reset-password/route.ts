@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         authProvider = authProvider || (isSupabaseActive() ? 'supabase' : 'firebase');
         dbProvider = dbProvider || (isSupabaseActive() ? 'supabase' : 'firebase');
 
+        const isLocal = authProvider === 'local' || dbProvider === 'local';
         const isSupabase = authProvider === 'supabase' || dbProvider === 'supabase';
 
         // 1. Safety verification: Prohibit resetting Super Admin
@@ -89,17 +90,24 @@ export async function POST(request: Request) {
         }
 
         // 2. Perform the reset according to the active auth provider
-        if (isSupabase) {
-            const { createClient } = await import('@supabase/supabase-js');
-            const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-            const supaKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        if (isSupabase || isLocal) {
+            let supabaseAdmin: any = null;
+            if (isLocal) {
+                const { localSupabaseClient } = await import('@/lib/local-supabase-shim');
+                supabaseAdmin = localSupabaseClient;
+            } else {
+                const { createClient } = await import('@supabase/supabase-js');
+                const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+                const supaKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+                if (supaUrl && supaKey) {
+                    supabaseAdmin = createClient(supaUrl, supaKey, {
+                        auth: { autoRefreshToken: false, persistSession: false }
+                    });
+                }
+            }
 
-            if (supaUrl && supaKey) {
-                const supabaseAdmin = createClient(supaUrl, supaKey, {
-                    auth: { autoRefreshToken: false, persistSession: false }
-                });
-
-                // Update auth credentials in Supabase Auth pool if service role key is permitted
+            if (supabaseAdmin) {
+                // Update auth credentials in Auth pool if permitted
                 try {
                     const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
                     const authUser = listData?.users?.find(

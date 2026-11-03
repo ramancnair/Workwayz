@@ -87,6 +87,9 @@ export function syncConnectionsToEnv(connsData?: any): void {
                 envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', '"supabase"');
                 if (activeDb.supabaseUrl) envMap.set('NEXT_PUBLIC_SUPABASE_URL', `"${activeDb.supabaseUrl}"`);
                 if (activeDb.supabaseAnonKey) envMap.set('NEXT_PUBLIC_SUPABASE_ANON_KEY', `"${activeDb.supabaseAnonKey}"`);
+            } else if (activeDb.provider === 'local') {
+                envMap.set('NEXT_PUBLIC_DB_PROVIDER', '"local"');
+                envMap.set('NEXT_PUBLIC_DATABASE_PROVIDER', '"local"');
             }
         }
     }

@@ -67,9 +67,10 @@ export async function POST(request: Request) {
             }
         }
 
+        const isLocal = authProvider === 'local' || dbProvider === 'local';
         const isSupabase = authProvider === 'supabase' || dbProvider === 'supabase';
 
-        if (!isSupabase) {
+        if (!isSupabase && !isLocal) {
             if (!projectId) {
                 return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Firebase Project ID is missing. Please configure it in the Database step.' }, { status: 400 });
             }
@@ -92,17 +93,23 @@ export async function POST(request: Request) {
 
         const isExistingMode = mode === 'existing' || action === 'verify';
 
-        if (isSupabase) {
-            const { createClient } = await import('@supabase/supabase-js');
-            
-            const finalSupaUrl = effectiveSupaUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-            const finalSupaKey = effectiveSupaKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        if (isSupabase || isLocal) {
+            let supabaseAdmin: any;
+            if (isLocal) {
+                const { localSupabaseClient } = await import('@/lib/local-supabase-shim');
+                supabaseAdmin = localSupabaseClient;
+            } else {
+                const { createClient } = await import('@supabase/supabase-js');
+                
+                const finalSupaUrl = effectiveSupaUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+                const finalSupaKey = effectiveSupaKey || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-            if (!finalSupaUrl || !finalSupaKey) {
-                return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Supabase URL or Publishable Key is missing.' }, { status: 400 });
+                if (!finalSupaUrl || !finalSupaKey) {
+                    return NextResponse.json({ success: false, code: 'CONFIG_MISSING', error: 'Supabase URL or Publishable Key is missing.' }, { status: 400 });
+                }
+
+                supabaseAdmin = createClient(finalSupaUrl, finalSupaKey);
             }
-
-            const supabaseAdmin = createClient(finalSupaUrl, finalSupaKey);
 
             if (isExistingMode) {
                 // Authenticate existing credentials

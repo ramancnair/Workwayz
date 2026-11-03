@@ -15,16 +15,17 @@ export function setRuntimeDbProvider(provider: string | null) {
   }
 }
 
-export function isSupabaseActive(): boolean {
-  if (_runtimeDbProvider) {
-    return _runtimeDbProvider === 'supabase' || _runtimeDbProvider === 'postgres';
-  }
+const isRelationalProvider = (val: string | null | undefined): boolean =>
+  val === 'supabase' || val === 'postgres' || val === 'local';
+
+export function isLocalDbActive(): boolean {
+  if (_runtimeDbProvider) return _runtimeDbProvider === 'local';
   if (typeof window !== 'undefined') {
     const cached = localStorage.getItem('workwayz_db_provider');
-    if (cached) return cached === 'supabase' || cached === 'postgres';
+    if (cached) return cached === 'local';
   }
   const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
-  if (envVal) return envVal === 'supabase' || envVal === 'postgres';
+  if (envVal) return envVal === 'local';
 
   if (typeof window === 'undefined') {
     try {
@@ -35,7 +36,35 @@ export function isSupabaseActive(): boolean {
         const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
         const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
         if (activeDb?.provider) {
-          return activeDb.provider === 'supabase' || activeDb.provider === 'postgres';
+          return activeDb.provider === 'local';
+        }
+      }
+    } catch {}
+  }
+  return false;
+}
+
+export function isSupabaseActive(): boolean {
+  if (_runtimeDbProvider) {
+    return isRelationalProvider(_runtimeDbProvider);
+  }
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('workwayz_db_provider');
+    if (cached) return isRelationalProvider(cached);
+  }
+  const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
+  if (envVal) return isRelationalProvider(envVal);
+
+  if (typeof window === 'undefined') {
+    try {
+      const fs = require('fs');
+      const { getProfilesPath } = require('./config-paths');
+      const connsPath = getProfilesPath();
+      if (fs.existsSync(connsPath)) {
+        const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+        const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
+        if (activeDb?.provider) {
+          return isRelationalProvider(activeDb.provider);
         }
       }
     } catch {}

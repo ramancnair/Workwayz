@@ -23,6 +23,7 @@ vi.mock('@supabase/supabase-js', () => ({
 vi.mock('@/lib/config-paths', () => ({
   getProfilesPath: vi.fn(() => '/mock/profiles.json'),
   getEnvPath: vi.fn(() => '/mock/.env.local'),
+  getDataDirectory: vi.fn(() => require('os').tmpdir()),
 }));
 
 vi.mock('fs', () => ({
@@ -248,6 +249,31 @@ describe('Admin Setup Mode API (/api/admin/setup)', () => {
       expect(data.success).toBe(false);
       expect(data.code).toBe('EMAIL_EXISTS');
       expect(data.error).toContain('Use Existing Credentials');
+    });
+
+    it('should provision Super Admin with local embedded database provider without external keys', async () => {
+      const uniqueEmail = `localadmin-${Date.now()}@workwayz.local`;
+      const req = new Request('http://localhost:3000/api/admin/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: uniqueEmail,
+          adminPassword: 'LocalAdminPassword123!',
+          adminFirstName: 'Local',
+          adminLastName: 'Founder',
+          mode: 'create',
+          dbProvider: 'local',
+          authProvider: 'local',
+        }),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe(uniqueEmail);
+      expect(data.user.accessLevel).toBe('Super Admin');
+      expect(data.user.name).toBe('Local Founder');
     });
   });
 });

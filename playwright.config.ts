@@ -1,4 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+const hasPlaywrightBrowsers = Boolean(
+  process.env.LOCALAPPDATA &&
+    fs.existsSync(path.join(process.env.LOCALAPPDATA, 'ms-playwright'))
+);
+const hasSystemChrome = fs.existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe');
+const defaultChannel = !hasPlaywrightBrowsers && hasSystemChrome ? 'chrome' : undefined;
 
 /**
  * Playwright E2E Configuration for Workwayz
@@ -46,6 +55,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        ...(defaultChannel ? { channel: defaultChannel } : {}),
         launchOptions: {
           args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         },

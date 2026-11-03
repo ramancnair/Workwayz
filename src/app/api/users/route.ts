@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { isSupabaseActive } from '@/lib/db-provider';
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { email, password } = body;
         
-        const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
-        const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
+        const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || (isSupabaseActive() ? 'supabase' : 'firebase');
+        const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || (isSupabaseActive() ? 'supabase' : 'firebase');
         
-        if (authProvider === 'supabase' || dbProvider === 'supabase') {
+        if (authProvider === 'supabase' || dbProvider === 'supabase' || authProvider === 'local' || dbProvider === 'local') {
             if (!supabase) return NextResponse.json({ error: 'Supabase client not initialized' }, { status: 500 });
             
             const { error } = await supabase.auth.signUp({
@@ -52,9 +53,9 @@ export async function DELETE(request: Request) {
         if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
 
         // Reject if target user is Super Admin
-        const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || 'firebase';
-        const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || 'firebase';
-        if (authProvider === 'supabase' || dbProvider === 'supabase') {
+        const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || (isSupabaseActive() ? 'supabase' : 'firebase');
+        const dbProvider = process.env.NEXT_PUBLIC_DATABASE_PROVIDER || (isSupabaseActive() ? 'supabase' : 'firebase');
+        if (authProvider === 'supabase' || dbProvider === 'supabase' || authProvider === 'local' || dbProvider === 'local') {
             if (supabase) {
                 const { data } = await supabase.from('employees').select('accessLevel').eq('email', email).maybeSingle();
                 if (data?.accessLevel === 'Super Admin') {

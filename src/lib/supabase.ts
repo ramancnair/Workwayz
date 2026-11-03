@@ -1,5 +1,6 @@
 import './legacy-storage-migration';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { localSupabaseClient } from './local-supabase-shim';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RUNTIME CONFIG CACHE
@@ -17,6 +18,32 @@ interface RuntimeConfig {
 let _runtimeConfig: RuntimeConfig | null = null;
 let _fetchPromise: Promise<RuntimeConfig> | null = null;
 let _client: SupabaseClient | null = null;
+
+function isLocalProviderActive(): boolean {
+    if (typeof window !== 'undefined') {
+        try {
+            const cached = localStorage.getItem('workwayz_db_provider');
+            if (cached === 'local') return true;
+        } catch (_) {}
+    }
+    if (_runtimeConfig?.dbProvider === 'local') return true;
+    const envVal = process.env.NEXT_PUBLIC_DB_PROVIDER || process.env.NEXT_PUBLIC_DATABASE_PROVIDER;
+    if (envVal === 'local') return true;
+
+    if (typeof window === 'undefined') {
+        try {
+            const fs = require('fs');
+            const { getProfilesPath } = require('./config-paths');
+            const connsPath = getProfilesPath();
+            if (fs.existsSync(connsPath)) {
+                const conns = JSON.parse(fs.readFileSync(connsPath, 'utf8'));
+                const activeDb = conns.database?.find((p: any) => p.isActive) || conns.database?.[0];
+                if (activeDb?.provider === 'local') return true;
+            }
+        } catch (_) {}
+    }
+    return false;
+}
 
 function createSupabaseClient(url: string, key: string): SupabaseClient {
     return createClient(url, key, {
@@ -54,6 +81,9 @@ async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
 }
 
 function getClientSync(): SupabaseClient | null {
+    if (isLocalProviderActive()) {
+        return localSupabaseClient as SupabaseClient;
+    }
     if (_client) return _client;
 
     // Try build-time env first (works in dev, or if passed as Docker build args)
@@ -80,6 +110,9 @@ function getClientSync(): SupabaseClient | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function buildServerClient(): SupabaseClient | null {
+    if (isLocalProviderActive()) {
+        return localSupabaseClient as SupabaseClient;
+    }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (url && key) return createSupabaseClient(url, key);
@@ -91,6 +124,9 @@ export async function initSupabaseClient(): Promise<void> {
     if (typeof window === 'undefined') return; // server-side, skip
     if (_client) return; // already initialized
     const config = await fetchRuntimeConfig();
+    if (config.dbProvider === 'local') {
+        return;
+    }
     if (config.supabaseUrl && config.supabaseAnonKey) {
         _client = createSupabaseClient(config.supabaseUrl, config.supabaseAnonKey);
     }

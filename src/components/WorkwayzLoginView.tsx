@@ -80,19 +80,19 @@ export function WorkwayzLoginCard() {
         setRuntimeDbProvider(runtimeDbProvider);
       }
 
-      if (runtimeDbProvider === 'supabase' || runtimeAuthProvider === 'supabase') {
+      if (runtimeDbProvider === 'local' || runtimeAuthProvider === 'local' || runtimeDbProvider === 'supabase' || runtimeAuthProvider === 'supabase') {
         if (!supabase) {
-          throw new Error('Supabase is not initialized. Please check your database settings.');
+          throw new Error('Database is not initialized. Please check your database settings.');
         }
 
-        // 1. Sign in with Supabase Auth
+        // 1. Sign in with Auth (Supabase or Local Built-in Auth)
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: emailInput,
           password: passwordInput,
         });
 
         if (authError) throw authError;
-        if (!authData.user) throw new Error('Could not log in with Supabase.');
+        if (!authData.user) throw new Error('Could not log in.');
 
         const user = authData.user;
 
@@ -127,12 +127,14 @@ export function WorkwayzLoginCard() {
 
         const isDefaultPassword = passwordInput === 'P@ssw0rd';
         const requiresPasswordReset = isDefaultPassword || docNeedsReset;
+        const effectiveAuthProvider =
+          runtimeDbProvider === 'local' || runtimeAuthProvider === 'local' ? 'local' : 'supabase';
 
         localStorage.setItem(
           USER_STORAGE_KEY,
           JSON.stringify({
             ...userData,
-            authProvider: 'supabase',
+            authProvider: effectiveAuthProvider,
             issuedAt: loginTimestamp,
             needsPasswordReset: requiresPasswordReset,
             rememberMe: rememberMe,

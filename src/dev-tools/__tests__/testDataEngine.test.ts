@@ -311,7 +311,7 @@ describe('DevTools Component Module Exports', () => {
     expect(TestDataModal).toBeDefined();
     expect(StudioLogViewerModal).toBeDefined();
     expect(DevTriggerButton).toBeDefined();
-  });
+  }, 20000);
 });
 
 

@@ -1,13 +1,20 @@
 import { auth as firebaseAuth } from './firebase';
 import { updatePassword as fbUpdatePassword } from 'firebase/auth';
 import { supabase } from './supabase';
+import { localSupabaseClient } from './local-supabase-shim';
 
 /**
  * Updates the user's password client-side depending on the active auth provider.
  */
 export async function changeUserPassword(newPassword: string, authProvider: string): Promise<{ success: boolean; error?: string }> {
   try {
-    if (authProvider === 'supabase') {
+    if (authProvider === 'local') {
+      const { error } = await localSupabaseClient.auth.updateUser({ password: newPassword });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } else if (authProvider === 'supabase') {
       if (!supabase) {
         throw new Error("Supabase is not initialized.");
       }

@@ -28,15 +28,15 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
   const [aiProfileId, setAiProfileId] = useState<string>('');
 
   // DB State
-  const [dbProjectName, setDbProjectName] = useState('Wizard Database');
-  const [dbProvider, setDbProvider] = useState('supabase');
+  const [dbProjectName, setDbProjectName] = useState('Local Workspace DB');
+  const [dbProvider, setDbProvider] = useState('local');
   const [fbProjectId, setFbProjectId] = useState('');
   const [fbApiKey, setFbApiKey] = useState('');
   const [supaUrl, setSupaUrl] = useState('');
   const [supaKey, setSupaKey] = useState('');
 
   // Auth State
-  const [authProvider, setAuthProvider] = useState('supabase');
+  const [authProvider, setAuthProvider] = useState('local');
   const [ssoGoogle, setSsoGoogle] = useState(false);
   const [ssoGithub, setSsoGithub] = useState(false);
 
@@ -75,7 +75,9 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
 
   const handleDbProviderChange = (val: string) => {
     setDbProvider(val);
-    if (val === 'supabase') {
+    if (val === 'local') {
+      setAuthProvider('local');
+    } else if (val === 'supabase') {
       setAuthProvider('supabase');
     } else if (val === 'firebase') {
       setAuthProvider('firebase');
@@ -430,7 +432,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
           authDomain: `${fbProjectId}.firebaseapp.com`,
           storageBucket: `${fbProjectId}.firebasestorage.app`,
         }));
-      } else if (dbProvider === 'supabase') {
+      } else if (dbProvider === 'supabase' || dbProvider === 'local') {
         localStorage.removeItem('workwayz_firebase_config');
       }
 
@@ -568,11 +570,24 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                       <SelectValue placeholder="Select Database Provider" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="local">Local Embedded Database (Built-in / Zero-Config)</SelectItem>
                       <SelectItem value="supabase">Supabase</SelectItem>
                       <SelectItem value="firebase">Firebase (Firestore)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {dbProvider === 'local' && (
+                  <div className="p-4 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-sm rounded-lg border border-emerald-500/30 space-y-1.5">
+                    <p className="font-semibold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      Ready Out-of-the-Box (Zero External Setup Required)
+                    </p>
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                      Your portfolios, projects, stories, and team data will be stored locally on this machine (<code className="font-mono">~/.workwayz</code>). No external cloud database account, URL, or API key is required.
+                    </p>
+                  </div>
+                )}
 
                 {dbProvider === 'firebase' && (
                   <div className="space-y-4">
@@ -612,6 +627,7 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                       <SelectValue placeholder="Select Authentication Provider" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="local">Local Built-in Auth</SelectItem>
                       <SelectItem value="supabase">Supabase Auth</SelectItem>
                       <SelectItem value="firebase">Firebase Auth</SelectItem>
                     </SelectContent>
@@ -620,6 +636,12 @@ export function SetupWizard({ onClose }: { onClose?: () => void }) {
                     Defines how users sign into Workwayz.
                   </p>
                 </div>
+
+                {authProvider === 'local' && (
+                  <div className="p-4 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-sm rounded-md border border-emerald-500/30">
+                    Local Built-in Auth securely hashes and stores user credentials directly inside your local Workwayz database with zero external setup.
+                  </div>
+                )}
 
                 {authProvider === 'supabase' && (
                   <div className="p-4 bg-emerald-50 text-emerald-800 text-sm rounded-md border border-emerald-200">

@@ -1,6 +1,11 @@
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
+const getNodeFs = () => {
+  const req = eval('require');
+  return {
+    path: req('path') as typeof import('path'),
+    fs: req('fs') as typeof import('fs'),
+    os: req('os') as typeof import('os'),
+  };
+};
 
 /**
  * Resolves the persistent data directory for storing Workwayz
@@ -18,6 +23,7 @@ export function getDataDirectory(): string {
   if (!isNode) {
     return '';
   }
+  const { path, fs, os } = getNodeFs();
 
   // 1. Explicit environment variable override
   const envDir = process.env.WORKWAYZ_DATA_DIR || process.env.PROJECTFLOW_DATA_DIR;
@@ -73,9 +79,11 @@ export function getDataDirectory(): string {
       return homeDir;
     }
 
-    if (!fs.existsSync(homeDir)) {
-      fs.mkdirSync(homeDir, { recursive: true });
-    }
+    try {
+      if (!fs.existsSync(homeDir)) {
+        fs.mkdirSync(homeDir, { recursive: true });
+      }
+    } catch (_) {}
     return homeDir;
   } catch (_) {}
 
@@ -88,6 +96,7 @@ export function getDataDirectory(): string {
 export function getProfilesPath(): string {
   const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);
   if (!isNode) return 'connections.json';
+  const { path } = getNodeFs();
   return path.join(getDataDirectory(), 'connections.json');
 }
 
@@ -97,6 +106,7 @@ export function getProfilesPath(): string {
 export function getEnvPath(): string {
   const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);
   if (!isNode) return '.env.local';
+  const { path, fs } = getNodeFs();
   const dataDir = getDataDirectory();
   const local = path.join(dataDir, '.env.local');
   if (fs.existsSync(local)) return local;
@@ -111,5 +121,6 @@ export function getEnvPath(): string {
 export function getEnvLocalPath(): string {
   const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);
   if (!isNode) return '.env.local';
+  const { path } = getNodeFs();
   return path.join(getDataDirectory(), '.env.local');
 }

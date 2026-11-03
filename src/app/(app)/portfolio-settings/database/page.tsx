@@ -23,7 +23,7 @@ import { Save, Server, Loader2, Database as DatabaseIcon, Info, CheckCircle2, Bo
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 
-type DatabaseProvider = 'firebase' | 'supabase';
+type DatabaseProvider = 'local' | 'firebase' | 'supabase';
 
 interface DatabaseConfig {
     id?: string;
@@ -42,6 +42,7 @@ interface DatabaseConfig {
 }
 
 const defaultConfigs: Record<DatabaseProvider, Partial<DatabaseConfig>> = {
+    local: { provider: 'local' },
     firebase: { provider: 'firebase', apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' },
     supabase: { provider: 'supabase', supabaseUrl: '', supabaseAnonKey: '' },
 };
@@ -322,6 +323,7 @@ export default function DatabaseSettingsPage() {
                                         <Select value={editConfig.provider} onValueChange={(val) => handleProviderChange(val, true)}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
+                                                <SelectItem value="local">Local Embedded Database</SelectItem>
                                                 <SelectItem value="firebase">Firebase</SelectItem>
                                                 <SelectItem value="supabase">Supabase</SelectItem>
                                             </SelectContent>
@@ -444,6 +446,7 @@ export default function DatabaseSettingsPage() {
                                         <SelectValue placeholder="Select provider" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="local">Local Embedded Database</SelectItem>
                                         <SelectItem value="firebase">Firebase</SelectItem>
                                         <SelectItem value="supabase">Supabase</SelectItem>
                                     </SelectContent>

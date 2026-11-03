@@ -125,9 +125,10 @@ npm run test:e2e:install
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
 | **TC-WIZ-001** | Setup Wizard modal & step headers | Wizard dialog renders welcome and step indicators | ✅ Automated |
-| **TC-WIZ-002** | Database engine selection | Multi-engine support (PostgreSQL, Firebase, Supabase) selectable | ✅ Automated |
+| **TC-WIZ-002** | Database engine selection | Multi-engine support (Local Embedded Database, PostgreSQL, Firebase, Supabase) selectable | ✅ Automated |
 | **TC-WIZ-003** | Multi-step navigation traversal | Forward/backward progression through wizard steps | ✅ Automated |
 | **TC-WIZ-004** | Clean wizard exit & completion | Close or skip action returns user to workspace | ✅ Automated |
+| **TC-WIZ-005** | Super Admin account setup & local DB provisioning | Admin user step requests First/Last Name, designates Super Admin role, and supports zero-config Local Embedded Database & Auth | ✅ Automated |
 
 ---
 
