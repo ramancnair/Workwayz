@@ -119,7 +119,7 @@ const pageToCollectionMap: Record<string, CollectionName[]> = {
   '/testing/test-cycle': ['testCases', 'employees', 'releases', 'stories', 'testCycles', 'sprints', 'environments'],
   '/testing/test-cases': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testCycles'],
   '/testing/test-backlog': ['testCases', 'employees', 'stories', 'sprints', 'releases', 'environments', 'testCycles'],
-  '/testing/defects': ['stories', 'employees', 'sprints', 'environments', 'releases', 'testCases'],
+  '/testing/defects': ['stories', 'epics', 'employees', 'sprints', 'environments', 'releases', 'testCases', 'testCycles'],
   '/project-details/pm-dashboard': ['employees', 'allUsers', 'sprints', 'stories', 'releases', 'holidays', 'weeklyOffDays', 'epics', 'fixedCosts', 'worklogs'],
   '/project-details/fp-pm-dash': ['stories', 'epics', 'sprints', 'employees', 'allUsers', 'testCases', 'risks', 'assumptions', 'issues', 'dependencies', 'releases', 'paymentMilestones', 'worklogs', 'impactedSystems', 'documents', 'weeklyOffDays', 'holidays', 'projectSettings', 'fixedCosts'],
   '/project-details/project-status': ['allUsers', 'paymentMilestones', 'employees', 'holidays', 'weeklyOffDays', 'fixedCosts'],

@@ -246,7 +246,7 @@ export default function DefectsPage() {
         relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
         attachments: values.attachments,
         releaseId: values.releaseId === 'unassigned' ? undefined : values.releaseId,
-        epicId: values.epicId === 'unassigned' ? undefined : values.epicId,
+        epicId: (values.epicId && values.epicId !== 'unassigned') ? values.epicId : stories.find(s => s.id === values.parentStoryId)?.epicId,
     };
 
     if (editingBug) {
@@ -580,7 +580,20 @@ export default function DefectsPage() {
                                     const text = e.target.value;
                                     setParentStoryInputText(text);
                                     const matchingOption = parentStoryOptions.find(opt => opt.label === text);
-                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                    const selectedId = matchingOption ? matchingOption.value : 'unassigned';
+                                    field.onChange(selectedId);
+                                    if (matchingOption) {
+                                      const foundStory = stories.find(s => s.id === matchingOption.value);
+                                      if (foundStory?.epicId && (!form.getValues('epicId') || form.getValues('epicId') === 'unassigned')) {
+                                        form.setValue('epicId', foundStory.epicId);
+                                      }
+                                      if (foundStory?.sprintId && (!form.getValues('sprintId') || form.getValues('sprintId') === 'backlog')) {
+                                        form.setValue('sprintId', foundStory.sprintId);
+                                      }
+                                      if (foundStory?.releaseId && (!form.getValues('releaseId') || form.getValues('releaseId') === 'unassigned')) {
+                                        form.setValue('releaseId', foundStory.releaseId);
+                                      }
+                                    }
                                   }}
                                   onBlur={() => {
                                     const matchingOption = parentStoryOptions.find(opt => opt.label === parentStoryInputText);
@@ -619,7 +632,20 @@ export default function DefectsPage() {
                                     const text = e.target.value;
                                     setTestCaseInputText(text);
                                     const matchingOption = testCaseOptions.find(opt => opt.label === text);
-                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                    const selectedId = matchingOption ? matchingOption.value : 'unassigned';
+                                    field.onChange(selectedId);
+                                    if (matchingOption) {
+                                      const foundStory = stories.find(s => s.id === matchingOption.value);
+                                      if (foundStory?.epicId && (!form.getValues('epicId') || form.getValues('epicId') === 'unassigned')) {
+                                        form.setValue('epicId', foundStory.epicId);
+                                      }
+                                      if (foundStory?.sprintId && (!form.getValues('sprintId') || form.getValues('sprintId') === 'backlog')) {
+                                        form.setValue('sprintId', foundStory.sprintId);
+                                      }
+                                      if (foundStory?.releaseId && (!form.getValues('releaseId') || form.getValues('releaseId') === 'unassigned')) {
+                                        form.setValue('releaseId', foundStory.releaseId);
+                                      }
+                                    }
                                   }}
                                   onBlur={() => {
                                     const matchingOption = testCaseOptions.find(opt => opt.label === testCaseInputText);
@@ -725,7 +751,20 @@ export default function DefectsPage() {
                                     const text = e.target.value;
                                     setRelatedBugInputText(text);
                                     const matchingOption = relatedBugOptions.find(opt => opt.label === text);
-                                    field.onChange(matchingOption ? matchingOption.value : 'unassigned');
+                                    const selectedId = matchingOption ? matchingOption.value : 'unassigned';
+                                    field.onChange(selectedId);
+                                    if (matchingOption) {
+                                      const foundStory = stories.find(s => s.id === matchingOption.value);
+                                      if (foundStory?.epicId && (!form.getValues('epicId') || form.getValues('epicId') === 'unassigned')) {
+                                        form.setValue('epicId', foundStory.epicId);
+                                      }
+                                      if (foundStory?.sprintId && (!form.getValues('sprintId') || form.getValues('sprintId') === 'backlog')) {
+                                        form.setValue('sprintId', foundStory.sprintId);
+                                      }
+                                      if (foundStory?.releaseId && (!form.getValues('releaseId') || form.getValues('releaseId') === 'unassigned')) {
+                                        form.setValue('releaseId', foundStory.releaseId);
+                                      }
+                                    }
                                   }}
                                   onBlur={() => {
                                     const matchingOption = relatedBugOptions.find(opt => opt.label === relatedBugInputText);
@@ -852,27 +891,7 @@ export default function DefectsPage() {
                         )}
                         />
                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <FormField
-                       control={form.control}
-                       name="releaseId"
-                       render={({ field }) => (
-                           <FormItem>
-                           <FormLabel>Release</FormLabel>
-                           <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
-                               <FormControl><SelectTrigger><SelectValue placeholder="Assign to a release" /></SelectTrigger></FormControl>
-                               <SelectContent>
-                               <SelectItem value="unassigned">Unassigned</SelectItem>
-                               {releases.map(release => (
-                                   <SelectItem key={release.id} value={release.id}>[{release.releaseId}] {release.name}</SelectItem>
-                               ))}
-                               </SelectContent>
-                           </Select>
-                           <FormMessage />
-                           </FormItem>
-                       )}
-                       />
-                   </div>
+
                    <FormField
                      control={form.control}
                      name="attachments"
