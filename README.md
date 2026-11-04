@@ -120,6 +120,21 @@ workwayz
 4. Create your **Super Admin** account and configure your preferred AI provider (or skip AI setup and configure it later under **Portfolio Settings → AI Config**).
 5. All settings and local database records are persisted automatically in `~/.workwayz`, surviving restarts and package upgrades.
 
+#### Uninstalling (NPX / NPM)
+```bash
+# 1. Remove the global CLI package (if installed via npm install -g)
+npm uninstall -g workwayz
+
+# 2. (Optional) Clear the npx cache if you ran via npx
+npm cache clean --force
+
+# 3. (Optional) Delete local database records and saved configuration profiles
+# macOS / Linux:
+rm -rf ~/.workwayz
+# Windows (PowerShell):
+Remove-Item -Recurse -Force "$HOME\.workwayz"
+```
+
 ---
 
 ### Option 2 — Pre-Built Docker Container (Self-Hosting)
@@ -154,6 +169,21 @@ npx supabase start --exclude storage-api,imgproxy,edge-runtime,logflare,vector,s
 2. Open **Supabase Studio** (`http://127.0.0.1:54323` → **SQL Editor**), paste and run the SQL schema from [`docs/supabase-schema.sql`](./docs/supabase-schema.sql) to create the Workwayz tables.
 3. In the Workwayz **In-App Setup Wizard** (or **Portfolio Settings → Database**), select **Supabase** and enter your local **`API URL`** and **`anon key`**.
    > *(Note: If Workwayz itself is running inside a Docker container on Windows/macOS, use `http://host.docker.internal:54321` as the Supabase URL so the container can reach your host's local Supabase port).*
+
+#### Uninstalling (Docker)
+```bash
+# 1. Stop and remove the Workwayz container
+docker stop workwayz-web && docker rm workwayz-web
+
+# 2. Remove the Workwayz Docker image
+docker rmi ghcr.io/ramancnair/workwayz:latest
+
+# 3. (Optional) Permanently delete the persistent data volume
+docker volume rm workwayz-data
+
+# 4. (Optional) If running local Supabase on Docker, stop and remove its containers & volumes
+npx supabase stop --no-backup
+```
 
 ---
 
