@@ -493,7 +493,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     return history;
   };
 
-  const storyRefObjs: { id: string; storyId: string; sprintId: string }[] = [];
+  const storyRefObjs: { id: string; storyId: string; sprintId: string; epicId: string }[] = [];
 
   // 10a. Stories & Subtasks
   storyTitles.forEach((title, i) => {
@@ -548,7 +548,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       deletedAt: null,
       createdAt: assignedSprint.start.toISOString(),
     }));
-    storyRefObjs.push({ id: stRef.id, storyId, sprintId: assignedSprint.id });
+    storyRefObjs.push({ id: stRef.id, storyId, sprintId: assignedSprint.id, epicId });
 
     // Sub-tasks: 3 subtasks per story (one per impacted system)
     systemIdsLive.forEach((sysId, sIdx) => {
@@ -627,7 +627,7 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
       deletedAt: null,
       createdAt: assignedSprint.start.toISOString(),
     }));
-    storyRefObjs.push({ id: fcRef.id, storyId: fcId, sprintId: assignedSprint.id });
+    storyRefObjs.push({ id: fcRef.id, storyId: fcId, sprintId: assignedSprint.id, epicId: epicIds[0] });
   });
 
   // 10c. Tasks (1 in Sprint 2 In QA, 1 in Sprint 3 To Do)
@@ -820,39 +820,58 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
   ];
 
   let bugCounter = storyCounter;
+  const sprint1Stories = storyRefObjs.filter(s => s.sprintId === sprint1Ref.id);
+  const sprint2Stories = storyRefObjs.filter(s => s.sprintId === sprint2Ref.id);
 
-  const createAutogenBug = (title: string, foundInPlanId: string) => {
+  const createAutogenBug = (title: string, foundInPlanId: string, idx: number) => {
     const bugRef = doc(col('stories'));
     const severity = rand(['Critical', 'High', 'Medium', 'Low']);
 
     let bugStatus = 'Open';
     let bugSprint = sprint2Ref;
+    let isEscaped = false;
+    let linkedStory: { id: string; storyId: string; sprintId: string; epicId: string } | undefined;
+    let assignedSprintId: string | null = sprint2Ref.id;
+    let assignedEpicId: string | undefined;
 
     if (foundInPlanId === sitTpRef.id) {
       bugSprint = sprint1Ref;
       // SIT was in the past: 70% resolved/closed
       bugStatus = rand(['Resolved', 'Closed', 'Resolved', 'In Progress', 'Open']);
+      linkedStory = sprint1Stories[idx % Math.max(sprint1Stories.length, 1)] || storyRefObjs[idx % Math.max(storyRefObjs.length, 1)];
+      assignedSprintId = linkedStory?.sprintId || sprint1Ref.id;
+      assignedEpicId = linkedStory?.epicId;
     } else if (foundInPlanId === uatTpRef.id) {
       bugSprint = sprint2Ref;
       // UAT is active: 40% open, 30% in progress, 30% resolved
       bugStatus = rand(['Open', 'Open', 'In Progress', 'Resolved']);
+      linkedStory = sprint2Stories[idx % Math.max(sprint2Stories.length, 1)] || storyRefObjs[idx % Math.max(storyRefObjs.length, 1)];
+      assignedSprintId = linkedStory?.sprintId || sprint2Ref.id;
+      assignedEpicId = linkedStory?.epicId;
     } else {
+      // Post-acceptance / Production Escaped Defect (PBI-level Defect)
+      isEscaped = true;
       bugSprint = sprint3Ref;
       bugStatus = 'To Triage';
+      // Schedule half in Sprint 3 and leave half in Product Backlog (sprintId: null)
+      assignedSprintId = idx < Math.ceil(prodBugsCount / 2) ? sprint3Ref.id : null;
+      assignedEpicId = epicIds[idx % Math.max(epicIds.length, 1)];
     }
 
     const bugHistory = buildStatusHistory(bugStatus, bugSprint.start, bugSprint.end, bugCounter, 20);
     const bugDone = bugHistory.find(h => h.toStatus === 'Done' || h.toStatus === 'Resolved' || h.toStatus === 'Closed');
 
     batch.set(bugRef, clean({
-      storyId: `BUG-${bugCounter++}`,
+      storyId: isEscaped ? `DEF-${bugCounter++}` : `BUG-${bugCounter++}`,
       title,
       description: `Steps to reproduce: Nav to the affected module, perform standard actions, observe the ${severity.toLowerCase()} issue.`,
-      itemType: 'Bug',
+      itemType: isEscaped ? 'Escaped Defect' : 'In-Sprint Bug',
       status: bugStatus,
       statusHistory: bugHistory,
       closeDate: (bugStatus === 'Resolved' || bugStatus === 'Closed') ? (bugDone?.date || now) : undefined,
-      sprintId: bugSprint.id,
+      parentStoryId: isEscaped ? undefined : linkedStory?.id,
+      epicId: assignedEpicId,
+      sprintId: assignedSprintId,
       releaseId: releaseRef.id,
       severity,
       priority: severity,
@@ -865,22 +884,22 @@ export async function generateFullProjectData(opts: AutogenOptions): Promise<voi
     }));
   };
 
-  // Create SIT Bugs
+  // Create SIT In-Sprint Bugs
   for (let i = 0; i < sitBugsCount; i++) {
     const title = sitTemplates[i % sitTemplates.length] + ` (#${i + 1})`;
-    createAutogenBug(title, sitTpRef.id);
+    createAutogenBug(title, sitTpRef.id, i);
   }
 
-  // Create UAT Bugs
+  // Create UAT In-Sprint Bugs
   for (let i = 0; i < uatBugsCount; i++) {
     const title = uatTemplates[i % uatTemplates.length] + ` (#${i + 1})`;
-    createAutogenBug(title, uatTpRef.id);
+    createAutogenBug(title, uatTpRef.id, i);
   }
 
-  // Create Production Bugs
+  // Create Production Escaped Defects
   for (let i = 0; i < prodBugsCount; i++) {
     const title = prodTemplates[i % prodTemplates.length] + ` (#${i + 1})`;
-    createAutogenBug(title, prodTpRef.id);
+    createAutogenBug(title, prodTpRef.id, i);
   }
 
   // ── 13. Release + Stages + Milestones ────────────────────────────────────────

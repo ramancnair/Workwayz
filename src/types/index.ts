@@ -33,6 +33,7 @@ export type PbiWorkItemType =
   | 'Enabler'
   | 'Tech Debt'
   | 'Spike'
+  | 'Escaped Defect'
   | 'Bug / Defect';
 
 // [Execution Level] — The "How" (Decomposed by Developers)
@@ -67,7 +68,7 @@ export const PBI_WORK_ITEM_TYPES: PbiWorkItemType[] = [
   'Enabler',
   'Tech Debt',
   'Spike',
-  'Bug / Defect',
+  'Escaped Defect',
 ];
 
 export const EXECUTION_WORK_ITEM_TYPES: ExecutionWorkItemType[] = [
@@ -87,7 +88,7 @@ export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
   },
   'User Story': {
     type: 'User Story',
-    label: 'Story',
+    label: 'User Story',
     level: 'PBI',
     prefix: 'US',
     description: 'Functional capability delivering user/business value',
@@ -141,21 +142,29 @@ export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
     description: 'Timeboxed R&D, feasibility tests, or architectural spikes',
     placeholder: 'Spike title',
   },
+  'Escaped Defect': {
+    type: 'Escaped Defect',
+    label: 'Defect (Escaped Defect)',
+    level: 'PBI',
+    prefix: 'DEF',
+    description: 'Short form: Defect — Post-acceptance or production defect tracked as a standalone backlog item',
+    placeholder: 'Defect title',
+  },
   'Bug / Defect': {
     type: 'Bug / Defect',
-    label: 'Bug / Defect',
+    label: 'Defect (Escaped Defect)',
     level: 'PBI',
-    prefix: 'BUG',
-    description: 'Production/escaped defects discovered post-acceptance',
+    prefix: 'DEF',
+    description: 'Short form: Defect — Post-acceptance or production defect tracked as a standalone backlog item',
     placeholder: 'Defect title',
   },
   'Bug': {
     type: 'Bug',
-    label: 'Bug / Defect',
-    level: 'PBI',
+    label: 'Bug (In-Sprint Bug)',
+    level: 'Execution',
     prefix: 'BUG',
-    description: 'Production/escaped defects discovered post-acceptance',
-    placeholder: 'Defect title',
+    description: 'Short form: Bug — Active bug logged against an in-flight story during sprint or test execution',
+    placeholder: 'Bug title',
   },
   'Subtasks': {
     type: 'Subtasks',
@@ -175,10 +184,10 @@ export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
   },
   'In-Sprint Bug': {
     type: 'In-Sprint Bug',
-    label: 'In-Sprint Bug',
+    label: 'Bug (In-Sprint Bug)',
     level: 'Execution',
     prefix: 'ISB',
-    description: 'Active defects logged against in-flight parent items before "Done"',
+    description: 'Short form: Bug — Active bug logged against an in-flight story during sprint or test execution',
     placeholder: 'In-sprint bug title',
   },
 };
@@ -186,7 +195,19 @@ export const WORK_ITEM_TAXONOMY: Record<WorkItemType, WorkItemTaxonomyItem> = {
 export const formatWorkItemType = (type: string | undefined | null): string => {
   if (!type) return 'Item';
   if (type === 'Requirement/Story' || type === 'User Story') return 'Story';
+  if (type === 'Escaped Defect' || type === 'Bug / Defect') return 'Defect';
+  if (type === 'In-Sprint Bug' || type === 'Bug') return 'Bug';
   return WORK_ITEM_TAXONOMY[type as WorkItemType]?.label || type;
+};
+
+export const isEscapedDefectWorkItem = (type: string | undefined | null): boolean => {
+  if (!type) return false;
+  return ['Escaped Defect', 'Bug / Defect'].includes(type);
+};
+
+export const isInSprintBugWorkItem = (type: string | undefined | null): boolean => {
+  if (!type) return false;
+  return ['In-Sprint Bug', 'Bug'].includes(type);
 };
 
 export const isPbiWorkItem = (type: string | undefined | null): boolean => {
@@ -200,19 +221,19 @@ export const isPbiWorkItem = (type: string | undefined | null): boolean => {
     'Enabler',
     'Tech Debt',
     'Spike',
+    'Escaped Defect',
     'Bug / Defect',
-    'Bug',
   ].includes(type);
 };
 
 export const isExecutionWorkItem = (type: string | undefined | null): boolean => {
   if (!type) return false;
-  return ['Sub Task', 'Subtasks', 'In-Sprint Bug'].includes(type);
+  return ['Sub Task', 'Subtasks', 'In-Sprint Bug', 'Bug'].includes(type);
 };
 
 export const isBugWorkItem = (type: string | undefined | null): boolean => {
   if (!type) return false;
-  return ['Bug', 'Bug / Defect', 'In-Sprint Bug'].includes(type);
+  return ['Bug', 'Bug / Defect', 'Escaped Defect', 'In-Sprint Bug'].includes(type);
 };
 
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low' | 'Backburner';

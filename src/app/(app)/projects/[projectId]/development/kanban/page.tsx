@@ -70,6 +70,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Enabler': Layers,
   'Tech Debt': Wrench,
   'Spike': Zap,
+  'Escaped Defect': Bug,
   'Bug / Defect': Bug,
   'Bug': Bug,
   'Subtasks': CheckSquare,
@@ -187,12 +188,12 @@ function StoryCard({
 
   const displayEffort = useMemo(() => {
     if (isPbiWorkItem(story.itemType)) {
-      if (subTasks.length > 0 || bugs.length > 0) {
-        return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      if (subTasks.length > 0) {
+        return subTasks.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
     }
     return story.estimatedHours;
-  }, [story.itemType, story.estimatedHours, subTasks, bugs]);
+  }, [story.itemType, story.estimatedHours, subTasks]);
 
 
   return (

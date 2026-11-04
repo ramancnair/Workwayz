@@ -78,6 +78,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Enabler': Layers,
   'Tech Debt': Wrench,
   'Spike': Zap,
+  'Escaped Defect': Bug,
   'Bug / Defect': Bug,
   'Bug': Bug,
   'Subtasks': CheckSquare,
@@ -177,12 +178,12 @@ function StoryItemCard({
 
   const displayEffort = useMemo(() => {
     if (isPbiWorkItem(story.itemType)) {
-      if (subTasks.length > 0 || bugs.length > 0) {
-        return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      if (subTasks.length > 0) {
+        return subTasks.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
     }
     return story.estimatedHours;
-  }, [story.itemType, story.estimatedHours, subTasks, bugs]);
+  }, [story.itemType, story.estimatedHours, subTasks]);
 
   const sortedSprints = useMemo(() => {
     return [...sprints].sort((a, b) => {
@@ -1094,8 +1095,7 @@ export default function GroomingPage() {
 
     const subItemsEffort = useMemo(() => {
       if (!selectedStory) return 0;
-      return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) + 
-             selectedStorySubItems.bugs.reduce((sum, bug) => sum + (bug.estimatedHours || 0), 0);
+      return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
     }, [selectedStory, selectedStorySubItems]);
 
     const isEffortReadOnly = useMemo(() => {

@@ -50,7 +50,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Epic, Story, Sprint, SprintStatus, User, WorkItemType, StoryStatus, ImpactedSystem, Release, Priority, StatusHistoryItem, BugSeverity, TestCase } from '@/types';
-import { isPbiWorkItem, isExecutionWorkItem, isBugWorkItem, PBI_WORK_ITEM_TYPES, WORK_ITEM_TAXONOMY, formatWorkItemType } from '@/types';
+import { isPbiWorkItem, isExecutionWorkItem, isBugWorkItem, isEscapedDefectWorkItem, isInSprintBugWorkItem, PBI_WORK_ITEM_TYPES, WORK_ITEM_TAXONOMY, formatWorkItemType } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
 import { Progress } from '@/components/ui/progress';
@@ -83,6 +83,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Enabler': Layers,
   'Tech Debt': Wrench,
   'Spike': Zap,
+  'Escaped Defect': Bug,
   'Bug / Defect': Bug,
   'Bug': Bug,
   'Subtasks': CheckSquare,
@@ -119,6 +120,7 @@ const storyFormSchema = z.object({
     'Enabler',
     'Tech Debt',
     'Spike',
+    'Escaped Defect',
     'Bug / Defect',
     'Bug',
     'Subtasks',
@@ -185,8 +187,8 @@ const bulkMoveSchema = z.object({
 
 function StoryCard({ story, epic, assignee, onClick, onDelete, className, subItems, sprint, release, onSubItemClick, isSelected, onSelectionChange }: { story: Story; epic?: Epic; assignee?: User; onClick: () => void; onDelete?: () => void; className?: string, subItems?: Story[], sprint?: Sprint | null, release?: Release | null, onSubItemClick: (item: Story) => void; isSelected: boolean; onSelectionChange: (checked: boolean) => void; }) {
   const Icon = workItemIcons[story.itemType] || BookOpen;
-  const subTasks = useMemo(() => subItems?.filter(i => isExecutionWorkItem(i.itemType) && !isBugWorkItem(i.itemType)) || [], [subItems]);
-  const bugs = useMemo(() => subItems?.filter(i => isBugWorkItem(i.itemType)) || [], [subItems]);
+  const subTasks = useMemo(() => subItems?.filter(i => i.itemType === 'Sub Task' || i.itemType === 'Subtasks') || [], [subItems]);
+  const bugs = useMemo(() => subItems?.filter(i => isInSprintBugWorkItem(i.itemType)) || [], [subItems]);
   
   const isReadyForDev = useMemo(() => {
     if (!story.estimatedHours || story.estimatedHours <= 0) return false;
@@ -198,12 +200,12 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
 
   const displayEffort = useMemo(() => {
     if (isPbiWorkItem(story.itemType)) {
-      if (subTasks.length > 0 || bugs.length > 0) {
-        return [...subTasks, ...bugs].reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
+      if (subTasks.length > 0) {
+        return subTasks.reduce((sum, item) => sum + (item.estimatedHours || 0), 0);
       }
     }
     return story.estimatedHours;
-  }, [story.itemType, story.estimatedHours, subTasks, bugs]);
+  }, [story.itemType, story.estimatedHours, subTasks]);
 
   return (
     <Collapsible>
@@ -867,15 +869,15 @@ export default function BacklogPage() {
           acceptanceCriteria: values.acceptanceCriteria,
           reporterId: values.reporterId === 'unassigned' ? undefined : values.reporterId,
           assigneeId: values.assigneeId === 'unassigned' ? undefined : values.assigneeId,
-          epicId: isPbiWorkItem(values.itemType) ? (values.epicId === 'unassigned' ? undefined : values.epicId) : (parentStory?.epicId),
+          epicId: (values.epicId && values.epicId !== 'unassigned') ? values.epicId : parentStory?.epicId,
           parentStoryId: (isBugWorkItem(values.itemType) || values.itemType === 'Feature Change') ? (values.parentStoryId || undefined) : undefined,
           relatedTestCaseId: values.relatedTestCaseId === 'unassigned' ? undefined : values.relatedTestCaseId,
           status: 'To Do',
           estimatedHours: values.estimatedHours,
           priority: values.priority as Priority | undefined,
           severity: values.severity as BugSeverity | undefined,
-          sprintId: parentStory?.sprintId || (values.sprintId === 'backlog' ? null : values.sprintId),
-          releaseId: parentStory?.releaseId || (values.releaseId === 'unassigned' ? undefined : values.releaseId),
+          sprintId: isInSprintBugWorkItem(values.itemType) && parentStory?.sprintId ? parentStory.sprintId : (values.sprintId === 'backlog' ? null : values.sprintId),
+          releaseId: isInSprintBugWorkItem(values.itemType) && parentStory?.releaseId ? parentStory.releaseId : (values.releaseId === 'unassigned' ? undefined : values.releaseId),
           foundInTestPlanId: values.foundInTestPlanId === 'unassigned' ? undefined : values.foundInTestPlanId,
           relatedBugId: values.relatedBugId === 'unassigned' ? undefined : values.relatedBugId,
           impactedSystemIds: values.impactedSystemIds,
@@ -1091,12 +1093,11 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
   }
 
   const allWorkItems = stories.filter((story) => {
-    const isSubItem = (isExecutionWorkItem(story.itemType) && !isBugWorkItem(story.itemType)) || (isBugWorkItem(story.itemType) && !!story.parentStoryId);
-    return !isSubItem && !story.isDeleted;
+    return isPbiWorkItem(story.itemType) && !story.isDeleted;
   });
 
   const subItemsByParentId = stories.reduce((acc, story) => {
-      if (story.parentStoryId) {
+      if (story.parentStoryId && isExecutionWorkItem(story.itemType) && !story.isDeleted) {
           if (!acc[story.parentStoryId]) {
               acc[story.parentStoryId] = [];
           }
@@ -1199,7 +1200,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
     const unassignedStoriesExist = (backlogItemsByEpic['unassigned'] || []).length > 0;
 
     if (unassignedStoriesExist) {
-        displayEpics.push({ id: 'unassigned', title: 'Unassigned', description: 'Items not assigned to any epic.' });
+        displayEpics.push({ id: 'unassigned', title: 'No Epic Assigned', description: 'PBI items not yet assigned to any epic.' });
     }
 
     return displayEpics.sort((a, b) => {
@@ -1253,8 +1254,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
 
   const subItemsEffort = useMemo(() => {
     if (!selectedStory) return 0;
-    return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) + 
-           selectedStorySubItems.bugs.reduce((sum, bug) => sum + (bug.estimatedHours || 0), 0);
+    return selectedStorySubItems.subTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
   }, [selectedStory, selectedStorySubItems]);
 
   const isEffortReadOnly = useMemo(() => {
@@ -1379,7 +1379,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                       <div className="flex flex-col gap-0.5">
                                         <div className="flex items-center gap-2 font-medium">
                                           <IconComponent className="h-4 w-4 text-emerald-500 shrink-0" />
-                                          <span>{itemType}</span>
+                                          <span>{meta?.label || itemType}</span>
                                         </div>
                                         {meta?.description && (
                                           <span className="text-xs text-muted-foreground line-clamp-1 pl-6">

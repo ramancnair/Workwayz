@@ -675,7 +675,9 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
     const parentStoryRef = doc(db, 'projects', projectId, 'stories', storyId);
 
     const subItemsSnapshot = await getDocs(query(collection(db, 'projects', projectId, 'stories'), where('parentStoryId', '==', storyId)));
-    const subItems = subItemsSnapshot.docs.map((doc: any) => doc.data() as Story);
+    const subItems = subItemsSnapshot.docs
+      .map((doc: any) => doc.data() as Story)
+      .filter((s: Story) => (s.itemType === 'Sub Task' || s.itemType === 'Subtasks') && !s.isDeleted);
 
     const totalHours = subItems.reduce((sum: number, task: Story) => sum + (task.estimatedHours || 0), 0);
 
@@ -719,7 +721,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         'Enabler': 'EN',
         'Tech Debt': 'TD',
         'Spike': 'SPK',
-        'Bug / Defect': 'BUG',
+        'Escaped Defect': 'DEF',
+        'Bug / Defect': 'DEF',
         'Bug': 'BUG',
         'Subtasks': 'SUB',
         'Sub Task': 'SUB',
@@ -742,8 +745,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
       if (endDate) payload.endDate = Timestamp.fromDate(new Date(endDate));
 
 
-      // If it's a sub-item (Bug) linked to a story, inherit the sprint
-      if (['Bug', 'Bug / Defect', 'In-Sprint Bug'].includes(story.itemType) && story.parentStoryId) {
+      // Only execution-level items (Sub Task, In-Sprint Bug) inherit the parent story's sprint
+      if (['In-Sprint Bug', 'Sub Task', 'Subtasks'].includes(story.itemType) && story.parentStoryId) {
         const parentStory = stories.find(s => s.id === story.parentStoryId);
         if (parentStory && parentStory.sprintId) {
           payload.sprintId = parentStory.sprintId;
@@ -799,7 +802,8 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
         'Enabler': 'EN',
         'Tech Debt': 'TD',
         'Spike': 'SPK',
-        'Bug / Defect': 'BUG',
+        'Escaped Defect': 'DEF',
+        'Bug / Defect': 'DEF',
         'Bug': 'BUG',
         'Subtasks': 'SUB',
         'Sub Task': 'SUB',
@@ -927,7 +931,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
 
       await batch.commit();
 
-      if (storyToUpdate.itemType === 'Sub Task' && storyToUpdate.parentStoryId) {
+      if ((storyToUpdate.itemType === 'Sub Task' || storyToUpdate.itemType === 'Subtasks') && storyToUpdate.parentStoryId) {
         await updateStoryEffort(storyToUpdate.parentStoryId);
 
         if (data.status) {
@@ -936,7 +940,7 @@ export function FirebaseProjectProvider({ children, projectId }: PropsWithChildr
           );
           const allSubTasks = allSubTasksSnapshot.docs
             .map((d: any) => ({ ...d.data() as Story, id: d.id }))
-            .filter((t: any) => !t.isDeleted);
+            .filter((t: any) => (t.itemType === 'Sub Task' || t.itemType === 'Subtasks') && !t.isDeleted);
 
           const updatedSubTasks = allSubTasks.map((t: any) => t.id === storyId ? { ...t, status: data.status! } : t);
 
