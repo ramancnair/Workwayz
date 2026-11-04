@@ -138,6 +138,23 @@ docker run -d \
 1. Open **[http://localhost:3000](http://localhost:3000)** in your browser and complete the **In-App Setup Wizard**.
 2. Your database and configuration profiles are stored persistently inside the `workwayz-data` Docker volume.
 
+#### Running Supabase Locally on Docker (Optional)
+
+For those who want to run **Supabase locally on Docker** instead of using the built-in Local Embedded Database or Supabase Cloud, follow these steps to spin up a lightweight local Supabase stack (pulling only the core containers Workwayz needs):
+
+```bash
+# 1. Initialize a local Supabase config (if running in a new folder)
+npx supabase init
+
+# 2. Start only the required Supabase containers on Docker Desktop
+npx supabase start --exclude storage-api,imgproxy,edge-runtime,logflare,vector,supavisor
+```
+
+1. Once started, the terminal will print your local **`API URL`** (`http://127.0.0.1:54321`), **`Studio URL`** (`http://127.0.0.1:54323`), and **`anon key`**.
+2. Open **Supabase Studio** (`http://127.0.0.1:54323` → **SQL Editor**), paste and run the SQL schema from [`docs/supabase-schema.sql`](./docs/supabase-schema.sql) to create the Workwayz tables.
+3. In the Workwayz **In-App Setup Wizard** (or **Portfolio Settings → Database**), select **Supabase** and enter your local **`API URL`** and **`anon key`**.
+   > *(Note: If Workwayz itself is running inside a Docker container on Windows/macOS, use `http://host.docker.internal:54321` as the Supabase URL so the container can reach your host's local Supabase port).*
+
 ---
 
 ## Tech Stack
