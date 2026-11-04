@@ -16,9 +16,10 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "createWorkItem",
     "varName": "createWorkItemTool",
     "category": "work_items",
-    "description": "Creates a new work item (User Story, Bug, Task, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. BUG-1, ST-5) and stores it in the database.",
+    "description": "Creates a new work item (User Story, Escaped Defect, In-Sprint Bug, Task, Enabler, Tech Debt, Spike, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. US-1, DEF-1 for Escaped Defects in Product Backlog, BUG-1 for In-Sprint Bugs in Testing > Bugs / Bug Tracker) and stores it in the database.",
     "params": [
       "projectId",
+      "itemType",
       "title",
       "description",
       "estimatedHours",
@@ -26,14 +27,19 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     ],
     "aliases": [
       "user story",
+      "requirement",
+      "add requirement",
       "task",
       "bug",
+      "in-sprint bug",
+      "bug tracker",
       "defect",
+      "escaped defect",
       "feature change",
       "sub task",
       "kanban item"
     ],
-    "searchText": "createWorkItem | Category: work_items | Aliases: user story task bug defect feature change sub task kanban item | Description: Creates a new work item (User Story, Bug, Task, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. BUG-1, ST-5) and stores it in the database. | Parameters: projectId title description estimatedHours acceptanceCriteria"
+    "searchText": "createWorkItem | Category: work_items | Aliases: user story requirement add requirement task bug in-sprint bug bug tracker defect escaped defect feature change sub task kanban item | Description: Creates a new work item (User Story, Escaped Defect, In-Sprint Bug, Task, Enabler, Tech Debt, Spike, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. US-1, DEF-1 for Escaped Defects in Product Backlog, BUG-1 for In-Sprint Bugs in Testing > Bugs / Bug Tracker) and stores it in the database. | Parameters: projectId itemType title description estimatedHours acceptanceCriteria"
   },
   {
     "name": "updateWorkItem",
@@ -2805,7 +2811,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "queryProjectDefects",
     "varName": "queryProjectDefectsTool",
     "category": "qa_testing",
-    "description": "Lists project bugs filtered by severity, status, or sprint.",
+    "description": "Lists project In-Sprint Bugs (Testing > Bugs / Bug Tracker) and Escaped Defects (Development > Product Backlog) filtered by severity, status, or sprint.",
     "params": [
       "projectId",
       "severity",
@@ -3204,7 +3210,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "queryQaDefects",
     "varName": "queryQaDefectsTool",
     "category": "qa_testing",
-    "description": "Queries defects logged during active test cycles filtered by environment.",
+    "description": "Queries In-Sprint Bugs (Testing > Bugs / Bug Tracker) logged during active test cycles filtered by environment.",
     "params": [
       "projectId",
       "environment"
@@ -3227,7 +3233,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     "name": "exportDefectsReport",
     "varName": "exportDefectsReportTool",
     "category": "qa_testing",
-    "description": "Exports testing defects summary to structured report format.",
+    "description": "Exports testing bugs and defects summary (Testing > Bugs / Bug Tracker) to structured report format.",
     "params": [
       "projectId"
     ],

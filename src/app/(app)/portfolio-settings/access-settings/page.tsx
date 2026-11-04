@@ -114,29 +114,12 @@ const pageSections: PageSection[] = [
         name: 'Project Details',
         topNavName: 'Project Details',
         pages: [
-          'Project Status',
           'PM Dashboard',
           'Project PromptBoard',
+          'Project Status',
           'Specifications',
+          'Project Releases',
         ],
-      },
-      {
-        id: 'top_proj_resources',
-        name: 'Resources',
-        topNavName: 'Resources',
-        pages: [
-          'Project Resources',
-          'Worklog',
-          'Resource Workload',
-          'Leave Calendar',
-          'Project Gantt',
-        ],
-      },
-      {
-        id: 'top_proj_releases',
-        name: 'Releases',
-        topNavName: 'Releases',
-        pages: ['Project Releases'],
       },
       {
         id: 'top_proj_development',
@@ -148,7 +131,6 @@ const pageSections: PageSection[] = [
           'Grooming',
           'Kanban Board',
           'Sub-Tasks',
-          'Bug Tracker',
         ],
       },
       {
@@ -161,6 +143,21 @@ const pageSections: PageSection[] = [
           'Test Cycle',
           'Test Execution',
           'Bugs',
+          'Bug Tracker',
+        ],
+      },
+      {
+        id: 'top_proj_resources',
+        name: 'Resources',
+        topNavName: 'Resources',
+        pages: [
+          'Project Resources',
+          'Resource Workload',
+          'Leave Calendar',
+          'Leave Summary',
+          'Project Holiday Calendar',
+          'Worklog',
+          'Project Gantt',
         ],
       },
       {
@@ -173,15 +170,6 @@ const pageSections: PageSection[] = [
           'Assumptions',
           'Issues',
           'Dependencies',
-        ],
-      },
-      {
-        id: 'top_proj_holidays',
-        name: 'Time Off',
-        topNavName: 'Time Off',
-        pages: [
-          'Project Holiday Calendar',
-          'Leave Summary',
         ],
       },
       {

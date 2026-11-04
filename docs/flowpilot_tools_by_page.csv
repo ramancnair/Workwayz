@@ -114,11 +114,11 @@ Project Level Pages,Resources,Resource Workload,reassignWorkload,"Reassign Task 
 Project Level Pages,Resources,Project Gantt,queryProjectContext,"Query Gantt Milestones: Queries project context, epics, sprints, and release milestones.",Yes
 Project Level Pages,Resources,Project Gantt,queryProjectGanttTimeline,"Gantt Timeline Data: Returns chronological project timeline with sprint dates, release milestones, and story schedules.",Yes
 Project Level Pages,Resources,Project Gantt,updateGanttTaskDependency,"Set Task Predecessor: Creates start-to-finish predecessor dependency links between project timeline tasks.",Yes
-Project Level Pages,Releases,Project Releases,createRelease,"Create Release: Creates a project Release, Stage, or Milestone in the project schedule.",Yes
-Project Level Pages,Releases,Project Releases,updateRelease,"Update Release: Modifies release start date, end date, milestone date, or status.",Yes
-Project Level Pages,Releases,Project Releases,deleteRelease,"Delete Release: Deletes a release or milestone from the project schedule.",Yes
-Project Level Pages,Releases,Project Releases,queryProjectReleases,"List Project Releases: Retrieves all project releases, stages, and milestones with schedule dates.",Yes
-Project Level Pages,Releases,Project Releases,assignStoriesToRelease,"Assign Stories to Release: Associates user stories or defects with a specific project release.",Yes
+Project Level Pages,Project Details,Project Releases,createRelease,"Create Release: Creates a project Release, Stage, or Milestone in the project schedule.",Yes
+Project Level Pages,Project Details,Project Releases,updateRelease,"Update Release: Modifies release start date, end date, milestone date, or status.",Yes
+Project Level Pages,Project Details,Project Releases,deleteRelease,"Delete Release: Deletes a release or milestone from the project schedule.",Yes
+Project Level Pages,Project Details,Project Releases,queryProjectReleases,"List Project Releases: Retrieves all project releases, stages, and milestones with schedule dates.",Yes
+Project Level Pages,Project Details,Project Releases,assignStoriesToRelease,"Assign Stories to Release: Associates user stories or defects with a specific project release.",Yes
 Project Level Pages,Development,Development Dashboard,queryProjectContext,"Query Dev Context: Queries total stories, epics, and active sprint statistics.",Yes
 Project Level Pages,Development,Development Dashboard,queryDevDashboardSummary,"Development Dashboard Metrics: Retrieves active sprint progress, sprint velocity points, and open defect counts.",Yes
 Project Level Pages,Development,Development Dashboard,querySprintBurndownData,"Sprint Burndown Data: Fetches ideal vs actual remaining effort points across active sprint days.",Yes
@@ -145,11 +145,11 @@ Project Level Pages,Development,Sub-Tasks,updateWorkItem,"Update Sub-Task: Updat
 Project Level Pages,Development,Sub-Tasks,querySubTasksByStory,"Query Story Sub-Tasks: Retrieves all sub-tasks linked under a specified parent story ID.",Yes
 Project Level Pages,Development,Sub-Tasks,deleteSubTask,"Delete Sub-Task: Deletes a sub-task from a parent user story.",Yes
 Project Level Pages,Development,Sub-Tasks,bulkCreateSubTasks,"Bulk Create Sub-Tasks: Generates standard sub-tasks (Frontend, Backend, Unit Tests, Code Review) for a story in batch.",Yes
-Project Level Pages,Development,Defect Tracker,createWorkItem,"Log Defect: Creates a new Bug (BUG-X) with severity (Critical/High/Medium/Low) and priority.",Yes
-Project Level Pages,Development,Defect Tracker,updateWorkItem,"Update Defect Status: Updates bug status (To Do, In Progress, In QA, Done) and resolution notes.",Yes
-Project Level Pages,Development,Defect Tracker,queryProjectDefects,"Query Defects: Lists all logged project bugs filtered by severity, status, or sprint.",Yes
-Project Level Pages,Development,Defect Tracker,linkDefectToStory,"Link Defect to Story: Associates a defect with the specific user story that introduced the regression.",Yes
-Project Level Pages,Development,Defect Tracker,closeDefect,"Close Defect: Marks a defect as verified and closed with resolution summary.",Yes
+Project Level Pages,Testing,Bug Tracker,createWorkItem,"Log Defect: Creates a new Bug (BUG-X) with severity (Critical/High/Medium/Low) and priority.",Yes
+Project Level Pages,Testing,Bug Tracker,updateWorkItem,"Update Defect Status: Updates bug status (To Do, In Progress, In QA, Done) and resolution notes.",Yes
+Project Level Pages,Testing,Bug Tracker,queryProjectDefects,"Query Defects: Lists all logged project bugs filtered by severity, status, or sprint.",Yes
+Project Level Pages,Testing,Bug Tracker,linkDefectToStory,"Link Defect to Story: Associates a defect with the specific user story that introduced the regression.",Yes
+Project Level Pages,Testing,Bug Tracker,closeDefect,"Close Defect: Marks a defect as verified and closed with resolution summary.",Yes
 Project Level Pages,Testing,Test Dashboard,queryProjectContext,"Query Testing Context: Queries basic test cases and test cycle counts.",Yes
 Project Level Pages,Testing,Test Dashboard,queryTestDashboardSummary,"Test Dashboard Summary: Retrieves total test cases, execution pass/fail rates, and cycle completion status.",Yes
 Project Level Pages,Testing,Test Dashboard,queryTestExecutionProgress,"Test Execution Velocity: Returns test execution burn-up metrics across active test cycles.",Yes
@@ -170,10 +170,10 @@ Project Level Pages,Testing,Test Execution,updateTestCaseStatus,"Record Test Exe
 Project Level Pages,Testing,Test Execution,queryTestExecutionList,"Query Execution Run: Retrieves all test cases assigned to a test cycle with their current execution status.",Yes
 Project Level Pages,Testing,Test Execution,bulkUpdateTestExecutionStatus,"Bulk Update Test Status: Batch marks multiple test cases as Passed or Skipped in a single action.",Yes
 Project Level Pages,Testing,Test Execution,logDefectFromTestExecution,"Log Defect from Test Run: Automatically creates a Bug linked directly to a failed test case execution.",Yes
-Project Level Pages,Testing,Defects,createWorkItem,"Log QA Defect: Logs a defect identified during test execution with severity and reproduction steps.",Yes
-Project Level Pages,Testing,Defects,updateWorkItem,"Update QA Defect: Updates bug status following QA re-testing.",Yes
-Project Level Pages,Testing,Defects,queryQaDefects,"Query QA Defects: Queries defects logged during active test cycles filtered by environment (SIT, UAT).",Yes
-Project Level Pages,Testing,Defects,exportDefectsReport,"Export Defects Report: Exports testing defects summary with severity and resolution notes to CSV.",Yes
+Project Level Pages,Testing,Bugs,createWorkItem,"Log QA Defect: Logs a defect identified during test execution with severity and reproduction steps.",Yes
+Project Level Pages,Testing,Bugs,updateWorkItem,"Update QA Defect: Updates bug status following QA re-testing.",Yes
+Project Level Pages,Testing,Bugs,queryQaDefects,"Query QA Defects: Queries defects logged during active test cycles filtered by environment (SIT, UAT).",Yes
+Project Level Pages,Testing,Bugs,exportDefectsReport,"Export Defects Report: Exports testing defects summary with severity and resolution notes to CSV.",Yes
 Project Level Pages,Governance,RAID Dashboard,createRaidItem,"Create RAID Item: Logs a governance item (Risk, Assumption, Issue, or Dependency) in the RAID log with RSK-X, ASM-X, ISS-X, or DEP-X ID.",Yes
 Project Level Pages,Governance,RAID Dashboard,updateRaidItem,"Update RAID Item: Updates an existing RAID item (e.g. close an issue, update risk mitigation).",Yes
 Project Level Pages,Governance,RAID Dashboard,queryProjectContext,"Query RAID Stats: Queries total counts of active risks, assumptions, issues, and dependencies.",Yes
@@ -199,13 +199,13 @@ Project Level Pages,Governance,Dependencies,updateRaidItem,"Update Dependency St
 Project Level Pages,Governance,Dependencies,queryProjectDependencies,"Query Dependencies: Lists all project dependencies categorized by incoming/outgoing and tracking status.",Yes
 Project Level Pages,Governance,Dependencies,deleteDependency,"Delete Dependency: Deletes a dependency entry from the project RAID log.",Yes
 Project Level Pages,Governance,Dependencies,updateDependencyStatus,"Set Dependency Status: Updates status to On Track, At Risk, or Blocked.",Yes
-Project Level Pages,Holidays,Project Holiday Calendar,queryHolidays,"Query Project Holidays: Queries organization and project holidays for working day calculation.",Yes
-Project Level Pages,Holidays,Project Holiday Calendar,createHoliday,"Add Project Holiday: Adds an additional holiday to the calendar.",Yes
-Project Level Pages,Holidays,Project Holiday Calendar,overrideProjectHolidayCalendar,"Toggle Holiday Override: Configures whether the project inherits global holidays or uses custom project holidays.",Yes
-Project Level Pages,Holidays,Project Holiday Calendar,queryProjectSpecificHolidays,"Query Custom Holidays: Retrieves project-specific holiday calendar overrides.",Yes
-Project Level Pages,Holidays,Leave Calendar,queryLeaveRequests,"Query Team Absences: Queries planned leave requests of allocated project team members.",Yes
-Project Level Pages,Holidays,Leave Calendar,applyLeave,"Submit Leave: Submits leave for a project resource.",Yes
-Project Level Pages,Holidays,Leave Calendar,queryTeamAbsenceCalendarBySprint,"Sprint Absence Overlay: Returns planned team absences overlapping with active sprint date ranges.",Yes
+Project Level Pages,Resources,Company Holidays,queryHolidays,"Query Project Holidays: Queries organization and project holidays for working day calculation.",Yes
+Project Level Pages,Resources,Company Holidays,createHoliday,"Add Project Holiday: Adds an additional holiday to the calendar.",Yes
+Project Level Pages,Resources,Company Holidays,overrideProjectHolidayCalendar,"Toggle Holiday Override: Configures whether the project inherits global holidays or uses custom project holidays.",Yes
+Project Level Pages,Resources,Company Holidays,queryProjectSpecificHolidays,"Query Custom Holidays: Retrieves project-specific holiday calendar overrides.",Yes
+Project Level Pages,Resources,Leave Calendar,queryLeaveRequests,"Query Team Absences: Queries planned leave requests of allocated project team members.",Yes
+Project Level Pages,Resources,Leave Calendar,applyLeave,"Submit Leave: Submits leave for a project resource.",Yes
+Project Level Pages,Resources,Leave Calendar,queryTeamAbsenceCalendarBySprint,"Sprint Absence Overlay: Returns planned team absences overlapping with active sprint date ranges.",Yes
 Project Level Pages,PMO,PMO Documents,addCodeRepository,"Link Code Repository: Links a GitHub, GitLab, or Bitbucket repository URL to the project.",Yes
 Project Level Pages,PMO,PMO Documents,uploadPmoDocument,"Upload PMO Document: Uploads project charter, architecture diagram, SOW, or signoff deliverables.",Yes
 Project Level Pages,PMO,PMO Documents,deletePmoDocument,"Delete PMO Document: Deletes a document attachment from the project repository.",Yes

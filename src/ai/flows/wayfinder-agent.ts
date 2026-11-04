@@ -252,17 +252,18 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
    - Formatted as "P" + Current Year + 5 Digits: "P2600001", "P2600002"...
    - Belong to a Portfolio (via portfolioId).
    - Contain subcollections: stories, epics, sprints, testCases, testCycles, risks, assumptions, issues, dependencies, kanbanColumns, settings, environments.
-3. **Work Items (User Stories, Bugs, Tasks, Feature Changes, Sub-Tasks)**:
+3. **Work Items (Requirements, Escaped Defects, In-Sprint Bugs, Tasks, Feature Changes, Sub-Tasks)**:
    - Stored in "projects/{projectId}/stories".
-   - ID Conventions:
-     * User Stories / Requirements: "ST-1", "ST-2", "ST-3"...
-     * Bugs / Defects: "BUG-1", "BUG-2", "BUG-3"...
-     * Tasks: "TASK-1", "TASK-2"...
+   - Two-Tier Bug vs. Defect Architecture & ID Conventions:
+     * User Stories / Requirements: "US-1", "ST-1"... (Created via Development > Product Backlog > Add Requirement)
+     * Escaped Defects (itemType: "Escaped Defect"): "DEF-1", "DEF-2"... Production or post-acceptance escaped defects logged in Development > Product Backlog via "Add Requirement" -> "Defect". Treated as standalone Product Backlog Items (PBIs) that can be estimated and prioritized into a sprint.
+     * In-Sprint Bugs (itemType: "In-Sprint Bug" or "Bug"): "BUG-1", "BUG-2"... Found during active sprint testing, logged and tracked under Testing > Bugs and Testing > Bug Tracker via "Add Bug". Linked to an in-sprint Story (parentStoryId) with 0 story points.
      * Feature Changes: "FC-1", "FC-2"...
-     * Sub Tasks: "SUB-1", "SUB-2"...
+     * Tasks / Enablers / Tech Debt / Spikes: "TASK-1", "EN-1", "TD-1", "SPK-1"...
+     * Sub-Tasks: "SUB-1", "SUB-2"...
    - Status Flow: "To Do" -> "In Progress" -> "In QA" -> "Done".
    - Priority: "Critical", "High", "Medium", "Low", "Backburner".
-   - Bug Severity: "Critical", "High", "Medium", "Low".
+   - Bug / Defect Severity: "Critical", "High", "Medium", "Low".
 4. **Specifications & Initial Estimation (Project Summary, Impacted Systems, Horizontals)**:
    - Project Summary: High-level overview stored directly on the Project document.
    - Impacted Systems: Architecture components / modules impacted by the project with Category ("Technology" or "Function"), estimated effort in man-days, and daily billing rate (USD).
@@ -289,6 +290,15 @@ You assist engineering leads, project managers, QA testers, PMO directors, and t
     - Tool "addEnvironment": Adds Dev, SIT, UAT, Staging, or Production environments.
     - Tool "addCodeRepository": Links Git repository URLs.
     - Tool "addFixedCost": Adds one-time or monthly software licenses / cloud costs.
+11. **Project Top Navigation & Sidebar Hierarchy (Consolidated Lifecycle Order)**:
+    - **Initial Estimation**: Specifications -> Project Status
+    - **Project Details**: PM Dashboard -> Project PromptBoard -> Project Status -> Specifications -> Project Releases
+    - **Development**: Development Dashboard -> Product Backlog (Add Requirement) -> Grooming -> Kanban Board -> Sub-Tasks
+    - **Testing**: Test Dashboard -> Test Cases -> Test Cycles -> Test Executions -> Bugs (Add Bug) -> Bug Tracker
+    - **Resources**: Project Resources -> Resource Workload -> Leave Calendar -> Leave Summary -> Company Holidays
+    - **Governance**: RAID Dashboard -> Risks -> Assumptions -> Issues -> Dependencies
+    - **PMO**: Documents -> Fixed Bid Billing -> Payment Milestones -> T&M Billing -> T&M Milestones -> BCP
+    - **Project Settings (Gear Icon)** & **Project Trash (Trash Icon)**
 
 === ACTIVE CONTEXT ===
 - Inference Engine: ${aiDetails.displayName} (${aiDetails.provider})

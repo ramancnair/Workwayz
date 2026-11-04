@@ -26,7 +26,7 @@ test.describe('Pillar 7: Resources, Releases & Administration', () => {
     await expect(page.locator('body')).toContainText(/Hours required for this week|Weekly Total Logged/i);
   });
 
-  test('TC-RES-004: Leave Calendar and Leave Summary views render under Resources and Time Off', async ({ page }) => {
+  test('TC-RES-004: Leave Calendar and Leave Summary views render under consolidated Resources tab', async ({ page }) => {
     const projectId = await getOrNavigateToProject(page);
     await page.goto(`/projects/${projectId}/resources/leave-calendar`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toContainText(/Leave Calendar/i);

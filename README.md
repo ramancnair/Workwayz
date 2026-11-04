@@ -25,7 +25,7 @@
 Small and medium businesses often struggle with tool sprawl — using one tool for project estimates, another for task boards, a third for QA test cases, spreadsheets for resource utilization and RAID logs, and separate software for client billing.
 
 **Workwayz brings the entire project lifecycle into one unified platform:**
-- **End-to-End Lifecycle Coverage** — Manage everything from Initial Estimation & Specifications, Product Backlog, Sprint/Kanban Execution, and Release Planning to QA Test Management, Defect Tracking, RAID Governance, Resource Utilization, Leave Tracking, and Client Invoicing.
+- **End-to-End Lifecycle Coverage** — Manage everything from Initial Estimation & Specifications, Project Releases, Product Backlog (`Add Requirement` & Escaped Defects), and Sprint/Kanban Execution to QA Test Management, In-Sprint Bug Tracking (`Bugs` & `Bug Tracker`), RAID Governance, Consolidated Resource & Time Off Management, and Client Invoicing.
 - **Multi-tier AI Built In** — Combine one-click AI generators inside everyday workflows, natural-language Executive & Project PromptBoards with scheduled cron reports, and **WayFinder**, a full-fledged conversational AI agent.
 - **Zero-Config Local or Cloud Deployment** — Run completely offline out-of-the-box with the built-in Local Embedded Database, or connect to Supabase (PostgreSQL) or Firebase via the guided In-App Setup Wizard.
 
@@ -58,7 +58,7 @@ Embedded directly inside project forms and tables to eliminate repetitive manual
 | **AI Standalone Test Case Generator** | Testing → Test Cases | Drafts functional, boundary, and edge-case QA test scenarios from requirement prompts |
 | **AI Task & Test Improvement Assistant** | Tasks & Test Cases | Reviews existing tasks and test cases to suggest actionable clarity and coverage improvements |
 | **AI RAID Generators** | Governance → Risks, Assumptions, Dependencies | Automatically drafts project Risks, Assumptions, and Dependencies complete with impact ratings and mitigation plans |
-| **AI Holiday Calendar Generator** | Time Off → Holiday Calendar | Auto-populates national and regional public holidays for any country and year |
+| **AI Holiday Calendar Generator** | Resources / Holidays → Company Holidays | Auto-populates national and regional public holidays for any country and year |
 
 #### 2. Executive & Project PromptBoards (`Portfolio PromptBoard` & `Project PromptBoard`)
 - **Zero-Hallucination Natural Language Analytics** — Ask plain-English questions across your portfolio or individual projects (e.g., *"Show project RAG health status"*, *"Compare Fixed Bid vs T&M valuation"*, *"Show PM workload graph"*, *"What are our top critical risks and blockers?"*).
@@ -66,7 +66,7 @@ Embedded directly inside project forms and tables to eliminate repetitive manual
 - **Scheduled AI Cron Jobs** — Convert any PromptBoard query into a recurring scheduled job (daily, weekly, or custom cron) that automatically executes and delivers rich interactive reports to stakeholders' in-app message inboxes.
 
 #### 3. WayFinder — Full-Fledged Interactive AI Agent
-- **Conversational Workspace Agent** — Accessible anywhere via the floating WayFinder Agent drawer, equipped with **16 specialized tool-calling capabilities** across every module in Workwayz.
+- **Conversational Workspace Agent** — Accessible anywhere via the floating WayFinder Agent drawer, equipped with **201 specialized tool-calling capabilities** via hybrid RAG retrieval across every module in Workwayz.
 - **Read & Write Action Cards** — WayFinder doesn't just answer questions; it can create and update projects, draft backlog stories, log defects, register RAID items, allocate resources, manage leave/holidays, and update billing records via interactive confirmation cards.
 - **Interactive Dependency Visualization** — Renders live node-and-edge dependency graphs inside the workspace to trace blockers across stories, tasks, and RAID items.
 
@@ -74,7 +74,7 @@ Embedded directly inside project forms and tables to eliminate repetitive manual
 
 ### Test Management & Quality Hub
 - Create and manage **Test Cases** linked directly to User Stories and requirements.
-- Execute test runs, log **Defects**, and track resolution lifecycles.
+- Execute test runs, log **In-Sprint Bugs** (`Bugs` & `Bug Tracker` under Testing) or **Escaped Defects** (`Add Requirement` → `Defect` in Product Backlog), and track resolution lifecycles.
 - Monitor **Estimation Variance** and **Defect Containment** metrics with cadence breakdowns in the Quality Hub.
 
 ### RAID Governance Tracker

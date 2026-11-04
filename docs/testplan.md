@@ -87,11 +87,11 @@ npm run test:e2e:install
 | Test Case ID | Test Objective | Assertion Criteria | Status |
 |---|---|---|---|
 | **TC-DEV-001** | Development sprint dashboard | Burndown charts and velocity metrics display | ✅ Automated |
-| **TC-DEV-002** | Product backlog & epic management | Backlog list, epic filters, story creation triggers | ✅ Automated |
+| **TC-DEV-002** | Product backlog & epic management | Backlog list, epic filters, Add Requirement & Escaped Defect triggers | ✅ Automated |
 | **TC-DEV-003** | Backlog grooming & story point sizing | Sizing cards and story priority editing | ✅ Automated |
 | **TC-DEV-004** | Interactive Kanban board | Swimlanes (To Do, In Progress, In QA, Done) render | ✅ Automated |
 | **TC-DEV-005** | Engineering development tasks | Granular subtasks linked to parent stories | ✅ Automated |
-| **TC-DEV-006** | Defect tracker | Defect triage table with severity badges | ✅ Automated |
+| **TC-DEV-006** | Bug tracker | In-Sprint Bug triage board and Bugs table with severity badges | ✅ Automated |
 
 ### Pillar 5: Testing & QA Management (`e2e/05-testing-and-quality.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |
@@ -118,7 +118,7 @@ npm run test:e2e:install
 | **TC-RES-001** | Project resources & capacity planning | Member assignments and allocation percentages | ✅ Automated |
 | **TC-RES-002** | Global Worklog & Project Effort Allocation | Worklog under My Projects with active project selection and cross-project logging | ✅ Automated |
 | **TC-RES-003** | Worklog Allocation Gating & Other Option | Only shows assigned active projects for the selected resource; provides Other project option for unallocated time & overhead tasks | ✅ Automated |
-| **TC-RES-004** | Leave Calendar under Resources & Leave Summary under Time Off | Places Leave Calendar under Resources below Resource Workload, and Leave Summary under Time Off below Company Holidays | ✅ Automated |
+| **TC-RES-004** | Consolidated Resources & Time Off Views | Places Project Resources, Resource Workload, Leave Calendar, Leave Summary, and Company Holidays under the consolidated Resources tab | ✅ Automated |
 | **TC-REL-001** | Release planning & deployments | Version milestones, release timelines, and Show Sprints grouping (aligned vs non-release) | ✅ Automated |
 | **TC-ADM-001** | User Profile & Messages hub | Personal profile credentials and single-column Gmail-style Messages view | ✅ Automated |
 

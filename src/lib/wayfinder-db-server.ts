@@ -17,7 +17,7 @@ import {
 } from '@/lib/db-provider';
 import { generateFullProjectData } from '@/lib/project-autogen';
 import { calculatePolicyALeaveQuotaForYear, parseEmployeeJoiningDate } from '@/lib/leave-utils';
-import { isBugWorkItem, isPbiWorkItem } from '@/types';
+import { isBugWorkItem, isInSprintBugWorkItem, isEscapedDefectWorkItem, isPbiWorkItem } from '@/types';
 import type {
   Story,
   Epic,
@@ -88,11 +88,12 @@ export async function wayfinderCreateWorkItem(params: {
     'Enabler': 'EN',
     'Tech Debt': 'TD',
     'Spike': 'SPK',
+    'Escaped Defect': 'DEF',
     'Bug / Defect': 'BUG',
     'Bug': 'BUG',
     'Subtasks': 'SUB',
     'Sub Task': 'SUB',
-    'In-Sprint Bug': 'ISB',
+    'In-Sprint Bug': 'BUG',
   };
   const prefix = prefixMap[itemType] || 'ITEM';
 
@@ -126,9 +127,11 @@ export async function wayfinderCreateWorkItem(params: {
 
   const docRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeData(payload));
 
-  const destinationUrl = isBugWorkItem(itemType)
+  const destinationUrl = isInSprintBugWorkItem(itemType)
     ? `/projects/${projectId}/testing/defect-tracker`
-    : `/projects/${projectId}/development/kanban`;
+    : isEscapedDefectWorkItem(itemType)
+      ? `/projects/${projectId}/development/backlog`
+      : `/projects/${projectId}/development/kanban`;
 
   return {
     success: true,
@@ -4409,6 +4412,7 @@ export async function wayfinderLinkDefectToStory(params: {
   if (!match) throw new Error(`Defect ${params.defectId} not found`);
 
   await updateDoc(match.ref, {
+    parentStoryId: params.storyId,
     linkedStoryId: params.storyId,
     updatedAt: new Date().toISOString(),
   });

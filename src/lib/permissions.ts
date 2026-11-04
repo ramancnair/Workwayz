@@ -351,7 +351,6 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/testing`,
         candidates: [
           { name: 'Test Dashboard', path: `${basePath}/testing/dashboard` },
-          { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
           { name: 'Test Cases', path: `${basePath}/testing/test-cases` },
           { name: 'Test Backlogs', path: `${basePath}/testing/test-cases` },
           { name: 'Test Backlog', path: `${basePath}/testing/test-cases` },
@@ -359,17 +358,21 @@ export function getPermittedFallbackRoute(
           { name: 'Test Cycle', path: `${basePath}/testing/test-cycle` },
           { name: 'Test Executions', path: `${basePath}/testing/test-execution` },
           { name: 'Test Execution', path: `${basePath}/testing/test-execution` },
+          { name: 'Bugs', path: `${basePath}/testing/defects` },
           { name: 'Defects', path: `${basePath}/testing/defects` },
+          { name: 'Bug Tracker', path: `${basePath}/testing/defect-tracker` },
+          { name: 'Defect Tracker', path: `${basePath}/testing/defect-tracker` },
         ],
       },
       {
         prefix: `${basePath}/project-details`,
         candidates: [
-          { name: 'Project Status', path: `${basePath}/project-details/project-status` },
-          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
           { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
           { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
           { name: 'FP PM Dash', path: `${basePath}/project-details/fp-pm-dash` },
+          { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
+          { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
         ],
       },
       {
@@ -385,6 +388,8 @@ export function getPermittedFallbackRoute(
           { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
           { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
           { name: 'Leave Calendar', path: `${basePath}/resources/leave-calendar` },
+          { name: 'Leave Summary', path: `${basePath}/holidays/leave-summary` },
+          { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
           { name: 'Worklog', path: `${basePath}/resources/worklog` },
           { name: 'Project Gantt', path: `${basePath}/resources/project-gantt` },
         ],
@@ -393,13 +398,20 @@ export function getPermittedFallbackRoute(
         prefix: `${basePath}/releases`,
         candidates: [
           { name: 'Project Releases', path: `${basePath}/releases/project-releases` },
+          { name: 'PM Dashboard', path: `${basePath}/project-details/pm-dashboard` },
+          { name: 'Project PromptBoard', path: `${basePath}/project-details/fp-pm-dash` },
+          { name: 'Project Status', path: `${basePath}/project-details/project-status` },
+          { name: 'Specifications', path: `${basePath}/project-details/specifications` },
         ],
       },
       {
         prefix: `${basePath}/holidays`,
         candidates: [
-          { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
           { name: 'Leave Summary', path: `${basePath}/holidays/leave-summary` },
+          { name: 'Project Holiday Calendar', path: `${basePath}/holidays` },
+          { name: 'Project Resources', path: `${basePath}/resources/project-resources` },
+          { name: 'Resource Workload', path: `${basePath}/resources/resource-workload` },
+          { name: 'Leave Calendar', path: `${basePath}/resources/leave-calendar` },
         ],
       },
       {

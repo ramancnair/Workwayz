@@ -176,11 +176,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Layers,
     },
     {
-      href: `${basePath}/development/development-tasks`,
-      label: "Sub-Tasks",
-      icon: Component,
-    },
-    {
       href: `${basePath}/development/grooming`,
       label: "Grooming",
       icon: ChevronsUpDown,
@@ -190,6 +185,11 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Kanban Board",
       icon: KanbanSquare,
     },
+    {
+      href: `${basePath}/development/development-tasks`,
+      label: "Sub-Tasks",
+      icon: Component,
+    },
   ];
 
   const testMenuItems = [
@@ -197,11 +197,6 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       href: `${basePath}/testing/dashboard`,
       label: "Test Dashboard",
       icon: TestTube2,
-    },
-    {
-      href: `${basePath}/testing/defect-tracker`,
-      label: "Bug Tracker",
-      icon: Bug,
     },
     {
       href: `${basePath}/testing/test-cases`,
@@ -223,9 +218,24 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       label: "Bugs",
       icon: Bug,
     },
+    {
+      href: `${basePath}/testing/defect-tracker`,
+      label: "Bug Tracker",
+      icon: Bug,
+    },
   ];
 
   const projectMenuItems = [
+    {
+      href: `${basePath}/project-details/pm-dashboard`,
+      label: "PM Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      href: `${basePath}/project-details/fp-pm-dash`,
+      label: "Project PromptBoard",
+      icon: Sparkles,
+    },
     {
       href: `${basePath}/project-details/project-status`,
       label: "Project Status",
@@ -237,14 +247,9 @@ export function SidebarNav({ projectId }: { projectId: string }) {
       icon: Server,
     },
     {
-      href: `${basePath}/project-details/pm-dashboard`,
-      label: "PM Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      href: `${basePath}/project-details/fp-pm-dash`,
-      label: "Project PromptBoard",
-      icon: Sparkles,
+      href: `${basePath}/releases/project-releases`,
+      label: "Project Releases",
+      icon: Package,
     },
   ];
 
@@ -261,13 +266,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
   ];
 
-  const releasesMenuItems = [
-    {
-      href: `${basePath}/releases/project-releases`,
-      label: "Project Releases",
-      icon: Package,
-    }
-  ];
+  const releasesMenuItems = projectMenuItems;
 
   const resourcesMenuItems = [
     {
@@ -283,6 +282,16 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     {
       href: `${basePath}/resources/leave-calendar`,
       label: "Leave Calendar",
+      icon: CalendarDays,
+    },
+    {
+      href: `${basePath}/holidays/leave-summary`,
+      label: "Leave Summary",
+      icon: CalendarCheck,
+    },
+    {
+      href: `${basePath}/holidays`,
+      label: "Company Holidays",
       icon: CalendarDays,
     },
   ];
@@ -392,10 +401,10 @@ export function SidebarNav({ projectId }: { projectId: string }) {
   ];
 
   const isTestingPath = effectivePath.startsWith(`${basePath}/testing`);
-  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`);
+  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`) || effectivePath.startsWith(`${basePath}/releases`);
   const isInitialEstimationPath = effectivePath.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = effectivePath.startsWith(`${basePath}/releases`);
-  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`);
+  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`) || effectivePath.startsWith(`${basePath}/holidays`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => effectivePath.startsWith(basePath + p));
   const isSettingsPath = effectivePath.startsWith(`${basePath}/project-settings`) || effectivePath.startsWith(`${basePath}/settings`);
   const isTrashPath = effectivePath.startsWith(`${basePath}/project-trash`) || effectivePath.startsWith(`${basePath}/trash`);

@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from '@/lib/db-provider';
 import { generateFullProjectData } from '@/lib/project-autogen';
-import { isBugWorkItem } from '@/types';
+import { isBugWorkItem, isInSprintBugWorkItem, isEscapedDefectWorkItem } from '@/types';
 import type {
   Story,
   Epic,
@@ -258,11 +258,12 @@ export async function executeClientCreateWorkItem(params: {
     'Enabler': 'EN',
     'Tech Debt': 'TD',
     'Spike': 'SPK',
+    'Escaped Defect': 'DEF',
     'Bug / Defect': 'BUG',
     'Bug': 'BUG',
     'Subtasks': 'SUB',
     'Sub Task': 'SUB',
-    'In-Sprint Bug': 'ISB',
+    'In-Sprint Bug': 'BUG',
   };
   const prefix = prefixMap[itemType] || 'ITEM';
 
@@ -295,9 +296,11 @@ export async function executeClientCreateWorkItem(params: {
 
   const docRef = await addDoc(collection(projectDocRef, 'stories'), sanitizeData(payload));
 
-  const destinationUrl = isBugWorkItem(itemType)
+  const destinationUrl = isInSprintBugWorkItem(itemType)
     ? `/projects/${projectId}/testing/defect-tracker`
-    : `/projects/${projectId}/development/kanban`;
+    : isEscapedDefectWorkItem(itemType)
+      ? `/projects/${projectId}/development/backlog`
+      : `/projects/${projectId}/development/kanban`;
 
   return {
     success: true,

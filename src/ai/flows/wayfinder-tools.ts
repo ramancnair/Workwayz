@@ -1,7 +1,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { AsyncLocalStorage } from 'async_hooks';
-import { isBugWorkItem } from '@/types';
+import { isBugWorkItem, isInSprintBugWorkItem, isEscapedDefectWorkItem } from '@/types';
 import {
   wayfinderCreateWorkItem,
   wayfinderUpdateWorkItem,
@@ -207,12 +207,12 @@ export function recordExecutedAction(toolName: string, result: any, params?: any
   }
 }
 
-// 1. Tool: Create Work Item (Story, Bug, Task, Feature Change, Sub Task)
+// 1. Tool: Create Work Item (Story, Escaped Defect, In-Sprint Bug, Task, Feature Change, Sub Task)
 export const createWorkItemTool = ai.defineTool(
   {
     name: 'createWorkItem',
     description:
-      'Creates a new work item (User Story, Bug, Task, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. BUG-1, ST-5) and stores it in the database.',
+      'Creates a new work item (User Story, Escaped Defect, In-Sprint Bug, Task, Enabler, Tech Debt, Spike, Feature Change, or Sub Task) in a project. Automatically assigns the next sequential ID (e.g. US-1, DEF-1 for Escaped Defects in Product Backlog, BUG-1 for In-Sprint Bugs in Testing > Bugs / Bug Tracker) and stores it in the database.',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID in which to create the work item.'),
       itemType: z
@@ -225,6 +225,7 @@ export const createWorkItemTool = ai.defineTool(
           'Enabler',
           'Tech Debt',
           'Spike',
+          'Escaped Defect',
           'Bug / Defect',
           'Bug',
           'Subtasks',
@@ -232,7 +233,7 @@ export const createWorkItemTool = ai.defineTool(
           'In-Sprint Bug',
         ])
         .default('User Story')
-        .describe('The type of work item: User Story, Feature Change, Task, Enabler, Tech Debt, Spike, Bug / Defect, Subtasks, or In-Sprint Bug.'),
+        .describe('The type of work item: User Story, Feature Change, Task, Enabler, Tech Debt, Spike, Escaped Defect (production/post-acceptance defect logged in Product Backlog via Add Requirement -> Defect, ID prefix DEF-), In-Sprint Bug / Bug (logged in Testing -> Bugs or Bug Tracker via Add Bug, ID prefix BUG-), or Subtasks.'),
       title: z.string().describe('Clear, concise title or headline of the work item.'),
       description: z.string().optional().describe('Detailed description, steps to reproduce, or requirements.'),
       priority: z
@@ -278,7 +279,7 @@ export const createWorkItemTool = ai.defineTool(
         priority: input.priority,
         severity: input.severity,
         projectId: input.projectId,
-        url: isBugWorkItem(input.itemType) ? `/projects/${input.projectId}/testing/defect-tracker` : `/projects/${input.projectId}/development/kanban`,
+        url: isInSprintBugWorkItem(input.itemType) ? `/projects/${input.projectId}/testing/defect-tracker` : isEscapedDefectWorkItem(input.itemType) ? `/projects/${input.projectId}/development/backlog` : `/projects/${input.projectId}/development/kanban`,
         needsClientExecution: true,
         params: input,
       };
@@ -1182,7 +1183,7 @@ export const createReleaseTool = ai.defineTool(
       name: input.name,
       itemType: input.itemType,
       projectId: input.projectId,
-      url: `/projects/${input.projectId}/releases`,
+      url: `/projects/${input.projectId}/releases/project-releases`,
       needsClientExecution: true,
       params: input,
     };
@@ -3997,7 +3998,7 @@ export const bulkCreateSubTasksTool = ai.defineTool(
 export const queryProjectDefectsTool = ai.defineTool(
   {
     name: 'queryProjectDefects',
-    description: 'Lists project bugs filtered by severity, status, or sprint.',
+    description: 'Lists project In-Sprint Bugs (Testing > Bugs / Bug Tracker) and Escaped Defects (Development > Product Backlog) filtered by severity, status, or sprint.',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID.'),
       severity: z.string().optional(),
@@ -4365,7 +4366,7 @@ export const logDefectFromTestExecutionTool = ai.defineTool(
 export const queryQaDefectsTool = ai.defineTool(
   {
     name: 'queryQaDefects',
-    description: 'Queries defects logged during active test cycles filtered by environment.',
+    description: 'Queries In-Sprint Bugs (Testing > Bugs / Bug Tracker) logged during active test cycles filtered by environment.',
     inputSchema: z.object({
       projectId: z.string().describe('The project ID.'),
       environment: z.string().optional(),
@@ -4385,7 +4386,7 @@ export const queryQaDefectsTool = ai.defineTool(
 export const exportDefectsReportTool = ai.defineTool(
   {
     name: 'exportDefectsReport',
-    description: 'Exports testing defects summary to structured report format.',
+    description: 'Exports testing bugs and defects summary (Testing > Bugs / Bug Tracker) to structured report format.',
     inputSchema: z.object({ projectId: z.string().describe('The project ID.') }),
     outputSchema: z.object({ reportJson: z.string() }),
   },

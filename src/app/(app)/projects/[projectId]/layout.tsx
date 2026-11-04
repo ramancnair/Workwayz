@@ -76,10 +76,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const isSettingsPath = effectivePath.startsWith(`${basePath}/project-settings`) || effectivePath.startsWith(`${basePath}/settings`);
   const isTrashPath = effectivePath.startsWith(`${basePath}/project-trash`) || effectivePath.startsWith(`${basePath}/trash`);
   const isTestingPath = effectivePath.startsWith(`${basePath}/testing`);
-  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`);
+  const isProjectPath = effectivePath.startsWith(`${basePath}/project-details`) || effectivePath.startsWith(`${basePath}/releases`);
   const isInitialEstimationPath = effectivePath.startsWith(`${basePath}/initial-estimation`);
   const isReleasesPath = effectivePath.startsWith(`${basePath}/releases`);
-  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`);
+  const isResourcesPath = effectivePath.startsWith(`${basePath}/resources`) || effectivePath.startsWith(`${basePath}/holidays`);
   const isGovernancePath = ['/raid-dashboard', '/risks', '/assumptions', '/issues', '/dependencies'].some(p => effectivePath.startsWith(basePath + p));
   const isHolidaysPath = effectivePath.startsWith(`${basePath}/holidays`);
   const isPmoPath = effectivePath.startsWith(`${basePath}/pmo`);
@@ -89,12 +89,10 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
   const getTabValue = () => {
     if (isDevelopmentPath) return 'development';
     if (isTestingPath) return 'testing';
-    if (isProjectPath) return 'project';
+    if (isProjectPath || isReleasesPath) return 'project';
     if (isInitialEstimationPath) return 'initial-estimation';
-    if (isReleasesPath) return 'releases';
-    if (isResourcesPath) return 'resources';
+    if (isResourcesPath || isHolidaysPath) return 'resources';
     if (isGovernancePath) return 'governance';
-    if (isHolidaysPath) return 'holidays';
     if (isPmoPath) return 'pmo';
     if (isSettingsPath) return 'settings';
     if (isTrashPath) return 'trash';
@@ -110,16 +108,19 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
         return `${basePath}/initial-estimation/specifications`;
 
       case 'project':
-        if (hasAccess('Project Status')) return `${basePath}/project-details/project-status`;
-        if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
         if (hasAccess('PM Dashboard')) return `${basePath}/project-details/pm-dashboard`;
         if (hasAccess('Project PromptBoard') || hasAccess('FP PM Dash')) return `${basePath}/project-details/fp-pm-dash`;
-        return `${basePath}/project-details/project-status`;
+        if (hasAccess('Project Status')) return `${basePath}/project-details/project-status`;
+        if (hasAccess('Specifications')) return `${basePath}/project-details/specifications`;
+        if (hasAccess('Project Releases')) return `${basePath}/releases/project-releases`;
+        return `${basePath}/project-details/pm-dashboard`;
 
       case 'resources':
         if (hasAccess('Project Resources')) return `${basePath}/resources/project-resources`;
         if (hasAccess('Resource Workload')) return `${basePath}/resources/resource-workload`;
         if (hasAccess('Leave Calendar')) return `${basePath}/resources/leave-calendar`;
+        if (hasAccess('Leave Summary')) return `${basePath}/holidays/leave-summary`;
+        if (hasAccess('Project Holiday Calendar')) return `${basePath}/holidays`;
         if (hasAccess('Worklog')) return `${basePath}/resources/worklog`;
         if (hasAccess('Project Gantt')) return `${basePath}/resources/project-gantt`;
         return `${basePath}/resources/project-resources`;
@@ -133,17 +134,16 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
         if (hasAccess('Grooming')) return `${basePath}/development/grooming`;
         if (hasAccess('Kanban Board')) return `${basePath}/development/kanban`;
         if (hasAccess('Sub-Tasks')) return `${basePath}/development/development-tasks`;
-        if (hasAccess('Defect Tracker')) return `${basePath}/development/defect-tracker`;
+        if (hasAccess('Bug Tracker') || hasAccess('Defect Tracker')) return `${basePath}/development/defect-tracker`;
         return `${basePath}/development/dashboard`;
 
       case 'testing':
         if (hasAccess('Test Dashboard')) return `${basePath}/testing/dashboard`;
-        if (hasAccess('Defect Tracker')) return `${basePath}/testing/defect-tracker`;
         if (hasAccess('Test Cases') || hasAccess('Test Backlog') || hasAccess('Test Backlogs')) return `${basePath}/testing/test-cases`;
         if (hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan')) return `${basePath}/testing/test-cycle`;
         if (hasAccess('Test Execution') || hasAccess('Test Executions')) return `${basePath}/testing/test-execution`;
-        if (hasAccess('Defects')) return `${basePath}/testing/defects`;
-        if (hasAccess('Defect Tracker')) return `${basePath}/testing/defect-tracker`;
+        if (hasAccess('Bugs') || hasAccess('Defects')) return `${basePath}/testing/defects`;
+        if (hasAccess('Bug Tracker') || hasAccess('Defect Tracker')) return `${basePath}/testing/defect-tracker`;
         return `${basePath}/testing/dashboard`;
 
       case 'governance':
@@ -229,39 +229,29 @@ function ProjectLayoutContent({ children }: PropsWithChildren) {
                 )}
                 {!showInitialTabsOnly && (
                   <>
-                    {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Project PromptBoard') || hasAccess('FP PM Dash') || hasAccess('Specifications')) && (
+                    {(hasAccess('Project Status') || hasAccess('PM Dashboard') || hasAccess('Project PromptBoard') || hasAccess('FP PM Dash') || hasAccess('Specifications') || hasAccess('Project Releases')) && (
                       <TabsTrigger value="project" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('project')}>Project Details</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Leave Calendar') || hasAccess('Project Gantt')) && (
-                      <TabsTrigger value="resources" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('resources')}>Resources</Link>
-                      </TabsTrigger>
-                    )}
-                    {hasAccess('Project Releases') && (
-                      <TabsTrigger value="releases" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('releases')}>Releases</Link>
-                      </TabsTrigger>
-                    )}
-                    {(hasAccess('Development Dashboard') || hasAccess('Product Backlog') || hasAccess('Grooming') || hasAccess('Kanban Board') || hasAccess('Sub-Tasks') || hasAccess('Defect Tracker')) && (
+                    {(hasAccess('Development Dashboard') || hasAccess('Product Backlog') || hasAccess('Grooming') || hasAccess('Kanban Board') || hasAccess('Sub-Tasks') || hasAccess('Bug Tracker') || hasAccess('Defect Tracker')) && (
                       <TabsTrigger value="development" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('development')}>Development</Link>
                       </TabsTrigger>
                     )}
-                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Backlogs') || hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Test Executions') || hasAccess('Defects') || hasAccess('Defect Tracker')) && (
+                    {(hasAccess('Test Dashboard') || hasAccess('Test Backlog') || hasAccess('Test Backlogs') || hasAccess('Test Cycle') || hasAccess('Test Cycles') || hasAccess('Test Plan') || hasAccess('Test Execution') || hasAccess('Test Executions') || hasAccess('Bugs') || hasAccess('Defects') || hasAccess('Bug Tracker') || hasAccess('Defect Tracker')) && (
                       <TabsTrigger value="testing" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('testing')}>Testing</Link>
+                      </TabsTrigger>
+                    )}
+                    {(hasAccess('Project Resources') || hasAccess('Worklog') || hasAccess('Resource Workload') || hasAccess('Leave Calendar') || hasAccess('Leave Summary') || hasAccess('Project Holiday Calendar') || hasAccess('Project Gantt')) && (
+                      <TabsTrigger value="resources" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
+                        <Link href={getDefaultRouteForTab('resources')}>Resources</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('RAID Dashboard') || hasAccess('Risks') || hasAccess('Assumptions') || hasAccess('Issues') || hasAccess('Dependencies')) && (
                       <TabsTrigger value="governance" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
                         <Link href={getDefaultRouteForTab('governance')}>Governance</Link>
-                      </TabsTrigger>
-                    )}
-                    {(hasAccess('Project Holiday Calendar') || hasAccess('Leave Summary')) && (
-                      <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-foreground">
-                        <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                       </TabsTrigger>
                     )}
                     {(hasAccess('PMO Documents') || hasAccess('PMO FB Billing') || hasAccess('PMO FB Payment Milestones') || hasAccess('PMO TnM Billing') || hasAccess('PMO TnM Payment Milestones') || hasAccess('Business Continuity')) && (
