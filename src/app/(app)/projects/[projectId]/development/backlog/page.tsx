@@ -327,7 +327,7 @@ function StoryCard({ story, epic, assignee, onClick, onDelete, className, subIte
                           </div>
                         )}
                         {bugs.length > 0 && (
-                          <div className="flex items-center gap-1" title={`${bugs.length} defects`}>
+                          <div className="flex items-center gap-1" title={`${bugs.length} bugs`}>
                             <Bug className="h-3 w-3" />
                             <span>{bugs.length}</span>
                           </div>
@@ -1345,12 +1345,12 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Story
+                Add Requirement
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
               <DialogHeader className="px-6 py-4 border-b shrink-0">
-                <DialogTitle>Add New Story</DialogTitle>
+                <DialogTitle>Add New Requirement</DialogTitle>
               </DialogHeader>
               <Form {...addStoryForm}>
                 <form onSubmit={addStoryForm.handleSubmit(onAddStorySubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1364,7 +1364,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
-                                <SelectValue placeholder="Select a story type" />
+                                <SelectValue placeholder="Select a requirement type" />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[380px]">
@@ -1902,7 +1902,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                   </div>
                   <DialogFooter className="px-6 py-4 border-t bg-background shrink-0">
                     <Button type="submit" disabled={isAddStorySubmitting}>
-                      {isAddStorySubmitting ? 'Creating...' : `Create ${watchedItemType}`}
+                      {isAddStorySubmitting ? 'Creating...' : `Create ${formatWorkItemType(watchedItemType)}`}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -2349,7 +2349,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             <li>{storiesToDeleteCascadeInfo.subTasksCount} related subtask(s)</li>
                           )}
                           {storiesToDeleteCascadeInfo.defectsCount > 0 && (
-                            <li>{storiesToDeleteCascadeInfo.defectsCount} related defect(s)</li>
+                            <li>{storiesToDeleteCascadeInfo.defectsCount} related bug(s)</li>
                           )}
                           {storiesToDeleteCascadeInfo.testCasesCount > 0 && (
                             <li>{storiesToDeleteCascadeInfo.testCasesCount} related test case(s)</li>
@@ -2640,10 +2640,10 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit Defect</DialogTitle>
+                        <DialogTitle>{isEscapedDefectWorkItem(selectedStory.itemType) ? 'Edit Defect' : 'Edit Bug'}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to the defect details here.
+                        Make changes to the {isEscapedDefectWorkItem(selectedStory.itemType) ? 'defect' : 'bug'} details here.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -2654,7 +2654,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           <FormItem>
                             <FormLabel>Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Defect title" {...field} maxLength={60} />
+                              <Input placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect title' : 'Bug title'} {...field} maxLength={60} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -2871,13 +2871,13 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                           name="relatedBugId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related / Original Defect</FormLabel>
+                              <FormLabel>Related / Original {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect' : 'Bug'}</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="bug-options-defect-edit-backlog"
-                                    placeholder="Search for a defect..."
+                                    placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Search for a defect...' : 'Search for a bug...'}
                                     className="pl-9"
                                     value={relatedBugInputText}
                                     onChange={(e) => {
@@ -3058,7 +3058,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Defect
+                        {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Delete Defect' : 'Delete Bug'}
                       </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -3549,7 +3549,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                         <div className="space-y-4 pt-4">
                             <div className="mb-2">
                                 <h4 className="text-sm font-semibold">In-Sprint Bugs</h4>
-                                <p className="text-xs text-muted-foreground">Active defects logged against in-flight parent items before &quot;Done&quot;</p>
+                                <p className="text-xs text-muted-foreground">Active in-sprint bugs logged against in-flight parent items before &quot;Done&quot;</p>
                             </div>
                                    {selectedStorySubItems.bugs.length > 0 ? (
                                        <div className="space-y-2 rounded-md border p-2">
@@ -3576,7 +3576,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
                                            <Form {...addBugForm}>
                                                <div className="space-y-3">
                                                    <FormField control={addBugForm.control} name="title" render={({field}) => (
-                                                       <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Defect title..." {...field} maxLength={60} /></FormControl><FormMessage/></FormItem>
+                                                       <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="Bug title..." {...field} maxLength={60} /></FormControl><FormMessage/></FormItem>
                                                    )}/>
                                                    <FormField control={addBugForm.control} name="description" render={({field}) => (
                                                        <FormItem><FormLabel>Description / Steps to Reproduce</FormLabel><FormControl><Textarea placeholder="Steps to reproduce..." {...field} maxLength={300} /></FormControl><FormMessage/></FormItem>

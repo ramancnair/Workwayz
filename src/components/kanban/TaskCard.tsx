@@ -19,6 +19,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Enabler': Layers,
   'Tech Debt': Wrench,
   'Spike': Zap,
+  'Escaped Defect': Bug,
   'Bug / Defect': Bug,
   'Bug': Bug,
   'Subtasks': CheckSquare,

@@ -43,7 +43,7 @@ import { cn, getSprintDisplayId, matchSearchQuery } from '@/lib/utils';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Story, WorkItemType, StoryStatus, Priority, BugSeverity } from '@/types';
-import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
+import { isPbiWorkItem, isBugWorkItem, isEscapedDefectWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
 import { AiSubtaskTestCaseButton } from '@/components/kanban/AiSubtaskTestCaseButton';
 
 const workItemTypes: WorkItemType[] = [
@@ -54,6 +54,7 @@ const workItemTypes: WorkItemType[] = [
   'Enabler',
   'Tech Debt',
   'Spike',
+  'Escaped Defect',
   'Bug / Defect',
   'Requirement/Story',
   'Bug',
@@ -71,6 +72,7 @@ const workItemIcons: Record<WorkItemType, React.ElementType> = {
   'Enabler': Layers,
   'Tech Debt': Wrench,
   'Spike': Zap,
+  'Escaped Defect': Bug,
   'Bug / Defect': Bug,
   'Bug': Bug,
   'Subtasks': CheckSquare,
@@ -701,10 +703,10 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit Defect</DialogTitle>
+                        <DialogTitle>{isEscapedDefectWorkItem(selectedStory.itemType) ? 'Edit Defect' : 'Edit Bug'}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to the defect details here.
+                        Make changes to the {isEscapedDefectWorkItem(selectedStory.itemType) ? 'defect' : 'bug'} details here.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -715,7 +717,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           <FormItem>
                             <FormLabel>Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Defect title" {...field} maxLength={60} />
+                              <Input placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect title' : 'Bug title'} {...field} maxLength={60} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -932,13 +934,13 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           name="relatedBugId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related / Original Defect</FormLabel>
+                              <FormLabel>Related / Original {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect' : 'Bug'}</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="bug-options-defect-edit-kanban"
-                                    placeholder="Search for a defect..."
+                                    placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Search for a defect...' : 'Search for a bug...'}
                                     className="pl-9"
                                     value={relatedBugInputText}
                                     onChange={(e) => {
@@ -1159,7 +1161,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                             {isPbiWorkItem(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger variant="folder" value="subTasks" className="shrink-0">Sub-Tasks</TabsTrigger>
-                                    <TabsTrigger variant="folder" value="bugs" className="shrink-0">Defects</TabsTrigger>
+                                    <TabsTrigger variant="folder" value="bugs" className="shrink-0">In-Sprint Bugs</TabsTrigger>
                                     <TabsTrigger variant="folder" value="testCases" className="shrink-0">Test Cases</TabsTrigger>
                                 </>
                             )}
@@ -1483,7 +1485,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-sm text-muted-foreground italic px-2">No defects found.</p>
+                                        <p className="text-sm text-muted-foreground italic px-2">No in-sprint bugs found.</p>
                                     )}
                                 </div>
                             </TabsContent>
@@ -1574,7 +1576,7 @@ export function StoryEditDialog({ storyId, onClose }: { storyId: string | null; 
                           <li>{deleteCascadeInfo.subTasksCount} related subtask(s)</li>
                         )}
                         {deleteCascadeInfo.defectsCount > 0 && (
-                          <li>{deleteCascadeInfo.defectsCount} related defect(s)</li>
+                          <li>{deleteCascadeInfo.defectsCount} related bug(s)</li>
                         )}
                         {deleteCascadeInfo.testCasesCount > 0 && (
                           <li>{deleteCascadeInfo.testCasesCount} related test case(s)</li>

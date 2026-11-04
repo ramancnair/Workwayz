@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/PageHeader';
 import type { Story, Epic, StoryStatus, User, WorkItemType, KanbanColumn, Environment, ImpactedSystem, Release, Sprint, Priority, BugSeverity, TestCase } from '@/types';
-import { isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
+import { isPbiWorkItem, isBugWorkItem, isEscapedDefectWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
 import { Columns, ChevronDown, Clock, BookOpen, Bug, CheckSquare, GitCommit, TrendingUp, Trash2, Ban, Edit, Flag, ArrowLeft, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import {
@@ -1036,10 +1036,10 @@ export default function KanbanPage() {
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit Defect</DialogTitle>
+                        <DialogTitle>{isEscapedDefectWorkItem(selectedStory.itemType) ? 'Edit Defect' : 'Edit Bug'}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to the defect details here.
+                        Make changes to the {isEscapedDefectWorkItem(selectedStory.itemType) ? 'defect' : 'bug'} details here.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -1050,7 +1050,7 @@ export default function KanbanPage() {
                           <FormItem>
                             <FormLabel>Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Defect title" {...field} maxLength={60} />
+                              <Input placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect title' : 'Bug title'} {...field} maxLength={60} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1267,13 +1267,13 @@ export default function KanbanPage() {
                           name="relatedBugId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related / Original Defect</FormLabel>
+                              <FormLabel>Related / Original {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect' : 'Bug'}</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="bug-options-defect-edit-kanban-page"
-                                    placeholder="Search for a defect..."
+                                    placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Search for a defect...' : 'Search for a bug...'}
                                     className="pl-9"
                                     value={relatedBugInputText}
                                     onChange={(e) => {
@@ -1484,7 +1484,7 @@ export default function KanbanPage() {
                               {!['Task'].includes(selectedStory.itemType) && (
                                 <>
                                   <TabsTrigger variant="folder" value="subTasks" className="shrink-0">Sub-Tasks</TabsTrigger>
-                                  <TabsTrigger variant="folder" value="bugs" className="shrink-0">Defects</TabsTrigger>
+                                  <TabsTrigger variant="folder" value="bugs" className="shrink-0">In-Sprint Bugs</TabsTrigger>
                                   <TabsTrigger variant="folder" value="testCases" className="shrink-0">Test Cases</TabsTrigger>
                                 </>
                               )}
@@ -1829,7 +1829,7 @@ export default function KanbanPage() {
                                       })}
                                       </div>
                                   ) : (
-                                      <p className="text-sm text-muted-foreground italic px-2">No defects linked.</p>
+                                      <p className="text-sm text-muted-foreground italic px-2">No in-sprint bugs linked.</p>
                                   )}
                               </div>
                           </TabsContent>
@@ -1970,7 +1970,7 @@ export default function KanbanPage() {
                         <li>{deletingStoryCascadeInfo.subTasksCount} related subtask(s)</li>
                       )}
                       {deletingStoryCascadeInfo.defectsCount > 0 && (
-                        <li>{deletingStoryCascadeInfo.defectsCount} related defect(s)</li>
+                        <li>{deletingStoryCascadeInfo.defectsCount} related bug(s)</li>
                       )}
                       {deletingStoryCascadeInfo.testCasesCount > 0 && (
                         <li>{deletingStoryCascadeInfo.testCasesCount} related test case(s)</li>

@@ -31,7 +31,7 @@ import {
 import { PlusCircle, Edit, Trash2, Star, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Bug, CheckSquare, GitCommit, Clock, CornerDownRight, Flag, ArrowLeft, Package, ClipboardList, Circle, CheckCircle, Search, Layers, Wrench, Zap } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
 import { useToast } from '@/hooks/use-toast';
-import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase, isPbiWorkItem, isBugWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
+import { type Sprint, type Story, type Epic, type WorkItemType, User, ImpactedSystem, Holiday, Release, Priority, StoryStatus, SprintStatus, TestCase, isPbiWorkItem, isBugWorkItem, isEscapedDefectWorkItem, isExecutionWorkItem, formatWorkItemType } from '@/types';
 import { cn, getSprintDisplayId, generateNextSprintId, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { Card, CardFooter, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -294,7 +294,7 @@ function StoryItemCard({
                         </button>
                     )}
                     {showBugs && (
-                        <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} defects`}>
+                        <button onClick={(e) => { e.stopPropagation(); setIsBugOpen(!isBugOpen); setIsSubtaskOpen(false); }} className="flex items-center gap-1 cursor-pointer" title={`${bugs.length} bugs`}>
                             <Bug className="h-3 w-3" />
                             <span>{bugs.length}</span>
                         </button>
@@ -1123,7 +1123,7 @@ export default function GroomingPage() {
                                 <SelectContent>
                                     <SelectItem value="story">Stories</SelectItem>
                                     <SelectItem value="sub-task">Sub-tasks</SelectItem>
-                                    <SelectItem value="bug">Defects</SelectItem>
+                                    <SelectItem value="bug">Bugs</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -1601,10 +1601,10 @@ export default function GroomingPage() {
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <DialogTitle>Edit Defect</DialogTitle>
+                        <DialogTitle>{isEscapedDefectWorkItem(selectedStory.itemType) ? 'Edit Defect' : 'Edit Bug'}</DialogTitle>
                       </div>
                       <DialogDescription>
-                        Make changes to the defect details here.
+                        Make changes to the {isEscapedDefectWorkItem(selectedStory.itemType) ? 'defect' : 'bug'} details here.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -1615,7 +1615,7 @@ export default function GroomingPage() {
                           <FormItem>
                             <FormLabel>Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Defect title" {...field} maxLength={60} />
+                              <Input placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect title' : 'Bug title'} {...field} maxLength={60} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1832,13 +1832,13 @@ export default function GroomingPage() {
                           name="relatedBugId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Related / Original Defect</FormLabel>
+                              <FormLabel>Related / Original {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect' : 'Bug'}</FormLabel>
                               <FormControl>
                                 <div className="relative">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                   <Input
                                     list="bug-options-defect-edit-grooming"
-                                    placeholder="Search for a defect..."
+                                    placeholder={isEscapedDefectWorkItem(selectedStory.itemType) ? 'Search for a defect...' : 'Search for a bug...'}
                                     className="pl-9"
                                     value={relatedBugInputText}
                                     onChange={(e) => {
@@ -2014,15 +2014,15 @@ export default function GroomingPage() {
                         onClick={() => {
                           if (selectedStory) {
                             deleteStory(selectedStory.id).then(success => {
-                              if (!success) toast({ variant: "destructive", title: "Error", description: "Could not delete defect." });
-                              else toast({ title: "Deleted", description: "Defect moved to trash." });
+                              if (!success) toast({ variant: "destructive", title: "Error", description: `Could not delete ${isEscapedDefectWorkItem(selectedStory.itemType) ? 'defect' : 'bug'}.` });
+                              else toast({ title: "Deleted", description: `${isEscapedDefectWorkItem(selectedStory.itemType) ? 'Defect' : 'Bug'} moved to trash.` });
                             });
                             handleSetSelectedStory(null);
                           }
                         }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Defect
+                        {isEscapedDefectWorkItem(selectedStory.itemType) ? 'Delete Defect' : 'Delete Bug'}
                       </Button>
                       <Button type="submit" disabled={isEditStorySubmitting}>
                         {isEditStorySubmitting ? 'Saving...' : 'Save Changes'}
@@ -2034,9 +2034,9 @@ export default function GroomingPage() {
                 <Form {...editStoryForm}>
                   <form onSubmit={editStoryForm.handleSubmit(onEditStorySubmit)} className="flex flex-col h-full max-h-[90vh] overflow-hidden">
                     <DialogHeader>
-                      <DialogTitle>Edit {selectedStory.itemType}</DialogTitle>
+                      <DialogTitle>Edit {formatWorkItemType(selectedStory.itemType)}</DialogTitle>
                       <DialogDescription>
-                        Make changes to your {selectedStory.itemType.toLowerCase()} here. Click save when you&apos;re done.
+                        Make changes to your {formatWorkItemType(selectedStory.itemType).toLowerCase()} here. Click save when you&apos;re done.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -2056,10 +2056,10 @@ export default function GroomingPage() {
                      <Tabs value={editStoryActiveTab} onValueChange={setEditStoryActiveTab} className="w-full">
                           <TabsList variant="folder" className="w-full flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <TabsTrigger variant="folder" value="details" className="shrink-0">Details</TabsTrigger>
-                            {['Requirement/Story', 'Feature Change', 'Task'].includes(selectedStory.itemType) && (
+                            {isPbiWorkItem(selectedStory.itemType) && (
                                 <>
                                     <TabsTrigger variant="folder" value="subTasks" className="shrink-0">Sub-Tasks</TabsTrigger>
-                                    <TabsTrigger variant="folder" value="bugs" className="shrink-0">Defects</TabsTrigger>
+                                    <TabsTrigger variant="folder" value="bugs" className="shrink-0">In-Sprint Bugs</TabsTrigger>
                                     <TabsTrigger variant="folder" value="testCases" className="shrink-0">Test Cases</TabsTrigger>
                                 </>
                             )}
@@ -2548,7 +2548,7 @@ export default function GroomingPage() {
                                       })}
                                       </div>
                                   ) : (
-                                      <p className="text-sm text-muted-foreground italic px-2">No defects linked.</p>
+                                      <p className="text-sm text-muted-foreground italic px-2">No in-sprint bugs linked.</p>
                                   )}
                               </div>
                           </TabsContent>

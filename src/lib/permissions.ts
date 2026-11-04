@@ -3,19 +3,19 @@ import { AccessLevel } from '@/types';
 export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' | 'Super Admin'>, string[]> = {
   'Senior Management': [
     'Project Home', 'Portfolio Dashboard', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Messages', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Bug Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Bugs', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity'
   ],
   'Project Manager': [
     'Project Home', 'Portfolio PromptBoard', 'FP Portfolio Dash', 'FP Dashboard', 'Estimations', 'Defects', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Settings', 'Leave Tracker', 'Messages', 'Billing', 'Billing Rate',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Bug Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Bugs', 'Project Status', 'PM Dashboard', 'Project PromptBoard', 'FP PM Dash', 'Specifications', 'Specifications (Initial Estimation)', 'Project Status (Initial Estimation)', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'PMO FB Billing', 'PMO FB Payment Milestones', 'PMO TnM Billing', 'PMO TnM Payment Milestones', 'Business Continuity', 'Board Settings', 'Sprint Settings', 'Effort Settings', 'Project Trash'
   ],
   'Lead': [
     'Project Home', 'User List', 'Holiday Calendar', 'Leave Tracker', 'Messages',
-    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
+    'Development Dashboard', 'Product Backlog', 'Grooming', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Bug Tracker', 'Test Dashboard', 'Test Backlog', 'Test Cycle', 'Test Plan', 'Test Execution', 'Defects', 'Bugs', 'Project Status', 'Specifications', 'Project Releases', 'Project Resources', 'Worklog', 'Resource Workload', 'Leave Calendar', 'Leave Summary', 'Project Gantt', 'RAID Dashboard', 'Risks', 'Assumptions', 'Issues', 'Dependencies', 'Project Holiday Calendar', 'PMO Documents', 'Business Continuity', 'Board Settings', 'Sprint Settings'
   ],
   'Team Member': [
     'Project Home', 'Leave Tracker', 'Messages',
-    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Test Dashboard', 'Test Backlog', 'Test Execution', 'Defects', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'PMO Documents'
+    'Development Dashboard', 'Kanban Board', 'Sub-Tasks', 'Defect Tracker', 'Bug Tracker', 'Test Dashboard', 'Test Backlog', 'Test Execution', 'Defects', 'Bugs', 'Project Status', 'Specifications', 'Project Resources', 'Worklog', 'RAID Dashboard', 'Project Holiday Calendar', 'PMO Documents'
   ],
   'PMO': [
     'Project Home', 'User List', 'Utilization', 'Holiday Calendar', 'Leave Tracker', 'Messages', 'Billing', 'Billing Rate',
@@ -124,8 +124,8 @@ export function hasPagePermission(
     ? ['Inactive', 'Archive', 'Inactive Projects']
     : (pageName === 'Estimation Variance' || pageName === 'Estimations')
     ? ['Estimation Variance', 'Estimations']
-    : (pageName === 'Defect Containment' || pageName === 'Defects')
-    ? ['Defect Containment', 'Defects']
+    : (pageName === 'Defect Containment' || pageName === 'Defects' || pageName === 'Bugs')
+    ? ['Defect Containment', 'Defects', 'Bugs'] : (pageName === 'Defect Tracker' || pageName === 'Bug Tracker') ? ['Defect Tracker', 'Bug Tracker']
     : [pageName];
 
   if (customPageAccess) {

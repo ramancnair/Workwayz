@@ -200,7 +200,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/testing/defect-tracker`,
-      label: "Defect Tracker",
+      label: "Bug Tracker",
       icon: Bug,
     },
     {
@@ -220,7 +220,7 @@ export function SidebarNav({ projectId }: { projectId: string }) {
     },
     {
       href: `${basePath}/testing/defects`,
-      label: "Defects",
+      label: "Bugs",
       icon: Bug,
     },
   ];

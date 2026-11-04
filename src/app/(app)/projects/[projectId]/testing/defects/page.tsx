@@ -41,7 +41,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Story, StoryStatus, Release, TestCase, BugSeverity } from '@/types';
-import { isBugWorkItem, isPbiWorkItem } from '@/types';
+import { isInSprintBugWorkItem, isPbiWorkItem } from '@/types';
 import { cn, getUserInitials, matchSearchQuery } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react';
@@ -79,7 +79,7 @@ const bugFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   parentStoryId: z.string({ required_error: 'Related story is required.' }).refine(
     val => !!val && val.trim() !== '' && val !== 'unassigned',
-    { message: 'A defect must be linked to a story. Please select a related story.' }
+    { message: 'A bug must be linked to a story. Please select a related story.' }
   ),
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
@@ -129,7 +129,7 @@ export default function DefectsPage() {
   const [editingBug, setEditingBug] = useState<Story | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const bugs = useMemo(() => stories.filter(story => isBugWorkItem(story.itemType)), [stories]);
+  const bugs = useMemo(() => stories.filter(story => isInSprintBugWorkItem(story.itemType)), [stories]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBugs, setSelectedBugs] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -256,16 +256,16 @@ export default function DefectsPage() {
     } else {
         payload.createdAt = (values.createdAt || new Date()).toISOString();
         payload.closedAt = values.status === 'Closed' ? (values.closedAt ? values.closedAt.toISOString() : new Date().toISOString()) : undefined;
-        const res = await addStory({ ...payload, itemType: 'Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'To Triage' });
+        const res = await addStory({ ...payload, itemType: 'In-Sprint Bug', title: payload.title || '', description: payload.description || '', status: payload.status || 'To Triage' }, 'BUG');
         success = !!res;
     }
     
     if (success) {
-      toast({ title: "Success", description: `Defect ${editingBug ? 'updated' : 'added'} successfully.` });
+      toast({ title: "Success", description: `Bug ${editingBug ? 'updated' : 'added'} successfully.` });
       setIsDialogOpen(false);
       setEditingBug(null);
     } else {
-      toast({ variant: "destructive", title: "Error", description: `Could not ${editingBug ? 'update' : 'add'} defect.` });
+      toast({ variant: "destructive", title: "Error", description: `Could not ${editingBug ? 'update' : 'add'} bug.` });
     }
     setIsSubmitting(false);
   };
@@ -278,10 +278,10 @@ export default function DefectsPage() {
 
     const successCount = results.filter(Boolean).length;
     if (successCount > 0) {
-        toast({ title: "Success", description: `${successCount} defect(s) moved to trash.` });
+        toast({ title: "Success", description: `${successCount} bug(s) moved to trash.` });
     }
     if (successCount < selectedBugs.length) {
-        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedBugs.length - successCount} defect(s).` });
+        toast({ variant: "destructive", title: "Error", description: `Could not delete ${selectedBugs.length - successCount} bug(s).` });
     }
     
     setSelectedBugs([]);
@@ -332,7 +332,7 @@ export default function DefectsPage() {
   return (
     <>
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader title="Defects" description="A list of all defects reported in the project.">
+      <PageHeader title="Bugs" description="A list of all in-sprint bugs reported during testing.">
         {selectedBugs.length > 0 && (
             <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -340,7 +340,7 @@ export default function DefectsPage() {
             </Button>
         )}
         <Button onClick={() => handleDialogOpen(null)}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Defect
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Bug
         </Button>
       </PageHeader>
 
@@ -348,7 +348,7 @@ export default function DefectsPage() {
         <div className="relative w-full md:w-[350px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
           <Input 
-            placeholder="Search defects (ID, title, description, assignee...)" 
+            placeholder="Search bugs (ID, title, description, assignee...)" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 h-10 bg-background/50 border-border/50 rounded-lg shadow-sm focus-visible:ring-primary/20"
@@ -390,7 +390,7 @@ export default function DefectsPage() {
             {sortedBugs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  No defects found.
+                  No bugs found.
                 </TableCell>
               </TableRow>
             ) : (
@@ -470,9 +470,9 @@ export default function DefectsPage() {
     <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) setEditingBug(null); setIsDialogOpen(open); }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden" bypassScrollWrapper={true}>
           <DialogHeader className="px-6 py-4 border-b shrink-0">
-            <DialogTitle>{editingBug ? 'Edit Defect' : 'Add New Defect'}</DialogTitle>
+            <DialogTitle>{editingBug ? 'Edit Bug' : 'Add New Bug'}</DialogTitle>
             <DialogDescription>
-              {editingBug ? 'Make changes to the defect details here.' : 'Log a new defect found during testing.'}
+              {editingBug ? 'Make changes to the bug details here.' : 'Log a new in-sprint bug found during testing.'}
             </DialogDescription>
           </DialogHeader>
             <Form {...form}>
@@ -485,7 +485,7 @@ export default function DefectsPage() {
                       <FormItem>
                         <FormLabel>Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="Defect title" {...field} maxLength={60} />
+                          <Input placeholder="Bug title" {...field} maxLength={60} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -498,7 +498,7 @@ export default function DefectsPage() {
                       <FormItem>
                         <FormLabel>Description (Steps to Reproduce)</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} maxLength={300} />
+                          <Textarea placeholder="Describe the steps to reproduce the bug..." {...field} maxLength={300} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -738,13 +738,13 @@ export default function DefectsPage() {
                         name="relatedBugId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Related / Original Defect</FormLabel>
+                            <FormLabel>Related / Original Bug</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                 <Input
                                   list="bug-options"
-                                  placeholder="Search for a defect..."
+                                  placeholder="Search for a bug..."
                                   className="pl-9"
                                   value={relatedBugInputText}
                                   onChange={(e) => {
@@ -956,7 +956,7 @@ export default function DefectsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move {selectedBugs.length} defect(s) to the trash.
+              This will move {selectedBugs.length} bug(s) to the trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

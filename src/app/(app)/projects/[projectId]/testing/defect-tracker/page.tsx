@@ -66,7 +66,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Story, StoryStatus, Priority, BugSeverity, User } from '@/types';
-import { isBugWorkItem, isPbiWorkItem } from '@/types';
+import { isInSprintBugWorkItem, isPbiWorkItem } from '@/types';
 import { cn, matchSearchQuery } from '@/lib/utils';
 
 // Swimlanes config with requested styling
@@ -114,7 +114,7 @@ const bugFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   parentStoryId: z.string({ required_error: 'Related story is required.' }).refine(
     val => !!val && val.trim() !== '' && val !== 'unassigned',
-    { message: 'A defect must be linked to a story. Please select a related story.' }
+    { message: 'A bug must be linked to a story. Please select a related story.' }
   ),
   relatedTestCaseId: z.string().optional(),
   reporterId: z.string().optional(),
@@ -275,7 +275,7 @@ export default function DefectTrackerPage() {
   const [testCaseInputText, setTestCaseInputText] = useState('');
   const [relatedBugInputText, setRelatedBugInputText] = useState('');
 
-  const bugs = useMemo(() => stories.filter(s => isBugWorkItem(s.itemType)), [stories]);
+  const bugs = useMemo(() => stories.filter(s => isInSprintBugWorkItem(s.itemType)), [stories]);
   const releases = useMemo(() => releasesAndMilestones.filter(r => r.itemType === 'Release'), [releasesAndMilestones]);
   const parentStoryOptions = useMemo(() => stories
     .filter(s => isPbiWorkItem(s.itemType))
@@ -357,9 +357,9 @@ export default function DefectTrackerPage() {
 
     if (success) {
       setSelectedBug(null);
-      toast({ title: "Success", description: "Defect updated successfully." });
+      toast({ title: "Success", description: "Bug updated successfully." });
     } else {
-      toast({ variant: "destructive", title: "Error", description: "Could not update defect." });
+      toast({ variant: "destructive", title: "Error", description: "Could not update bug." });
     }
     setIsSubmitInProgress(false);
   };
@@ -403,7 +403,7 @@ export default function DefectTrackerPage() {
   }, [testPlans, scopeType, selectedSprintId, selectedReleaseId]);
 
   const sprintBugs = useMemo(() => {
-    let baseBugs = stories.filter(story => isBugWorkItem(story.itemType));
+    let baseBugs = stories.filter(story => isInSprintBugWorkItem(story.itemType));
 
     // 1. Primary Filter (Sprint vs Release)
     if (scopeType === 'sprint') {
@@ -435,7 +435,7 @@ export default function DefectTrackerPage() {
   const sprintAssigneeIds = useMemo(() => {
     const ids = new Set<string>();
     stories.forEach(story => {
-      if (isBugWorkItem(story.itemType)) {
+      if (isInSprintBugWorkItem(story.itemType)) {
         let matchesPrimary = false;
         if (scopeType === 'sprint') {
           matchesPrimary = selectedSprintId === 'all' || 
@@ -469,7 +469,7 @@ export default function DefectTrackerPage() {
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 h-full flex flex-col min-w-0 overflow-hidden">
         <PageHeader 
-          title="Defect Tracker"
+          title="Bug Tracker"
           description="Track and update bug resolutions in color-coded swim lanes."
         >
           <div className="flex items-center gap-4 flex-wrap">
@@ -606,9 +606,9 @@ export default function DefectTrackerPage() {
       <Dialog open={!!selectedBug} onOpenChange={(isOpen) => !isOpen && setSelectedBug(null)}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0" bypassScrollWrapper={true}>
           <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Edit Defect</DialogTitle>
+            <DialogTitle>Edit Bug</DialogTitle>
             <DialogDescription>
-              Make changes to the defect details here.
+              Make changes to the bug details here.
             </DialogDescription>
           </DialogHeader>
 
@@ -622,7 +622,7 @@ export default function DefectTrackerPage() {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="Defect title" {...field} maxLength={60} />
+                        <Input placeholder="Bug title" {...field} maxLength={60} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -635,7 +635,7 @@ export default function DefectTrackerPage() {
                     <FormItem>
                       <FormLabel>Description (Steps to Reproduce)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe the steps to reproduce the defect..." {...field} maxLength={300} />
+                        <Textarea placeholder="Describe the steps to reproduce the bug..." {...field} maxLength={300} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -849,13 +849,13 @@ export default function DefectTrackerPage() {
                     name="relatedBugId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Related / Original Defect</FormLabel>
+                        <FormLabel>Related / Original Bug</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
                               list="bug-options-tracker"
-                              placeholder="Search for a defect..."
+                              placeholder="Search for a bug..."
                               className="pl-9"
                               value={relatedBugInputText}
                               onChange={(e) => {
@@ -1057,7 +1057,7 @@ export default function DefectTrackerPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the defect and remove it from the system.
+              This action cannot be undone. This will permanently delete the bug and remove it from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1069,9 +1069,9 @@ export default function DefectTrackerPage() {
                     if (success) {
                       setDeletingBug(null);
                       setSelectedBug(null);
-                      toast({ title: "Defect Deleted", description: "The defect was deleted successfully." });
+                      toast({ title: "Bug Deleted", description: "The bug was deleted successfully." });
                     } else {
-                      toast({ variant: "destructive", title: "Error", description: "Failed to delete defect." });
+                      toast({ variant: "destructive", title: "Error", description: "Failed to delete bug." });
                     }
                   });
                 }
