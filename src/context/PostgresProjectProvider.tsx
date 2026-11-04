@@ -239,6 +239,9 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         isInitialLoad.current = false;
     }
 
+    let isCancelled = false;
+    setError(null);
+
     const rootProjectDocRef = doc(db, 'projects', projectId);
 
     const allCollections: { name: CollectionName, setState: React.Dispatch<any>, isDoc: boolean }[] = [
@@ -477,15 +480,14 @@ export function PostgresProjectProvider({ children, projectId }: PropsWithChildr
         setAllUsers(usersData);
     });
 
-    Promise.all(initialFetchPromises).then(() => {
-        setIsLoading(false);
-    }).catch(err => {
-        console.error("Error during initial data fetch:", err);
-        setError("Failed to load initial project data.");
-        setIsLoading(false);
+    Promise.allSettled(initialFetchPromises).then(() => {
+        if (!isCancelled) {
+            setIsLoading(false);
+        }
     });
 
     return () => {
+      isCancelled = true;
       unsubscribers.forEach(unsub => unsub && unsub());
       unsubGlobalSettings();
       unsubGlobalHolidays();

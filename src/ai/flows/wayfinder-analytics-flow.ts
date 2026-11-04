@@ -364,7 +364,9 @@ async function executePortfolioAiAnalytics(
       portfolioName: portfoliosMap.get(p.portfolioId) || p.portfolioName || 'General',
       projectManager: pmName,
       pricingModel: p.pricingModel || 'Fixed Bid',
+      status: p.status || 'Active',
       overallStatus: p.overallStatus || 'Green',
+      projectValue: p.projectValue || p.budget || p.totalCost || 0,
       budget: p.budget || p.totalCost || 0,
       dailyBillingRate: p.dailyBillingRate || 0,
       startDate: p.startDate || null,
@@ -646,6 +648,10 @@ async function fetchProjectDataForPm(projectId: string): Promise<FpPmProjectData
     testCasesSnap,
     worklogsSnap,
     paymentsSnap,
+    releasesSnap,
+    systemsSnap,
+    globalEmployeesSnap,
+    portfoliosSnap,
   ] = await Promise.all([
     getDocs(collection(db, 'projects', projectId, 'stories')).catch(() => ({ docs: [] })),
     getDocs(collection(db, 'projects', projectId, 'sprints')).catch(() => ({ docs: [] })),
@@ -658,14 +664,23 @@ async function fetchProjectDataForPm(projectId: string): Promise<FpPmProjectData
     getDocs(collection(db, 'projects', projectId, 'testCases')).catch(() => ({ docs: [] })),
     getDocs(collection(db, 'projects', projectId, 'worklogs')).catch(() => ({ docs: [] })),
     getDocs(collection(db, 'projects', projectId, 'paymentMilestones')).catch(() => ({ docs: [] })),
+    getDocs(collection(db, 'projects', projectId, 'releases')).catch(() => ({ docs: [] })),
+    getDocs(collection(db, 'projects', projectId, 'impactedSystems')).catch(() => ({ docs: [] })),
+    getDocs(collection(db, 'employees')).catch(() => ({ docs: [] })),
+    getDocs(collection(db, 'portfolios')).catch(() => ({ docs: [] })),
   ]);
+
+  const portfolioDoc = portfoliosSnap.docs.find((d: any) => d.id === (project as any).portfolioId);
+  const portfolioName = portfolioDoc ? portfolioDoc.data().name : undefined;
 
   return {
     project,
+    portfolioName,
     stories: storiesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     sprints: sprintsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     epics: epicsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     employees: employeesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
+    allUsers: globalEmployeesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     risks: risksSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     issues: issuesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     assumptions: assumptionsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
@@ -673,6 +688,8 @@ async function fetchProjectDataForPm(projectId: string): Promise<FpPmProjectData
     testCases: testCasesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     worklogs: worklogsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
     paymentMilestones: paymentsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
+    releases: releasesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
+    impactedSystems: systemsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })),
   };
 }
 

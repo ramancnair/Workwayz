@@ -235,7 +235,9 @@ export async function executeFpQuery(
         pricingModel: p.pricingModel || 'Fixed Bid',
         projectValue: Number(p.projectValue) || 0,
         statusComments: p.statusComments || 'No comments recorded',
-        link: `/projects/${p.id}/project-details/project-status`,
+        link: (p.status === 'Initial Estimation' || p.status === 'Not Started')
+          ? `/projects/${p.id}/initial-estimation/project-status`
+          : `/projects/${p.id}/project-details/project-status`,
       };
     });
 
@@ -336,7 +338,9 @@ export async function executeFpQuery(
         pricingModel: p.pricingModel || 'Fixed Bid',
         projectManager: getPmName(p),
         statusComments: p.statusComments || 'No comments recorded',
-        link: `/projects/${p.id}/project-details/project-status`,
+        link: (p.status === 'Initial Estimation' || p.status === 'Not Started')
+          ? `/projects/${p.id}/initial-estimation/project-status`
+          : `/projects/${p.id}/project-details/project-status`,
       };
     });
 
@@ -434,7 +438,9 @@ export async function executeFpQuery(
         projectValue: val,
         health: p.overallStatus || 'Green',
         projectManager: getPmName(p),
-        link: `/projects/${p.id}/project-details/project-status`,
+        link: (p.status === 'Initial Estimation' || p.status === 'Not Started')
+          ? `/projects/${p.id}/initial-estimation/project-status`
+          : `/projects/${p.id}/project-details/project-status`,
       };
     });
 
@@ -668,7 +674,9 @@ export async function executeFpQuery(
         monthlyBilled: monthly,
         health: p.overallStatus || 'Green',
         projectManager: getPmName(p),
-        link: `/projects/${p.id}/project-details/project-status`,
+        link: (p.status === 'Initial Estimation' || p.status === 'Not Started')
+          ? `/projects/${p.id}/initial-estimation/project-status`
+          : `/projects/${p.id}/project-details/project-status`,
       };
     });
 
@@ -819,7 +827,7 @@ export async function executeFpQuery(
   // --- SCENARIO 7: General Search / Active Projects Overview (Default Fallback) ---
   const keywordMatches = allProjects.filter((p: any) => {
     const pm = getPmName(p);
-    const text = `${p.id} ${p.name} ${p.summary || ''} ${p.description || ''} ${pm}`.toLowerCase();
+    const text = `${p.id} ${p.name} ${p.summary || ''} ${p.description || ''} ${pm} ${p.status || 'Active'}`.toLowerCase();
     return lowerQuery.split(/\s+/).some((token) => token.length > 2 && text.includes(token));
   });
 
@@ -835,7 +843,9 @@ export async function executeFpQuery(
     projectValue: Number(p.projectValue) || 0,
     status: p.status || 'Active',
     statusComments: p.statusComments || 'No comments recorded',
-    link: `/projects/${p.id}/project-details/project-status`,
+    link: (p.status === 'Initial Estimation' || p.status === 'Not Started')
+      ? `/projects/${p.id}/initial-estimation/project-status`
+      : `/projects/${p.id}/project-details/project-status`,
   }));
 
   const chartData = displayProjects.map((p: any) => ({

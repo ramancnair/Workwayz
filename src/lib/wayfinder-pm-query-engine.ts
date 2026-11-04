@@ -492,7 +492,7 @@ export function executeFpPmQuery(
         priority: b.priority || 'Medium',
         assignee: b.assigneeName || b.assignedTo || 'Unassigned',
         createdAt: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A',
-        link: `/projects/${projectId}/development/defect-tracker`,
+        link: `/projects/${projectId}/testing/defect-tracker`,
       };
     });
 
@@ -773,7 +773,7 @@ export function executeFpPmQuery(
 
     worklogs.forEach((wl: any) => {
       const empId = wl.employeeId || wl.userId;
-      const hrs = Number(wl.hours) || Number(wl.duration) || 0;
+      const hrs = Number(wl.totalHours) || Number(wl.hours) || Number(wl.duration) || 0;
       if (empId && memberMap.has(empId)) {
         memberMap.get(empId)!.loggedHours += hrs;
       }

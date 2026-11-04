@@ -49,8 +49,9 @@ test.describe('Pillar 3: Project Details, Status & Estimations', () => {
     const searchFilter = page.getByPlaceholder(/Filter initial estimates/i);
     await expect(searchFilter).toBeVisible();
 
-    // Check if initial estimate projects exist or empty state is rendered
-    const hasProjects = await page.locator('table tbody tr').first().isVisible({ timeout: 4000 }).catch(() => false);
+    // Wait for loading state to complete before checking if projects exist
+    await expect(page.locator('body')).not.toContainText('Loading initial estimates...', { timeout: 15000 });
+    const hasProjects = await page.locator('table tbody tr').first().isVisible({ timeout: 5000 }).catch(() => false);
 
     if (hasProjects) {
       const firstEstimateLink = page.locator('a[href*="/initial-estimation/specifications"]').first();

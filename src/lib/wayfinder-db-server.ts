@@ -339,7 +339,9 @@ export async function wayfinderCreateProject(params: {
     name: params.name,
     portfolioId,
     status: params.status || 'Active',
-    url: `/projects/${projectId}/project-details/project-status`,
+    url: (params.status || 'Active') === 'Initial Estimation'
+      ? `/projects/${projectId}/initial-estimation/project-status`
+      : `/projects/${projectId}/project-details/project-status`,
   };
 }
 
@@ -1820,7 +1822,7 @@ export async function wayfinderQueryResourceUtilization(params: {
       );
       let loggedHours = 0;
       logsSnap.docs.forEach((l: any) => {
-        loggedHours += l.data().hours || 0;
+        loggedHours += Number(l.data().totalHours ?? l.data().hours ?? 0);
       });
       totalLoggedHours += loggedHours;
 
@@ -2185,6 +2187,7 @@ export async function wayfinderGetProjectHomeMetrics() {
   return {
     totalProjectsCount: allProjects.length,
     activeProjectsCount: activeProjects.length,
+    initialEstimationProjectsCount: activeProjects.filter((p: any) => p.status === 'Initial Estimation').length,
     archivedProjectsCount: archivedProjects.length,
     deletedProjectsCount: deletedProjects.length,
     totalPortfoliosCount: totalPortfolios,
@@ -3386,7 +3389,7 @@ export async function wayfinderQueryProjectPmDashboard(params: { projectId: stri
     totalPlannedHours += s.estimatedHours || s.originalEstimateHours || 0;
   });
   worklogs.forEach((w: any) => {
-    totalLoggedHours += w.hours || w.timeSpentHours || 0;
+    totalLoggedHours += Number(w.totalHours ?? w.hours ?? w.timeSpentHours ?? 0);
   });
 
   const taskDistribution: Record<string, number> = { 'To Do': 0, 'In Progress': 0, 'In QA': 0, 'Done': 0 };
@@ -3468,7 +3471,7 @@ export async function wayfinderQueryProjectResourceFinancials(params: { projectI
       roleFinancials[role] = { role, totalHours: 0, billedRevenue: 0, internalCost: 0, margin: 0 };
     }
     const empLogs = worklogs.filter((w: any) => w.employeeId === r.id || w.empId === r.empId);
-    const loggedHours = empLogs.reduce((sum: number, w: any) => sum + (w.hours || 0), 0);
+    const loggedHours = empLogs.reduce((sum: number, w: any) => sum + Number(w.totalHours ?? w.hours ?? 0), 0);
     const billedRate = r.billedRate || 400;
     const costRate = r.costRate || 250;
     const rev = (loggedHours / 8) * billedRate;
@@ -3798,7 +3801,7 @@ export async function wayfinderQueryProjectWorklogs(params: {
     worklogs = worklogs.filter((w: any) => w.date <= params.endDate!);
   }
 
-  const totalHours = worklogs.reduce((sum: number, w: any) => sum + (w.hours || 0), 0);
+  const totalHours = worklogs.reduce((sum: number, w: any) => sum + Number(w.totalHours ?? w.hours ?? 0), 0);
 
   return {
     projectId: params.projectId,
@@ -4105,7 +4108,7 @@ export async function wayfinderReorderBacklogStories(params: { projectId: string
     success: true,
     projectId: params.projectId,
     reorderedCount: params.orderedStoryIds.length,
-    url: `/projects/${params.projectId}/development/product-backlog`,
+    url: `/projects/${params.projectId}/development/backlog`,
   };
 }
 
@@ -4119,7 +4122,7 @@ export async function wayfinderDeleteEpic(params: { projectId: string; epicId: s
     success: true,
     projectId: params.projectId,
     epicId: params.epicId,
-    url: `/projects/${params.projectId}/development/product-backlog`,
+    url: `/projects/${params.projectId}/development/backlog`,
   };
 }
 
@@ -4166,7 +4169,7 @@ export async function wayfinderDeleteWorkItem(params: { projectId: string; story
     projectId: params.projectId,
     id: match.id,
     storyId: match.data().storyId,
-    url: `/projects/${params.projectId}/development/product-backlog`,
+    url: `/projects/${params.projectId}/development/backlog`,
   };
 }
 
@@ -4308,7 +4311,7 @@ export async function wayfinderDeleteSubTask(params: { projectId: string; subTas
     success: true,
     projectId: params.projectId,
     subTaskId: params.subTaskId,
-    url: `/projects/${params.projectId}/development/sub-tasks`,
+    url: `/projects/${params.projectId}/development/development-tasks`,
   };
 }
 
@@ -4362,7 +4365,7 @@ export async function wayfinderBulkCreateSubTasks(params: {
     parentStoryId: params.parentStoryId,
     createdCount: created.length,
     subTasks: created,
-    url: `/projects/${params.projectId}/development/sub-tasks`,
+    url: `/projects/${params.projectId}/development/development-tasks`,
   };
 }
 
@@ -4415,7 +4418,7 @@ export async function wayfinderLinkDefectToStory(params: {
     projectId: params.projectId,
     defectId: params.defectId,
     linkedStoryId: params.storyId,
-    url: `/projects/${params.projectId}/development/defect-tracker`,
+    url: `/projects/${params.projectId}/testing/defect-tracker`,
   };
 }
 
@@ -4441,7 +4444,7 @@ export async function wayfinderCloseDefect(params: {
     projectId: params.projectId,
     defectId: params.defectId,
     status: 'Done',
-    url: `/projects/${params.projectId}/development/defect-tracker`,
+    url: `/projects/${params.projectId}/testing/defect-tracker`,
   };
 }
 
@@ -4467,12 +4470,23 @@ export async function wayfinderQueryTestDashboardSummary(params: { projectId: st
   const executed = testCases.length - (statusCount['Not Run'] || 0);
   const passRate = executed > 0 ? Math.round(((statusCount['Passed'] || 0) / executed) * 100) : 0;
 
+  const storiesSnap = await getDocs(collection(db, 'projects', params.projectId, 'stories'));
+  const reqStories = storiesSnap.docs
+    .map((d: any) => ({ id: d.id, ...d.data() }))
+    .filter((s: any) => !s.isDeleted && isPbiWorkItem(s.itemType) && !isBugWorkItem(s.itemType));
+  const coveredStoryIds = new Set(testCases.map((tc: any) => tc.storyId || tc.linkedStoryId).filter(Boolean));
+  const coveredCount = reqStories.filter((s: any) => coveredStoryIds.has(s.id) || coveredStoryIds.has(s.storyId)).length;
+
   return {
     projectId: params.projectId,
     totalTestCases: testCases.length,
     totalTestCycles: testPlans.length,
     statusBreakdown: statusCount,
     executionPassRate: passRate,
+    storyCoverage: {
+      Covered: coveredCount,
+      'Not Covered': Math.max(0, reqStories.length - coveredCount),
+    },
   };
 }
 
@@ -4822,7 +4836,7 @@ export async function wayfinderDeleteRisk(params: { projectId: string; riskId: s
   if (match) {
     await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, riskId: params.riskId, url: `/projects/${params.projectId}/governance/risks` };
+  return { success: true, projectId: params.projectId, riskId: params.riskId, url: `/projects/${params.projectId}/risks` };
 }
 
 export async function wayfinderCloseRisk(params: { projectId: string; riskId: string; closureNotes?: string }) {
@@ -4832,7 +4846,7 @@ export async function wayfinderCloseRisk(params: { projectId: string; riskId: st
   if (match) {
     await updateDoc(match.ref, { status: 'Closed', closureNotes: params.closureNotes || 'Risk mitigated', closedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, riskId: params.riskId, status: 'Closed', url: `/projects/${params.projectId}/governance/risks` };
+  return { success: true, projectId: params.projectId, riskId: params.riskId, status: 'Closed', url: `/projects/${params.projectId}/risks` };
 }
 
 export async function wayfinderQueryProjectAssumptions(params: { projectId: string }) {
@@ -4849,7 +4863,7 @@ export async function wayfinderDeleteAssumption(params: { projectId: string; ass
   if (match) {
     await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, assumptionId: params.assumptionId, url: `/projects/${params.projectId}/governance/assumptions` };
+  return { success: true, projectId: params.projectId, assumptionId: params.assumptionId, url: `/projects/${params.projectId}/assumptions` };
 }
 
 export async function wayfinderValidateAssumption(params: {
@@ -4864,7 +4878,7 @@ export async function wayfinderValidateAssumption(params: {
   if (match) {
     await updateDoc(match.ref, { assumptionStatus: params.status, validationNotes: params.validationNotes, validatedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, assumptionId: params.assumptionId, status: params.status, url: `/projects/${params.projectId}/governance/assumptions` };
+  return { success: true, projectId: params.projectId, assumptionId: params.assumptionId, status: params.status, url: `/projects/${params.projectId}/assumptions` };
 }
 
 export async function wayfinderQueryProjectIssues(params: { projectId: string; priority?: string }) {
@@ -4884,7 +4898,7 @@ export async function wayfinderDeleteIssue(params: { projectId: string; issueId:
   if (match) {
     await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, issueId: params.issueId, url: `/projects/${params.projectId}/governance/issues` };
+  return { success: true, projectId: params.projectId, issueId: params.issueId, url: `/projects/${params.projectId}/issues` };
 }
 
 export async function wayfinderResolveIssue(params: {
@@ -4898,7 +4912,7 @@ export async function wayfinderResolveIssue(params: {
   if (match) {
     await updateDoc(match.ref, { issueStatus: 'Resolved', resolutionDetails: params.resolutionDetails || 'Resolved', resolvedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, issueId: params.issueId, status: 'Resolved', url: `/projects/${params.projectId}/governance/issues` };
+  return { success: true, projectId: params.projectId, issueId: params.issueId, status: 'Resolved', url: `/projects/${params.projectId}/issues` };
 }
 
 export async function wayfinderQueryProjectDependencies(params: { projectId: string }) {
@@ -4915,7 +4929,7 @@ export async function wayfinderDeleteDependency(params: { projectId: string; dep
   if (match) {
     await updateDoc(match.ref, { isDeleted: true, deletedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, dependencyId: params.dependencyId, url: `/projects/${params.projectId}/governance/dependencies` };
+  return { success: true, projectId: params.projectId, dependencyId: params.dependencyId, url: `/projects/${params.projectId}/dependencies` };
 }
 
 export async function wayfinderUpdateDependencyStatus(params: {
@@ -4929,7 +4943,7 @@ export async function wayfinderUpdateDependencyStatus(params: {
   if (match) {
     await updateDoc(match.ref, { dependencyStatus: params.status, updatedAt: new Date().toISOString() });
   }
-  return { success: true, projectId: params.projectId, dependencyId: params.dependencyId, status: params.status, url: `/projects/${params.projectId}/governance/dependencies` };
+  return { success: true, projectId: params.projectId, dependencyId: params.dependencyId, status: params.status, url: `/projects/${params.projectId}/dependencies` };
 }
 
 // --- MODULE 8: PROJECT HOLIDAYS & LEAVE CALENDAR ---
@@ -4947,7 +4961,7 @@ export async function wayfinderOverrideProjectHolidayCalendar(params: {
     success: true,
     projectId: params.projectId,
     isHolidayOverrideEnabled: params.isHolidayOverrideEnabled,
-    url: `/projects/${params.projectId}/holidays/holiday-calendar`,
+    url: `/projects/${params.projectId}/resources/leave-calendar`,
   };
 }
 
@@ -5024,7 +5038,7 @@ export async function wayfinderUploadPmoDocument(params: {
     projectId: params.projectId,
     name: params.name,
     category: params.category,
-    url: `/projects/${params.projectId}/pmo/pmo-documents`,
+    url: `/projects/${params.projectId}/pmo/documents`,
   };
 }
 
@@ -5035,7 +5049,7 @@ export async function wayfinderDeletePmoDocument(params: { projectId: string; do
     success: true,
     projectId: params.projectId,
     documentId: params.documentId,
-    url: `/projects/${params.projectId}/pmo/pmo-documents`,
+    url: `/projects/${params.projectId}/pmo/documents`,
   };
 }
 
@@ -5101,7 +5115,7 @@ export async function wayfinderUpdateFbContractValue(params: { projectId: string
     success: true,
     projectId: params.projectId,
     contractValue: params.contractValue,
-    url: `/projects/${params.projectId}/pmo/pmo-fb-billing`,
+    url: `/projects/${params.projectId}/pmo/fb-billing`,
   };
 }
 
@@ -5123,7 +5137,7 @@ export async function wayfinderLogFbInvoice(params: {
     projectId: params.projectId,
     milestoneId: params.milestoneId,
     invoiceNumber: params.invoiceNumber,
-    url: `/projects/${params.projectId}/pmo/pmo-fb-billing`,
+    url: `/projects/${params.projectId}/pmo/fb-billing`,
   };
 }
 
@@ -5147,7 +5161,7 @@ export async function wayfinderUpdatePaymentMilestone(params: {
     projectId: params.projectId,
     milestoneId: params.milestoneId,
     ...p,
-    url: `/projects/${params.projectId}/pmo/pmo-fb-payment-milestones`,
+    url: `/projects/${params.projectId}/pmo/fb-payment-milestones`,
   };
 }
 
@@ -5158,7 +5172,7 @@ export async function wayfinderDeletePaymentMilestone(params: { projectId: strin
     success: true,
     projectId: params.projectId,
     milestoneId: params.milestoneId,
-    url: `/projects/${params.projectId}/pmo/pmo-fb-payment-milestones`,
+    url: `/projects/${params.projectId}/pmo/fb-payment-milestones`,
   };
 }
 
@@ -5190,7 +5204,7 @@ export async function wayfinderMarkMilestoneInvoiceRaised(params: {
     milestoneId: params.milestoneId,
     invoiceNumber: params.invoiceNumber,
     status: 'Invoice raised',
-    url: `/projects/${params.projectId}/pmo/pmo-fb-payment-milestones`,
+    url: `/projects/${params.projectId}/pmo/fb-payment-milestones`,
   };
 }
 
@@ -5212,7 +5226,7 @@ export async function wayfinderQueryTnmBillingSummary(params: { projectId: strin
   worklogs.forEach((w: any) => {
     const res = resources.find((r: any) => r.id === w.employeeId || r.empId === w.empId);
     const rate = res ? res.billedRate || 400 : 400;
-    const hours = w.hours || 0;
+    const hours = Number(w.totalHours ?? w.hours ?? 0);
     totalHours += hours;
     totalBilledRevenue += (hours / 8) * rate;
   });
@@ -5235,7 +5249,7 @@ export async function wayfinderGenerateMonthlyTnmInvoice(params: { projectId: st
     invoiceNumber,
     invoiceAmount: summary.totalBilledRevenue,
     totalHours: summary.totalHours,
-    url: `/projects/${params.projectId}/pmo/pmo-tnm-billing`,
+    url: `/projects/${params.projectId}/pmo/tnm-billing`,
   };
 }
 
@@ -5329,7 +5343,7 @@ export async function wayfinderAddKanbanColumn(params: {
     success: true,
     projectId: params.projectId,
     columnName: params.columnName,
-    url: `/projects/${params.projectId}/project-settings/board-settings`,
+    url: `/projects/${params.projectId}/project-settings/board`,
   };
 }
 
@@ -5340,7 +5354,7 @@ export async function wayfinderDeleteKanbanColumn(params: { projectId: string; c
     success: true,
     projectId: params.projectId,
     columnId: params.columnId,
-    url: `/projects/${params.projectId}/project-settings/board-settings`,
+    url: `/projects/${params.projectId}/project-settings/board`,
   };
 }
 
@@ -5361,7 +5375,7 @@ export async function wayfinderUpdateKanbanColumnsOrder(params: {
     success: true,
     projectId: params.projectId,
     columnOrder: params.columnOrder,
-    url: `/projects/${params.projectId}/project-settings/board-settings`,
+    url: `/projects/${params.projectId}/project-settings/board`,
   };
 }
 
@@ -5389,7 +5403,7 @@ export async function wayfinderUpdateSprintDurationSettings(params: {
     success: true,
     projectId: params.projectId,
     durationWeeks: params.durationWeeks,
-    url: `/projects/${params.projectId}/project-settings/sprint-settings`,
+    url: `/projects/${params.projectId}/project-settings/sprint`,
   };
 }
 
@@ -5406,7 +5420,7 @@ export async function wayfinderSetSprintStartDay(params: {
     success: true,
     projectId: params.projectId,
     startDay: params.startDay,
-    url: `/projects/${params.projectId}/project-settings/sprint-settings`,
+    url: `/projects/${params.projectId}/project-settings/sprint`,
   };
 }
 
@@ -5438,7 +5452,7 @@ export async function wayfinderUpdateEffortConversionSettings(params: {
     success: true,
     projectId: params.projectId,
     ...p,
-    url: `/projects/${params.projectId}/project-settings/effort-settings`,
+    url: `/projects/${params.projectId}/project-settings/effort`,
   };
 }
 

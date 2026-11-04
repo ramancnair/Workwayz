@@ -1300,7 +1300,7 @@ export const logWorkTool = ai.defineTool(
       storyId: input.storyId,
       hours: input.hours,
       projectId: input.projectId,
-      url: `/projects/${input.projectId}/resources/timesheet`,
+      url: input.projectId === 'other' ? '/worklog' : `/projects/${input.projectId}/resources/worklog`,
       needsClientExecution: true,
       params: input,
     };
@@ -1406,7 +1406,7 @@ export const addFixedCostTool = ai.defineTool(
       description: input.description,
       amount: input.amount,
       projectId: input.projectId,
-      url: `/projects/${input.projectId}/pmo/fixed-cost-calculator`,
+      url: `/projects/${input.projectId}/pmo/fb-billing`,
       needsClientExecution: true,
       params: input,
     };

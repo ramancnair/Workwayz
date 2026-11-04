@@ -591,7 +591,7 @@ export default function FpPmDashboardPage() {
         ) : (
           <>
             {/* Hero AI Search Bar */}
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/20 shadow-md">
+        <Card className="bg-card border-primary/25 shadow-md">
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
@@ -603,7 +603,7 @@ export default function FpPmDashboardPage() {
                     if (e.key === 'Enter') handleRunQuery(searchQuery);
                   }}
                   placeholder="Ask Project PromptBoard (e.g. 'Show sprint velocity', 'List open critical bugs', 'Team workload and capacity breakdown')..."
-                  className="pl-9 bg-background/80 border-border/80 focus-visible:ring-primary h-10 text-sm"
+                  className="pl-9 bg-background border-border focus-visible:ring-primary h-10 text-sm shadow-xs"
                 />
                 {searchQuery && (
                   <button
@@ -655,7 +655,7 @@ export default function FpPmDashboardPage() {
                 <button
                   key={prompt.query}
                   onClick={() => handleRunQuery(prompt.query)}
-                  className="text-xs px-2.5 py-1 rounded-full bg-accent/60 hover:bg-primary/15 hover:text-primary hover:border-primary/40 border border-border/60 text-foreground transition-all cursor-pointer truncate max-w-[280px]"
+                  className="text-xs px-2.5 py-1 rounded-full bg-secondary hover:bg-primary/15 hover:text-primary hover:border-primary/40 border border-border text-foreground font-medium transition-all cursor-pointer truncate max-w-[280px] shadow-xs"
                   title={prompt.description}
                 >
                   {prompt.label}
