@@ -65,8 +65,8 @@ Embedded directly inside project forms and tables to eliminate repetitive manual
 - **Instant Visuals & Data Tables** — Automatically renders executive KPI summary cards, interactive Recharts visualizations (bar, stacked health, donut share), and filterable, CSV-exportable data tables derived strictly from live database records.
 - **Scheduled AI Cron Jobs** — Convert any PromptBoard query into a recurring scheduled job (daily, weekly, or custom cron) that automatically executes and delivers rich interactive reports to stakeholders' in-app message inboxes.
 
-#### 3. WayFinder — Full-Fledged Interactive AI Agent & Copilot
-- **Conversational Workspace Agent** — Accessible anywhere via the floating WayFinder Copilot drawer, equipped with **16 specialized tool-calling capabilities** across every module in Workwayz.
+#### 3. WayFinder — Full-Fledged Interactive AI Agent
+- **Conversational Workspace Agent** — Accessible anywhere via the floating WayFinder Agent drawer, equipped with **16 specialized tool-calling capabilities** across every module in Workwayz.
 - **Read & Write Action Cards** — WayFinder doesn't just answer questions; it can create and update projects, draft backlog stories, log defects, register RAID items, allocate resources, manage leave/holidays, and update billing records via interactive confirmation cards.
 - **Interactive Dependency Visualization** — Renders live node-and-edge dependency graphs inside the workspace to trace blockers across stories, tasks, and RAID items.
 
