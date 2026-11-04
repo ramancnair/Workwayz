@@ -2,7 +2,7 @@
   "name": "workwayz",
   "version": "8.0.2",
   "private": false,
-  "description": "Workwayz - Enterprise-Grade AI-Powered Project & Portfolio Management Platform",
+  "description": "Workwayz - All-in-One AI-Powered Project & Portfolio Management Platform for Small & Medium Businesses",
   "author": "Workwayz <workwayzce@gmail.com>",
   "license": "Apache-2.0",
   "homepage": "https://github.com/ramancnair/Workwayz#readme",
@@ -14,7 +14,7 @@
     "project-management",
     "portfolio-management",
     "ppm",
-    "safe-agile",
+    "smb",
     "hybrid-delivery",
     "ai-estimation",
     "genkit"
