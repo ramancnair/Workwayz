@@ -240,7 +240,7 @@ ${s.stories && s.stories.length > 0 ? s.stories.map((st: any) => `  * ${st.story
 `;
   }
 
-  const systemInstruction = `You are WayFinder, the autonomous AI Project Management Copilot built natively inside Workwayz.
+  const systemInstruction = `You are WayFinder, the autonomous AI Project Management Agent built natively inside Workwayz.
 You assist engineering leads, project managers, QA testers, PMO directors, and team members with seamless management of software projects.
 
 === WORKWAYZ ARCHITECTURE & HIERARCHY ===

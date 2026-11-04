@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { setupAuthenticatedWorkspace } from './helpers/testSetup';
 
-test.describe('Pillar 9: WayFinder AI Agent & Interactive Copilot UI', () => {
+test.describe('Pillar 9: WayFinder AI Agent & Interactive Assistant UI', () => {
   test('TC-AGENT-001: WayFinder chat drawer opens, submits prompt, renders action cards, and executes client actions', async ({
     page,
   }) => {
@@ -53,9 +53,9 @@ test.describe('Pillar 9: WayFinder AI Agent & Interactive Copilot UI', () => {
     await expect(page.locator('body')).toContainText(/My Projects/i);
 
     // 3. Locate and click floating WayFinder launch trigger
-    const copilotTrigger = page.locator('button[aria-label="Open WayFinder AI Copilot"], button[aria-label="Open FlowPilot AI Copilot"]').first();
-    await expect(copilotTrigger).toBeVisible({ timeout: 15000 });
-    await copilotTrigger.click();
+    const agentTrigger = page.locator('button[aria-label="Open WayFinder AI Agent"]').first();
+    await expect(agentTrigger).toBeVisible({ timeout: 15000 });
+    await agentTrigger.click();
 
     // 4. Verify chat container opens
     const chatContainer = page.locator('div:has-text("WayFinder"), div:has-text("FlowPilot")').filter({
@@ -80,7 +80,7 @@ test.describe('Pillar 9: WayFinder AI Agent & Interactive Copilot UI', () => {
     const minimizeBtn = page.locator('button[title="Minimize Chat"]');
     if (await minimizeBtn.isVisible()) {
       await minimizeBtn.click();
-      await expect(copilotTrigger).toBeVisible({ timeout: 5000 });
+      await expect(agentTrigger).toBeVisible({ timeout: 5000 });
     }
   });
 });

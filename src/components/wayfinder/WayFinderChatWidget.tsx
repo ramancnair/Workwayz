@@ -672,7 +672,7 @@ export function WayFinderChatWidget() {
                 <button
                   onClick={() => setIsOpen(true)}
                   className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-[#1d4ed8] via-[#0284c7] to-[#059669] text-white shadow-xl shadow-emerald-950/40 hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all duration-300 ring-4 ring-emerald-500/25 border border-emerald-400/30 cursor-pointer"
-                  aria-label="Open WayFinder AI Copilot"
+                  aria-label="Open WayFinder AI Agent"
                 >
                   <Bot className="w-7 h-7 transition-transform group-hover:rotate-6 text-white" />
                   <span className="absolute -top-1 -right-1 flex h-4 w-4">
@@ -1133,7 +1133,7 @@ export function WayFinderChatWidget() {
                     Hello{currentUser?.firstName ? `, ${currentUser.firstName}` : ''}!
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-[320px]">
-                    I am <span className="font-semibold text-emerald-600 dark:text-emerald-400">WayFinder</span>, your autonomous project copilot. Tell me what you need and I will implement it in Workwayz.
+                    I am <span className="font-semibold text-emerald-600 dark:text-emerald-400">WayFinder</span>, your autonomous project AI agent. Tell me what you need and I will implement it in Workwayz.
                   </p>
                 </div>
 
