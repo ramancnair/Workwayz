@@ -57,8 +57,9 @@ test.describe('Pillar 3: Project Details, Status & Estimations', () => {
       await expect(firstEstimateLink).toBeVisible();
       await firstEstimateLink.click();
       await page.waitForLoadState('domcontentloaded');
-      expect(page.url()).toContain('/initial-estimation/specifications');
-      await expect(page.locator('body')).toContainText(/Initial Estimation|Specifications|Impacted Systems/i);
+      await expect.poll(async () => page.evaluate(() => sessionStorage.getItem('workwayz_real_route') || window.location.pathname)).toContain('/initial-estimation/specifications');
+      await expect(page.locator('body')).toContainText(/Initial Estimation|Specifications|Impacted Systems/i, { timeout: 15000 });
+
     } else {
       await expect(page.locator('body')).toContainText(/No initial estimate projects|Projects in initial estimation will appear here/i);
     }

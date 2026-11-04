@@ -182,37 +182,37 @@ export default function AppLayout({ children }: PropsWithChildren) {
         </Sidebar>
         <SidebarInset className="min-w-0 h-screen max-h-screen overflow-hidden flex flex-col">
           <div className="h-full max-h-full flex flex-col overflow-hidden min-h-0 flex-1">
-            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border flex items-center gap-4 shrink-0">
+            <div className="bg-topbar text-topbar-foreground px-4 md:px-8 py-4 border-b border-border shadow-sm flex items-center gap-4 shrink-0">
               <TooltipProvider delayDuration={150}>
                 <Tabs value={activeTab} onValueChange={onTabChange}>
-                    <TabsList className="bg-topbar-foreground/10 text-topbar-foreground/80 border border-border/40">
-                        <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                    <TabsList className="bg-muted text-muted-foreground border border-border">
+                        <TabsTrigger value="my-projects" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                           <Link href={getDefaultRouteForTab('my-projects')}>My Workspace</Link>
                         </TabsTrigger>
                         {!showOnlyMyProjects && (
                           <>
                             {(hasAccess('Project Home') || hasAccess('Portfolio Dashboard')) && (
-                              <TabsTrigger value="projects" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                              <TabsTrigger value="projects" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('projects')}>Projects</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Estimation Variance') || hasAccess('Estimations') || hasAccess('Defect Containment') || hasAccess('Defects')) && (
-                              <TabsTrigger value="quality" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                              <TabsTrigger value="quality" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('quality')}>Quality</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Billing') || hasAccess('Billing Rate')) && (
-                              <TabsTrigger value="billing" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                              <TabsTrigger value="billing" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('billing')}>Billing</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('User List') || hasAccess('Utilization')) && (
-                              <TabsTrigger value="users" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                              <TabsTrigger value="users" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('users')}>Users</Link>
                               </TabsTrigger>
                             )}
                             {(hasAccess('Holiday Calendar') || hasAccess('Leave Settings')) && (
-                              <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                              <TabsTrigger value="holidays" asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                                 <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                               </TabsTrigger>
                             )}
@@ -221,8 +221,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 value="portfolios"
                                 asChild
                                 className={cn(
-                                  "data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
-                                  activeTab === 'portfolios' && "bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
+                                  "data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
+                                  activeTab === 'portfolios' && "bg-card dark:bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
                                 )}
                               >
                                 <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
@@ -245,8 +245,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 value="trash"
                                 asChild
                                 className={cn(
-                                  "data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
-                                  activeTab === 'trash' && "bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
+                                  "data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all px-2.5",
+                                  activeTab === 'trash' && "bg-card dark:bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
                                 )}
                               >
                                 <Link href={getDefaultRouteForTab('trash')} className="flex items-center justify-center" aria-label="Portfolio Trash">
@@ -267,7 +267,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                           </>
                         )}
                         {dynamicTab && (
-                          <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
+                          <TabsTrigger value={dynamicTab.value} asChild className="data-[state=active]:bg-card dark:data-[state=active]:bg-background data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:font-semibold data-[state=active]:border data-[state=active]:border-emerald-500/40 data-[state=active]:shadow-sm hover:text-emerald-500 dark:hover:text-emerald-300 transition-all">
                             <Link href={dynamicTab.value === 'my-account' ? '/my-account' : '#'}>
                               {dynamicTab.label}
                             </Link>

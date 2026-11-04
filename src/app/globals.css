@@ -10,22 +10,22 @@ body {
   font-family: var(--font-body-family), sans-serif;
 }
 
-/* Dark theme input autofill overrides to maintain dark UI */
+/* Theme-aware input autofill overrides */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0 1000px #121824 inset !important;
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
   transition: background-color 5000s ease-in-out 0s;
-  caret-color: #ffffff !important;
+  caret-color: hsl(var(--foreground)) !important;
 }
 
 
 @layer base {
   :root {
     color-scheme: light;
-    --background: 210 40% 98%;
+    --background: 214 32% 93%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -34,35 +34,35 @@ input:-webkit-autofill:active {
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 221 83% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
+    --secondary: 214 28% 88%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 214 28% 88%;
+    --muted-foreground: 215 25% 34%;
 
-    --accent: 210 40% 96%;
+    --accent: 214 28% 88%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 26% 80%;
+    --input: 215 25% 74%;
     --ring: 158 75% 42%;
 
     --topbar-background: 0 0% 100%;
     --topbar-foreground: 222 47% 11%;
 
-    --sidebar-background: 0 0% 100%;
+    --sidebar-background: 215 30% 96%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary: 221 83% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent: 214 32% 89%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
+    --sidebar-border: 214 26% 80%;
     --sidebar-ring: 158 75% 42%;
 
     --chart-1: 158 75% 42%;
@@ -75,7 +75,10 @@ input:-webkit-autofill:active {
     --font-body-family: var(--font-inter), 'Inter', sans-serif;
 
     --shadow-color: 220 30% 10%;
-    --shadow-strength: 6%;
+    --shadow-strength: 10%;
+    --shadow-sm: var(--shadow-sm-md);
+    --shadow-md: var(--shadow-md-md);
+    --shadow-lg: var(--shadow-lg-md);
 
     --shadow-sm-none: 0 0 #0000;
     --shadow-md-none: 0 0 #0000;
@@ -105,7 +108,7 @@ input:-webkit-autofill:active {
     --popover: 217 48% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 221 83% 53%;
+    --primary: 221 83% 48%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 45% 15%;
@@ -129,7 +132,7 @@ input:-webkit-autofill:active {
 
     --sidebar-background: 222 55% 7%;
     --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary: 221 83% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 45% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
@@ -144,6 +147,9 @@ input:-webkit-autofill:active {
 
     --shadow-color: 220 70% 3%;
     --shadow-strength: 35%;
+    --shadow-sm: 0 1px 3px 0 hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%)), 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-md: 0 6px 10px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%)), 0 3px 6px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 10%));
+    --shadow-lg: 0 15px 25px -5px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%)), 0 8px 10px -6px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 8%));
   }
 }
 

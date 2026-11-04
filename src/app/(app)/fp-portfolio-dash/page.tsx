@@ -551,7 +551,7 @@ export default function FpDashboardPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Ask Portfolio PromptBoard (e.g. 'Show project health status', 'Compare Fixed Bid vs T&M', 'What are our top risks?')..."
-                className="h-14 pl-12 pr-12 rounded-xl text-base bg-card/70 border-border/80 shadow-md focus-visible:ring-2 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/70"
+                className="h-14 pl-12 pr-12 rounded-xl text-base bg-card border-input shadow-md focus-visible:ring-2 focus-visible:ring-primary/50 transition-all placeholder:text-muted-foreground/80"
               />
               {searchQuery && (
                 <button
@@ -610,7 +610,7 @@ export default function FpDashboardPage() {
                   'text-xs px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium',
                   searchQuery === preset.query
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                    : 'bg-card/50 text-foreground/80 border-border/70 hover:bg-card hover:border-primary/50'
+                    : 'bg-card text-foreground border-border shadow-sm hover:border-primary/60 hover:text-primary'
                 )}
                 title={preset.description}
               >
@@ -745,7 +745,7 @@ export default function FpDashboardPage() {
 
             {/* Split View or Graph Only: Chart Section */}
             {(viewMode === 'split' || viewMode === 'chart') && response.chart && response.chart.type !== 'none' && (
-              <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-sm">
+              <Card className="border-border bg-card shadow-sm">
                 <CardHeader className="pb-2 flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -980,7 +980,7 @@ export default function FpDashboardPage() {
 
             {/* Split View or Table Only: Sortable Data Table */}
             {(viewMode === 'split' || viewMode === 'table') && response.table && (
-              <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-sm">
+              <Card className="border-border bg-card shadow-sm">
                 <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-base font-semibold">Data Table</CardTitle>
@@ -1083,7 +1083,7 @@ export default function FpDashboardPage() {
 
             {/* Follow-up Question Suggestions */}
             {response.followUpSuggestions && response.followUpSuggestions.length > 0 && (
-              <div className="p-4 rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm space-y-2">
+              <div className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-2">
                 <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                   Recommended Follow-up Inquiries for Leadership:
