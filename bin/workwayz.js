@@ -4,7 +4,16 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const appDir = path.resolve(__dirname, '..');
-const port = process.env.PORT || '3000';
+const args = process.argv.slice(2);
+let cliPort = null;
+for (let i = 0; i < args.length; i++) {
+  if ((args[i] === '--port' || args[i] === '-p') && args[i + 1]) {
+    cliPort = args[++i];
+  } else if (args[i] === '--data-dir' && args[i + 1]) {
+    process.env.WORKWAYZ_DATA_DIR = path.resolve(args[++i]);
+  }
+}
+const port = cliPort || process.env.PORT || '3000';
 const host = process.env.HOSTNAME || '0.0.0.0';
 
 console.log(`▲ Workwayz starting on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);

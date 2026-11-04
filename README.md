@@ -114,6 +114,18 @@ npm install -g workwayz
 workwayz
 ```
 
+#### Or install into a specific directory of your choosing:
+```bash
+# 1. Install Workwayz into your chosen folder (e.g., D:\Apps\Workwayz or ~/Apps/Workwayz)
+npm install --prefix "D:\Apps\Workwayz" workwayz
+
+# 2. Launch Workwayz from that custom folder
+npx --prefix "D:\Apps\Workwayz" workwayz
+
+# (Optional) Also store the local database & config files inside your custom folder instead of ~/.workwayz:
+node "D:\Apps\Workwayz\node_modules\workwayz\bin\workwayz.js" --data-dir "D:\Apps\Workwayz\data"
+```
+
 1. Open your browser to **[http://localhost:3000](http://localhost:3000)**.
 2. On first launch, the **In-App Setup Wizard** (`/setup-wizard`) opens automatically.
 3. Choose the **Local Embedded Database (Zero-Config Default)** to start immediately offline, or connect your own **Supabase** or **Firebase** instance.
@@ -128,7 +140,13 @@ npm uninstall -g workwayz
 # 2. (Optional) Clear the npx cache if you ran via npx
 npm cache clean --force
 
-# 3. (Optional) Delete local database records and saved configuration profiles
+# 3. (Optional) If installed into a custom directory via --prefix, delete that folder
+# macOS / Linux:
+rm -rf ~/Apps/Workwayz
+# Windows (PowerShell):
+Remove-Item -Recurse -Force "D:\Apps\Workwayz"
+
+# 4. (Optional) Delete default local database records and saved configuration profiles
 # macOS / Linux:
 rm -rf ~/.workwayz
 # Windows (PowerShell):
