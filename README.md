@@ -154,6 +154,21 @@ node "D:\Apps\Workwayz\node_modules\workwayz\bin\workwayz.js" --data-dir "D:\App
 4. Create your **Super Admin** account and configure your preferred AI provider (or skip AI setup and configure it later under **Portfolio Settings → AI Config**).
 5. All settings and local database records are persisted automatically in `~/.workwayz`, surviving restarts and package upgrades.
 
+#### Updating to the Latest Version (NPM / NPX)
+```bash
+# If installed globally via NPM:
+npm install -g workwayz@latest
+
+# If running via NPX:
+# NPX automatically fetches and runs the newest release when specifying @latest:
+npx workwayz@latest
+
+# (Optional) If installed into a custom directory via --prefix:
+npm update --prefix "D:\Apps\Workwayz" workwayz
+```
+
+> **Data Persistence:** All local embedded databases, workspace settings, and AI configurations reside safely in `~/.workwayz` (or your `--data-dir`) and are never overwritten or lost during version updates.
+
 #### Uninstalling (NPX / NPM)
 ```bash
 # 1. Remove the global CLI package (if installed via npm install -g)
@@ -209,6 +224,25 @@ npx supabase start --exclude storage-api,imgproxy,edge-runtime,logflare,vector,s
 2. Open **Supabase Studio** (`http://127.0.0.1:54323` → **SQL Editor**), paste and run the SQL schema from [`docs/supabase-schema.sql`](./docs/supabase-schema.sql) to create the Workwayz tables.
 3. In the Workwayz **In-App Setup Wizard** (or **Portfolio Settings → Database**), select **Supabase** and enter your local **`API URL`** and **`anon key`**.
    > *(Note: If Workwayz itself is running inside a Docker container on Windows/macOS, use `http://host.docker.internal:54321` as the Supabase URL so the container can reach your host's local Supabase port).*
+
+#### Updating to the Latest Version (Docker)
+```bash
+# 1. Pull the latest Docker image
+docker pull workwayz/workwayz:latest
+
+# 2. Stop and remove the current container
+docker stop workwayz-web && docker rm workwayz-web
+
+# 3. Launch the new container using the same persistent volume
+docker run -d \
+  -p 3000:3000 \
+  -v workwayz-data:/app/data \
+  --name workwayz-web \
+  --restart always \
+  workwayz/workwayz:latest
+```
+
+> **Data Persistence:** All project databases, portfolios, users, and configurations are preserved inside the `workwayz-data` volume and automatically carried over into the updated container.
 
 #### Uninstalling (Docker)
 ```bash
