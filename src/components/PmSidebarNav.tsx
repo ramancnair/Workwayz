@@ -54,6 +54,7 @@ import {
   UserCog,
   Mail,
   Clock,
+  Info,
 } from "lucide-react";
 import { db, collection, query, where, onSnapshot, unsubscribeAllListeners } from "@/lib/db-provider";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -61,6 +62,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { getEffectiveRoute } from "@/lib/route-utils";
+import { useAppVersion } from "@/hooks/use-app-version";
 
 type PmSidebarNavProps = {
   activeTab: 'portfolios' | 'projects' | 'users' | 'trash' | 'holidays' | 'billing' | 'quality' | 'my-projects' | 'my-account';
@@ -70,6 +72,8 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
+  const { versionInfo } = useAppVersion();
+  const hasUpdate = Boolean(versionInfo?.hasUpdate);
 
   const [user, setUser] = useState<{ name: string; email: string; avatar: string; accessLevel?: string; role?: string; empId?: string; id?: string }>({ name: '', email: '', avatar: '' });
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -341,6 +345,13 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
       group: 'portfolio'
     },
     {
+      id: 'about',
+      href: '/portfolio-settings/about',
+      label: 'About Workwayz',
+      icon: Info,
+      group: 'portfolio'
+    },
+    {
       id: 'trash',
       href: '/portfolio-trash',
       label: 'Portfolio Trash',
@@ -385,7 +396,7 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
   const activeGroup = getGroupForTab(activeTab);
   const menuItems = allMenuItems
     .filter(item => item.group === activeGroup)
-    .filter(item => item.label === 'My Projects' || item.label === 'Worklog' || item.label === 'Leave Tracker' || item.label === 'Account Settings' || item.label === 'Messages' || hasAccess(item.label));
+    .filter(item => item.label === 'My Projects' || item.label === 'Worklog' || item.label === 'Leave Tracker' || item.label === 'Account Settings' || item.label === 'Messages' || item.label === 'About Workwayz' || hasAccess(item.label));
 
   const activeItemHref = useMemo(() => {
     const cleanPath = effectivePath.replace(/\/$/, '');
@@ -466,6 +477,11 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{item.label}</span>
                     </div>
+                    {item.id === 'about' && hasUpdate && (
+                      <span className="ml-auto bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full text-center leading-none group-data-[collapsible=icon]:hidden">
+                        Update
+                      </span>
+                    )}
                     {item.id === 'messages' && unreadCount > 0 && (
                       <span className="ml-auto bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none group-data-[collapsible=icon]:hidden">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -501,6 +517,19 @@ export function PmSidebarNav({ activeTab }: PmSidebarNavProps) {
               <Link href="/my-account">
                 <Users className="mr-2 h-4 w-4" />
                 <span>Profile & Account</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/portfolio-settings/about" className="flex items-center justify-between w-full">
+                <div className="flex items-center">
+                  <Info className="mr-2 h-4 w-4" />
+                  <span>About Workwayz</span>
+                </div>
+                {hasUpdate && (
+                  <span className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    Update
+                  </span>
+                )}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

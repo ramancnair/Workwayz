@@ -24,7 +24,7 @@ export const defaultAccessSettings: Record<Exclude<AccessLevel, 'Administrator' 
 };
 
 export function getPageNameForRoute(pathname: string): string | null {
-  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account') || pathname.startsWith('/messages') || pathname.startsWith('/my-projects')) {
+  if (!pathname || pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/setup-wizard' || pathname.startsWith('/my-account') || pathname.startsWith('/messages') || pathname.startsWith('/my-projects') || pathname.startsWith('/portfolio-settings/about')) {
     return null; // Public or universal profile/landing/messaging path (no specific role restriction)
   }
 
@@ -36,6 +36,7 @@ export function getPageNameForRoute(pathname: string): string | null {
   if (pathname.startsWith('/portfolio-settings/archive') || pathname.startsWith('/portfolio-settings/inactive')) return 'Inactive Projects';
   if (pathname.startsWith('/portfolio-settings/test-data-studio')) return 'Test Data Studio';
   if (pathname.startsWith('/portfolio-settings/cron-jobs')) return 'Cron Jobs';
+  if (pathname.startsWith('/portfolio-settings/about')) return 'About Workwayz';
   if (pathname.startsWith('/portfolio-settings')) return 'Access Settings';
 
   // Portfolio Level Pages

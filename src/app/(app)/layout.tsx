@@ -17,6 +17,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getEffectiveRoute } from '@/lib/route-utils';
+import { useAppVersion } from '@/hooks/use-app-version';
 
 type AccessLevel = 'Super Admin' | 'Administrator' | 'Senior Management' | 'Project Manager' | 'Lead' | 'Team Member' | 'PMO';
 
@@ -49,6 +50,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
   const [userAccessLevel, setUserAccessLevel] = useState<AccessLevel | null>(null);
   const { hasAccess } = usePermissions();
+  const { versionInfo } = useAppVersion();
+  const hasUpdate = Boolean(versionInfo?.hasUpdate);
   const [isEnabled, setIsEnabled] = useState<boolean | null>(null); // null = loading
 
   useEffect(() => {
@@ -141,6 +144,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         if (hasAccess('Inactive') || hasAccess('Archive') || hasAccess('Inactive Projects')) return '/portfolio-settings/archive';
         if (hasAccess('Cron Jobs')) return '/portfolio-settings/cron-jobs';
         if (hasAccess('Test Data Studio')) return '/portfolio-settings/test-data-studio';
+        if (hasAccess('About Workwayz') || hasAccess('About')) return '/portfolio-settings/about';
         return '/portfolio-settings';
       case 'trash':
         return '/portfolio-trash';
@@ -216,7 +220,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 <Link href={getDefaultRouteForTab('holidays')}>Time Off</Link>
                               </TabsTrigger>
                             )}
-                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs')) && (
+                            {(hasAccess('Access Settings') || hasAccess('Database') || hasAccess('Authentication') || hasAccess('AI Config') || hasAccess('Setup Wizard') || hasAccess('Archive') || hasAccess('Test Data Studio') || hasAccess('Cron Jobs') || hasAccess('About Workwayz')) && (
                               <TabsTrigger
                                 value="portfolios"
                                 asChild
@@ -225,11 +229,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                   activeTab === 'portfolios' && "bg-card dark:bg-background text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/40 shadow-sm"
                                 )}
                               >
-                                <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center" aria-label="Portfolio Settings">
+                                <Link href={getDefaultRouteForTab('portfolios')} className="flex items-center justify-center relative" aria-label="Portfolio Settings">
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="flex items-center justify-center">
                                         <Settings className="h-4 w-4" />
+                                        {hasUpdate && (
+                                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
+                                        )}
                                         <span className="sr-only">Portfolio Settings</span>
                                       </span>
                                     </TooltipTrigger>

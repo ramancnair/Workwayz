@@ -224,4 +224,17 @@ test.describe('Pillar 2: Global Portfolio Workspace & Administration', () => {
       await expect(page.locator('aside, nav, [data-sidebar]').first()).toContainText(/Billing Rate/i);
     }
   });
+
+  test('TC-PORT-015: About Workwayz view renders version card, update check action, and community resources', async ({ page }) => {
+    test.setTimeout(60000);
+    await page.goto('/portfolio-settings/about', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.locator('body')).toContainText(/About Workwayz/i, { timeout: 20000 });
+    await expect(page.locator('body')).toContainText(/Check for Updates/i);
+    await expect(page.locator('body')).toContainText(/System Diagnostics/i);
+    await expect(page.locator('body')).toContainText(/Resources & Registries/i);
+
+    const aboutLink = page.locator('a[href="/portfolio-settings/about"]').first();
+    await expect(aboutLink).toBeVisible();
+  });
 });

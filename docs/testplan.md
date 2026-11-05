@@ -74,6 +74,7 @@ npm run test:e2e:install
 | **TC-PORT-012** | Billing Rate Card reference tab | Displays standard tech & horizontal roles, empty initially, supports adding, editing, and deleting benchmark rates by experience tier | ✅ Automated |
 | **TC-PORT-013** | Portfolio Deletion Specificity & Inactive Project Handling | Specifically reports active vs inactive projects and provides direct link to Inactive Projects tab when blocking deletion | ✅ Automated |
 | **TC-PORT-014** | Project Home Initial Estimates Partitioning | Partitions Initial Estimates state projects into dedicated tab between Active and Inactive, reserving Active for active only and Inactive for On Hold/Completed/Cancelled | ✅ Automated |
+| **TC-PORT-015** | About Workwayz & Version Update Center | Renders application version, release status, environment diagnostics, and live update checking | ✅ Automated |
 
 ### Pillar 3: Project Detail Hub (`e2e/03-project-details-and-estimations.spec.ts`)
 | Test Case ID | Test Objective | Assertion Criteria | Status |
