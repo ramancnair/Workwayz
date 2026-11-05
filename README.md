@@ -20,6 +20,22 @@
 
 ---
 
+### ⚡ Quick Start (Instant Run)
+
+Launch Workwayz directly in your terminal — no repo cloning or manual build required:
+
+```bash
+# Option 1: Run instantly with zero install via NPX (Recommended)
+npx workwayz@latest
+
+# Option 2: Or run via Docker Container
+docker run -d -p 3000:3000 -v workwayz-data:/app/data -e PORT=3000 workwayz/workwayz:latest
+```
+
+Once started, open **[http://localhost:3000](http://localhost:3000)** in your browser to complete the guided In-App Setup Wizard.
+
+---
+
 ## Why Workwayz?
 
 Small and medium businesses often struggle with tool sprawl — using one tool for project estimates, another for task boards, a third for QA test cases, spreadsheets for resource utilization and RAID logs, and separate software for client billing.

@@ -154,6 +154,16 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Update Docker Hub Description & Overview
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/workwayz
+          short-description: "Workwayz - All-in-One AI-Powered Project & Portfolio Management Platform"
+          readme-filepath: ./README.md
+
       # --- 8. Upload Release Assets to GitHub Release ---
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
