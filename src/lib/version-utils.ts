@@ -60,7 +60,7 @@ export function getAppVersion(): string {
     }
   }
 
-  return '8.0.2';
+  return '1.0.2';
 }
 
 export type DeploymentType = 'docker' | 'npm' | 'source';

@@ -39,7 +39,7 @@ export default function AboutPage() {
     }
   };
 
-  const currentVersion = versionInfo?.currentVersion || '8.0.2';
+  const currentVersion = versionInfo?.currentVersion || '1.0.2';
   const latestVersion = versionInfo?.latestVersion;
   const hasUpdate = Boolean(versionInfo?.hasUpdate);
   const isOffline = Boolean(versionInfo?.isOffline);

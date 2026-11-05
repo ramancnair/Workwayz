@@ -7,8 +7,8 @@ import AboutPage from '../page';
 vi.mock('@/hooks/use-app-version', () => ({
   useAppVersion: vi.fn(() => ({
     versionInfo: {
-      currentVersion: '8.0.2',
-      latestVersion: '8.0.2',
+      currentVersion: '1.0.2',
+      latestVersion: '1.0.2',
       hasUpdate: false,
       publishedAt: '2026-11-05T00:00:00.000Z',
       releaseUrl: 'https://github.com/ramancnair/Workwayz/releases',
@@ -31,7 +31,7 @@ describe('AboutPage', () => {
     render(<AboutPage />);
 
     expect(screen.getByText('About Workwayz')).toBeDefined();
-    expect(screen.getByText('v8.0.2')).toBeDefined();
+    expect(screen.getByText('v1.0.2')).toBeDefined();
     expect(screen.getByText('Check for Updates')).toBeDefined();
     expect(screen.getByText('System Diagnostics')).toBeDefined();
     expect(screen.getByText('Resources & Registries')).toBeDefined();
