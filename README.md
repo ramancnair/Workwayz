@@ -20,15 +20,19 @@
 
 ---
 
-### ⚡ Quick Start (Instant Run)
+### ⚡ Quick Start
 
 Launch Workwayz directly in your terminal — no repo cloning or manual build required:
 
 ```bash
-# Option 1: Run instantly with zero install via NPX (Recommended)
+# Option 1: Install globally via NPM (Recommended)
+npm install -g workwayz
+workwayz
+
+# Option 2: Or run via NPX (Zero-Install evaluation)
 npx workwayz@latest
 
-# Option 2: Or run via Docker Container
+# Option 3: Or run via Docker Container
 docker run -d -p 3000:3000 -v workwayz-data:/app/data -e PORT=3000 workwayz/workwayz:latest
 ```
 
@@ -110,24 +114,26 @@ You do **not** need to clone any Git repository or touch source code to run Work
 
 | Method | Best For | Command |
 |---|---|---|
-| **Option 1: NPX / NPM** | Fastest evaluation & local/office server deployment | `npx workwayz@latest` |
-| **Option 2: Docker Container** | Self-hosting on a team server or cloud VM | `docker run -d -p 3000:3000 ...` |
+| **Option 1: Global NPM Install (Recommended)** | Standard production CLI usage & office server deployment | `npm install -g workwayz && workwayz` |
+| **Option 2: NPX Instant Run** | Quick temporary evaluation without permanent installation | `npx workwayz@latest` |
+| **Option 3: Docker Container** | Self-hosting on a team server or cloud VM | `docker run -d -p 3000:3000 ...` |
 
 ---
 
-### Option 1 — Instant Run via NPX / NPM (Recommended)
+### Option 1 — Install Globally via NPM (Recommended)
 
-Ensure **[Node.js v20+](https://nodejs.org/)** is installed on your machine, then run Workwayz directly from npm:
+Ensure **[Node.js v20+](https://nodejs.org/)** is installed on your machine, then install Workwayz globally:
 
-#### Run instantly with zero install:
-```bash
-npx workwayz@latest
-```
-
-#### Or install globally as a command-line app:
 ```bash
 npm install -g workwayz
 workwayz
+```
+
+### Option 2 — Instant Run via NPX (Zero-Install Evaluation)
+
+Run Workwayz immediately without permanent installation:
+```bash
+npx workwayz@latest
 ```
 
 #### Or install into a specific directory of your choosing:
@@ -171,7 +177,7 @@ Remove-Item -Recurse -Force "$HOME\.workwayz"
 
 ---
 
-### Option 2 — Pre-Built Docker Container (Self-Hosting)
+### Option 3 — Pre-Built Docker Container (Self-Hosting)
 
 Run the pre-built production container directly without cloning the repository:
 
