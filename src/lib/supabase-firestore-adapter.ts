@@ -402,7 +402,7 @@ export const addDoc = async (colRef: any, data: any) => {
     const tableName = resolveTableName(collectionName);
 
     let insertData: any = { ...data, id: docId };
-    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+    if (projectId && TABLE_COLUMNS[tableName]?.includes('projectId')) {
         insertData.projectId = projectId;
     }
     if (testCycleId) {
@@ -433,7 +433,7 @@ export const setDoc = async (docRef: any, data: any, options?: { merge?: boolean
     const docId = fullPath.split('/').pop();
 
     let upsertData: any = { ...data, id: docId };
-    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+    if (projectId && TABLE_COLUMNS[tableName]?.includes('projectId')) {
         upsertData.projectId = projectId;
     }
     if (testCycleId) {
@@ -570,7 +570,7 @@ export const getDocs = async (queryRef: any) => {
     if (testPlanId) {
         request = request.eq('testPlanId', testPlanId);
     }
-    if (projectId && tableName !== 'projects' && tableName !== 'portfolios' && tableName !== 'employees') {
+    if (projectId && TABLE_COLUMNS[tableName]?.includes('projectId')) {
         request = request.eq('projectId', projectId);
     }
 

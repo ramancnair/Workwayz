@@ -8,6 +8,7 @@ import {
   getLocalDbFilePath,
 } from '../local-db-engine';
 import { localSupabaseClient } from '../local-supabase-shim';
+import { collection, getDocs, setDoc, doc } from '../supabase-firestore-adapter';
 
 describe('Local Embedded Database & Auth Engine (local-db-engine.ts)', () => {
   let tempDir: string;
@@ -165,6 +166,28 @@ describe('Local Embedded Database & Auth Engine (local-db-engine.ts)', () => {
     });
     expect(relogin.error).toBeNull();
     expect(relogin.data.user.email).toBe('admin@workwayz.local');
+  });
+
+  it('correctly retrieves test cycle test cases subcollection without spurious projectId filtering', async () => {
+    // 1. Insert test cycle
+    await setDoc(doc(null, 'projects', 'p-test', 'testCycles', 'cycle-1'), {
+      testCycleId: 'TC-SIT',
+      name: 'SIT Cycle',
+    });
+
+    // 2. Insert test case into test cycle
+    await setDoc(doc(null, 'projects', 'p-test', 'testCycles', 'cycle-1', 'testCases', 'tc-1'), {
+      testCaseId: 'TC-1',
+      title: 'Login test',
+      status: 'Passed',
+    });
+
+    // 3. Query via collection
+    const colRef = collection(null, 'projects', 'p-test', 'testCycles', 'cycle-1', 'testCases');
+    const snapshot = await getDocs(colRef);
+    expect(snapshot.docs).toHaveLength(1);
+    expect(snapshot.docs[0].data().status).toBe('Passed');
+    expect(snapshot.docs[0].data().testCaseId).toBe('TC-1');
   });
 });
 

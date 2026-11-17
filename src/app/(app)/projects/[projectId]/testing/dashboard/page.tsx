@@ -382,49 +382,67 @@ export default function TestingDashboard() {
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold text-center mb-4">Test Cases by Status</h3>
             <div className="h-[300px] w-full">
-              <ChartContainer config={testCaseStatusConfig} className="h-full w-full">
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie data={filteredSummaryData.testCaseStatusData} dataKey="value" nameKey="name">
-                    {filteredSummaryData.testCaseStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartLegend content={<ChartLegendContent />} />
-                </PieChart>
-              </ChartContainer>
+              {filteredSummaryData.testCaseStatusData.length > 0 ? (
+                <ChartContainer config={testCaseStatusConfig} className="h-full w-full">
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                    <Pie data={filteredSummaryData.testCaseStatusData} dataKey="value" nameKey="name">
+                      {filteredSummaryData.testCaseStatusData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic">
+                  No test cases found for the selected cycle.
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold text-center mb-4">Bugs by Status</h3>
             <div className="h-[300px] w-full">
-              <ChartContainer config={bugStatusConfig} className="h-full w-full">
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie data={filteredSummaryData.bugStatusData} dataKey="value" nameKey="name">
-                    {filteredSummaryData.bugStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartLegend content={<ChartLegendContent />} />
-                </PieChart>
-              </ChartContainer>
+              {filteredSummaryData.bugStatusData.length > 0 ? (
+                <ChartContainer config={bugStatusConfig} className="h-full w-full">
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                    <Pie data={filteredSummaryData.bugStatusData} dataKey="value" nameKey="name">
+                      {filteredSummaryData.bugStatusData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic">
+                  No bugs found for the selected cycle.
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col">
             <h3 className="text-lg font-semibold text-center mb-4">Open Bugs by Severity</h3>
             <div className="h-[300px] w-full">
-              <ChartContainer config={bugSeverityConfig} className="h-full w-full">
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie data={filteredSummaryData.openBugsBySeverityData} dataKey="value" nameKey="name">
-                    {filteredSummaryData.openBugsBySeverityData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartLegend content={<ChartLegendContent />} />
-                </PieChart>
-              </ChartContainer>
+              {filteredSummaryData.openBugsBySeverityData.length > 0 ? (
+                <ChartContainer config={bugSeverityConfig} className="h-full w-full">
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                    <Pie data={filteredSummaryData.openBugsBySeverityData} dataKey="value" nameKey="name">
+                      {filteredSummaryData.openBugsBySeverityData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm italic">
+                  No open bugs found.
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
