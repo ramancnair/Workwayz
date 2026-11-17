@@ -1158,6 +1158,14 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
       isBacklog?: boolean;
     }> = [];
 
+    // Product Backlog group is the first item
+    groups.push({
+      id: 'backlog',
+      title: 'Product Backlog',
+      status: 'Backlog',
+      isBacklog: true,
+    });
+
     activeOrUpcomingSprints.forEach(s => {
       groups.push({
         id: s.id,
@@ -1167,13 +1175,6 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
         endDate: s.endDate,
         isBacklog: false,
       });
-    });
-
-    groups.push({
-      id: 'backlog',
-      title: 'Product Backlog',
-      status: 'Backlog',
-      isBacklog: true,
     });
 
     completedOrCancelledSprints.forEach(s => {
@@ -1940,7 +1941,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
         </div>
         <div className="flex-1 overflow-y-auto pr-2">
           {groupBy === 'epic' ? (
-            <Accordion type="multiple" className="w-full space-y-3" key="by-epic" defaultValue={epicsAndUnassigned.map(e => e.id)}>
+            <Accordion type="multiple" className="w-full space-y-3" key="by-epic" defaultValue={[]}>
               {epicsAndUnassigned.map((epic) => {
                 const isUnassignedEpic = epic.id === 'unassigned';
                 const allStoriesInEpic = stories.filter(s => s.epicId === epic.id);
@@ -2064,7 +2065,7 @@ const handleAddBug = async (values: z.infer<typeof addBugFormSchema>) => {
               })}
             </Accordion>
           ) : (
-            <Accordion type="multiple" className="w-full space-y-3" key="by-sprint" defaultValue={sprintGroups.map(s => s.id)}>
+            <Accordion type="multiple" className="w-full space-y-3" key="by-sprint" defaultValue={[]}>
               {sprintGroups.map((sprintGroup) => {
                 const itemsForSprint = backlogItemsBySprint[sprintGroup.id] || [];
                 const totalSprintItemsCount = itemsForSprint.length;
